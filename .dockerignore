@@ -1,0 +1,15 @@
+venv
+__pycache__/
+*.pyc
+*.db
+*.log
+.git
+.gitignore
+pytest_cache
+token.json
+credentials.json
+.env
+.DS_Store
+tests
+*.pytest_cache
+*.egg-info

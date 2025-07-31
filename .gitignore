@@ -212,3 +212,7 @@ credentials.json
 forecast.db
 test_forecast.db
 token.json
+# Ignore local runtime data and logs
+data/
+.DS_Store
+*.log

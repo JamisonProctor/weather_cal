@@ -124,3 +124,33 @@ def patch_event(event_id, body):
     """
     service = get_calendar_service()
     return service.events().update(calendarId=CALENDAR_ID, eventId=event_id, body=body).execute()
+import logging
+logger = logging.getLogger(__name__)
+
+_original_insert_event = insert_event
+def insert_event(calendar_id, body):
+    logger.info(f"Creating event on calendar '{calendar_id}' with summary '{body.get('summary')}' for date {body.get('start', {}).get('date')}")
+    try:
+        return _original_insert_event(calendar_id, body)
+    except Exception as e:
+        logger.error(f"Failed to create event: {e}", exc_info=True)
+        raise
+
+_original_patch_event = patch_event
+def patch_event(event_id, body):
+    logger.info(f"Updating event ID '{event_id}' with summary '{body.get('summary')}' for date {body.get('start', {}).get('date')}")
+    try:
+        return _original_patch_event(event_id, body)
+    except Exception as e:
+        logger.error(f"Failed to update event '{event_id}': {e}", exc_info=True)
+        raise
+
+# Wrap find_event with logging
+_original_find_event = find_event
+def find_event(date):
+    logger.info(f"Searching for event on date {date}")
+    try:
+        return _original_find_event(date)
+    except Exception as e:
+        logger.error(f"Failed to find event for date {date}: {e}", exc_info=True)
+        raise

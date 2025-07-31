@@ -125,3 +125,50 @@ def fetch_forecast(location: str = DEFAULT_LOCATION):
         })
 
     return forecasts
+
+def fetch_forecasts_for_locations(locations: list[str]):
+    """
+    Fetch forecasts for a list of locations, avoiding duplicate API calls.
+    Returns a dict mapping each location to its 7-day forecast list.
+    """
+    unique_locations = set(locations)
+    results = {}
+    for loc in unique_locations:
+        try:
+            results[loc] = fetch_forecast(loc)
+        except Exception as e:
+            print(f"[WARN] Could not fetch forecast for {loc}: {e}")
+            results[loc] = []
+    return results
+
+import logging
+logger = logging.getLogger(__name__)
+
+# Add logging to key functions
+
+_original_get_coordinates = get_coordinates
+def get_coordinates(location_name: str):
+    logger.info(f"Fetching coordinates for location: {location_name}")
+    try:
+        return _original_get_coordinates(location_name)
+    except Exception as e:
+        logger.error(f"Error fetching coordinates for {location_name}: {e}", exc_info=True)
+        raise
+
+_original_fetch_forecast = fetch_forecast
+def fetch_forecast(location: str = DEFAULT_LOCATION):
+    logger.info(f"Fetching 7-day weather forecast for location: {location}")
+    try:
+        return _original_fetch_forecast(location)
+    except Exception as e:
+        logger.error(f"Error fetching forecast for {location}: {e}", exc_info=True)
+        raise
+
+_original_fetch_forecasts_for_locations = fetch_forecasts_for_locations
+def fetch_forecasts_for_locations(locations: list[str]):
+    logger.info(f"Fetching forecasts for {len(locations)} locations: {locations}")
+    try:
+        return _original_fetch_forecasts_for_locations(locations)
+    except Exception as e:
+        logger.error("Error fetching forecasts for multiple locations", exc_info=True)
+        raise

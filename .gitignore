@@ -205,3 +205,10 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+credentials.json
+
+# Local runtime data
+forecast.db
+test_forecast.db
+token.json

@@ -1,5 +1,5 @@
-# Lightweight Python image
-FROM python:3.11-slim
+# Lightweight Python image with latest security patches
+FROM python:3.11-slim-bullseye
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -9,9 +9,13 @@ ENV PYTHONUNBUFFERED=1 \
 # Set working directory
 WORKDIR /app
 
-# Copy requirements and install dependencies
+# Update base image packages and security patches
+RUN apt-get update && apt-get upgrade -y && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install dependencies securely
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy project files
 COPY . .

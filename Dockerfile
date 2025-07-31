@@ -1,27 +1,25 @@
-# Lightweight Python image with latest security patches
-FROM python:3.11-slim-bullseye
-
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    LANG=C.UTF-8
-
-# Set working directory
+FROM python:3.11-slim-bullseye AS builder
 WORKDIR /app
-
-# Update base image packages and security patches
-RUN apt-get update && apt-get upgrade -y && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements and install dependencies securely
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
-
-# Copy project files
+# Install dependencies to a custom folder for later copy
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir --prefix=/app/deps -r requirements.txt
 COPY . .
 
-# Ensure data directory exists
-RUN mkdir -p /app/data
+FROM builder AS permfix
+RUN apt-get update && apt-get install -y tzdata && rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /app/data && chown -R 65532:65532 /app/data
 
-# Default command
-CMD ["python", "main.py"]
+FROM gcr.io/distroless/python3-debian11
+WORKDIR /app
+COPY --from=permfix /app /app
+COPY --from=permfix /app/deps /app/deps
+COPY --from=permfix /usr/share/zoneinfo/Europe/Berlin /etc/localtime
+COPY --from=permfix /etc/timezone /etc/timezone
+
+ENV PYTHONPATH=/app/deps/lib/python3.11/site-packages
+ENV PYTHONUNBUFFERED=1
+ENV TZ=Europe/Berlin
+
+USER 65532:65532
+CMD ["main.py"]

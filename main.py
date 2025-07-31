@@ -54,6 +54,7 @@ def main():
 
 
 if __name__ == "__main__":
+    import sys
     import schedule
     import time
     import logging
@@ -61,9 +62,12 @@ if __name__ == "__main__":
     # Setup logging
     os.makedirs("data", exist_ok=True)
     logging.basicConfig(
-        filename='data/weather_cal.log',
         level=logging.INFO,
-        format='%(asctime)s [%(levelname)s] %(message)s'
+        format='%(asctime)s [%(levelname)s] %(message)s',
+        handlers=[
+            logging.FileHandler('data/weather_cal.log'),
+            logging.StreamHandler(sys.stdout)
+        ]
     )
     logger = logging.getLogger(__name__)
 

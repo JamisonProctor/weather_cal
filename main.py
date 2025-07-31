@@ -1,12 +1,13 @@
 from weather_service import fetch_forecast, DEFAULT_LOCATION
 from sqlite_store import init_db, upsert_forecast, get_forecast_record, DB_PATH
+from calendar_service import upsert_event
 
 def main():
     print("Fetching 7-day weather forecast...\n")
     init_db(DB_PATH)
     forecasts = fetch_forecast(DEFAULT_LOCATION)
 
-    # Store forecasts in DB
+    # Store forecasts in DB and update calendar
     for day in forecasts:
         # Parse forecast summary to extract emojis and temps
         parts = day['summary'].split("➡️")
@@ -23,7 +24,10 @@ def main():
             DB_PATH
         )
 
-    print("\nForecasts stored in database:\n")
+        # Create or update Google Calendar event
+        upsert_event(day['date'], day['summary'], DEFAULT_LOCATION)
+
+    print("\nForecasts stored in database and synced to Google Calendar:\n")
     for day in forecasts:
         record = get_forecast_record(day['date'], DEFAULT_LOCATION, DB_PATH)
         if record:

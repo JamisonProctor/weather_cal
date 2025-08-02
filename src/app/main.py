@@ -1,6 +1,8 @@
 import os
 import sys
 import logging
+import time
+import schedule
 
 from src.services.forecast_service import ForecastService
 from src.services.forecast_formatting import format_summary, format_detailed_forecast
@@ -42,5 +44,17 @@ def main():
     except Exception as e:
         logger.error(f"Failed to fetch, process, store, or update calendar with forecasts: {e}", exc_info=True)
 
+def schedule_jobs():
+    # For testing, run every minute
+    # schedule.every(1).minutes.do(main)
+
+    # For production, switch to midnight only
+    schedule.every().day.at("00:00").do(main)
+
+    logger.info("Scheduler started. Waiting for tasks...")
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
 if __name__ == "__main__":
-    main()
+    schedule_jobs()

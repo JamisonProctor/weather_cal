@@ -1,0 +1,14 @@
+{
+  "python.envFile": "${workspaceFolder}/.env",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}",
+    "${workspaceFolder}/weather_cal"
+  ],
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingImports": "none"
+  },
+  "python.analysis.autoImportCompletions": true,
+  "terminal.integrated.env.osx": {
+    "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/weather_cal"
+  }
+}

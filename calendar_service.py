@@ -55,7 +55,7 @@ def update_event(event_id, date, summary, location, description=None):
     event = {
         "summary": summary,
         "location": location,
-        "description": description or "",
+        "description": description,
         "start": {"date": date},
         "end": {"date": date},
         "reminders": {"useDefault": False}

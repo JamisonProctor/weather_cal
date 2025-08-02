@@ -9,11 +9,11 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 def main():
-    location = get_locations()
+    locations = get_locations()
     
     try:
         # Fetch forecast objects for next 7 days
-        forecasts = ForecastService.fetch_forecasts(location=location)
+        forecasts = ForecastService.fetch_forecasts(location=locations)
 
         # Format and enrich each forecast object
         for forecast in forecasts:

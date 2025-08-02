@@ -7,8 +7,8 @@ import logging
 from typing import List
 from datetime import datetime
 from dotenv import load_dotenv
-from utils.logging_config import setup_logging
-from forecast import Forecast
+from weather_cal.utils.logging_config import setup_logging
+from weather_cal.forecast import Forecast
 
 setup_logging()
 logger = logging.getLogger(__name__)

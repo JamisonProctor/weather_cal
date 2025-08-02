@@ -1,0 +1,13 @@
+services:
+  weather-cal:
+    build: .
+    container_name: weather-cal
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app/src:/app
+    volumes:
+      - ./data:/app/data
+      - ./logs:/var/log
+      - ./token.json:/app/token.json:ro
+    restart: unless-stopped

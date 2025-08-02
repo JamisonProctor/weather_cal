@@ -1,15 +1,27 @@
+# Python build artifacts
 venv
 __pycache__/
 *.pyc
-*.db
-*.log
-.git
-.gitignore
+*.pyo
+*.pyd
+*.egg-info
 pytest_cache
-token.json
-credentials.json
+
+# Environment and local config
 .env
 .DS_Store
-tests
-*.pytest_cache
-*.egg-info
+
+# Logs and data
+*.log
+*.db
+
+# Git files
+.git
+.gitignore
+
+# Credentials (don't bake secrets into image)
+token.json
+credentials.json
+
+# IDE settings
+.vscode

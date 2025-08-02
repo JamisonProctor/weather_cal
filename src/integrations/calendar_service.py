@@ -1,70 +1,65 @@
 import logging
+from src.utils.logging_config import setup_logging
+
+setup_logging()
 logger = logging.getLogger(__name__)
-CALENDAR_ID = "primary"
-def find_event(date):
-    logger.info(f"Searching for event on date {date}")
-    try:
-        service = get_calendar_service()
-        # Define timezone and search window explicitly
-        tz = "Europe/Berlin"
-        start = f"{date}T00:00:00+02:00"
-        end = f"{date}T23:59:59+02:00"
 
-        events_result = service.events().list(
-            calendarId=CALENDAR_ID,
-            timeMin=start,
-            timeMax=end,
-            singleEvents=True,
-            orderBy="startTime"
-        ).execute()
-        events = events_result.get("items", [])
-        if not events:
+class CalendarService:
+    def __init__(self, calendar_id="primary"):
+        self.calendar_id = calendar_id
+        self.service = self.get_calendar_service()
+
+    @staticmethod
+    def get_calendar_service():
+        try:
+            from googleapiclient.discovery import build
+            from google.oauth2.credentials import Credentials
+            creds = Credentials.from_authorized_user_file("token.json", ["https://www.googleapis.com/auth/calendar"])
+            return build("calendar", "v3", credentials=creds)
+        except Exception as e:
+            logger.error(f"Failed to initialize Google Calendar service: {e}", exc_info=True)
+            raise
+
+    def find_event(self, date):
+        """Find the first event on a given date (UTC)."""
+        try:
+            events_result = self.service.events().list(
+                calendarId=self.calendar_id,
+                timeMin=f"{date}T00:00:00Z",
+                timeMax=f"{date}T23:59:59Z",
+                singleEvents=True,
+                orderBy="startTime"
+            ).execute()
+            events = events_result.get("items", [])
+            return events[0] if events else None
+        except Exception as e:
+            logger.error(f"Failed to find event for date {date}: {e}", exc_info=True)
             return None
-        for event in events:
-            if event.get("start", {}).get("date") == date:
-                return event
-        return events[0]
-    except Exception as e:
-        logger.error(f"Failed to find event for date {date}: {e}", exc_info=True)
-        raise
 
-def get_calendar_service():
-    try:
-        from googleapiclient.discovery import build
-        from google.oauth2.credentials import Credentials
-        creds = Credentials.from_authorized_user_file("token.json", ["https://www.googleapis.com/auth/calendar"])
-        return build("calendar", "v3", credentials=creds)
-    except Exception as e:
-        logger.error(f"Failed to initialize Google Calendar service: {e}", exc_info=True)
-        raise
+    def upsert_event(self, forecast):
+        """Insert or update a Google Calendar event based on a Forecast object."""
+        try:
+            event_body = {
+                "summary": forecast.summary,
+                "location": forecast.location,
+                "description": forecast.description or "",
+                "start": {"date": forecast.date},
+                "end": {"date": forecast.date},
+                "reminders": {"useDefault": False}
+            }
 
-def create_event(date, summary, location, description=None):
-    service = get_calendar_service()
-    event = {
-        "summary": summary,
-        "location": location,
-        "description": description or "",
-        "start": {"date": date},
-        "end": {"date": date},
-        "reminders": {"useDefault": False}
-    }
-    return service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
+            existing_event = self.find_event(forecast.date)
+            if existing_event:
+                return self.service.events().update(
+                    calendarId=self.calendar_id,
+                    eventId=existing_event["id"],
+                    body=event_body
+                ).execute()
 
-def update_event(event_id, date, summary, location, description=None):
-    service = get_calendar_service()
-    event = {
-        "summary": summary,
-        "location": location,
-        "description": description,
-        "start": {"date": date},
-        "end": {"date": date},
-        "reminders": {"useDefault": False}
-    }
-    return service.events().update(calendarId=CALENDAR_ID, eventId=event_id, body=event).execute()
-
-def upsert_event(date, summary, location, description=None):
-    existing_event = find_event(date)
-    if existing_event:
-        return update_event(existing_event["id"], date, summary, location, description)
-    else:
-        return create_event(date, summary, location, description)
+            return self.service.events().insert(
+                calendarId=self.calendar_id,
+                body=event_body
+            ).execute()
+        except Exception as e:
+            logger.error(f"Failed to upsert event for {forecast.date}: {e}", exc_info=True)
+            raise

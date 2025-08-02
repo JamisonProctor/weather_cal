@@ -78,7 +78,7 @@ class ForecastService:
             logger.debug(f"Raw forecast data: {data}")
         except Exception:
             logger.error(f"Error fetching forecast data for lat={lat}, lon={lon}")
-            logger.exception("Exception details:")
+            logger.exception("Exception description:")
             raise
 
         times = data["hourly"]["time"]
@@ -115,7 +115,7 @@ class ForecastService:
                 codes=vals["codes"],
                 rain=vals["rain"],
                 winds=vals["winds"],
-                details=None
+                description=None
             ))
             logger.info(f"Created forecast for {date}: high={high}, low={low}")
         return forecasts

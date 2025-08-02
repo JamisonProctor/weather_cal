@@ -11,21 +11,36 @@ from src.services.forecast_store import ForecastStore
 setup_logging()
 logger = logging.getLogger(__name__)
 
+from src.integrations.calendar_service import CalendarService
+
 def main():
     locations = get_locations()
     store = ForecastStore()
 
+    forecast_days = 7
+
     try:
+        # Fetch new forecasts and store them
         for loc in locations:
-            forecasts = ForecastService.fetch_forecasts(location=loc)
+            forecasts = ForecastService.fetch_forecasts(location=loc, forecast_days=forecast_days)
 
             for forecast in forecasts:
                 forecast.summary = format_summary(forecast)
                 forecast.description = format_detailed_forecast(forecast)
                 store.upsert_forecast(forecast)
 
+        # Populate calendar with future events from DB
+        logger.info("Retrieving forecasts from DB for calendar population...")
+        all_forecasts = store.get_forecasts_future(days=forecast_days)
+
+        calendar = CalendarService()
+
+        for forecast in all_forecasts:
+            logger.info(f"Updating calendar for date={forecast.date}, location={forecast.location}")
+            calendar.upsert_event(forecast)
+
     except Exception as e:
-        logger.error(f"Failed to fetch, process, or store forecasts: {e}", exc_info=True)
+        logger.error(f"Failed to fetch, process, store, or update calendar with forecasts: {e}", exc_info=True)
 
 if __name__ == "__main__":
     main()

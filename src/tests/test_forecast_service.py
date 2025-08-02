@@ -177,7 +177,7 @@ def test_forecast_dataclass():
         codes=[1],
         rain=[0],
         winds=[5],
-        details="Some details"
+        description="Some description"
     )
     assert forecast.date == "2025-08-04"
     assert forecast.location == "Munich"
@@ -189,7 +189,7 @@ def test_forecast_dataclass():
     assert forecast.codes == [1]
     assert forecast.rain == [0]
     assert forecast.winds == [5]
-    assert forecast.details == "Some details"
+    assert forecast.description == "Some description"
 
 # 12. Test fetch_forecasts with missing keys in API response
 def test_fetch_forecasts_missing_keys(monkeypatch):

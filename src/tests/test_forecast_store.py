@@ -29,7 +29,7 @@ def test_upsert_and_get_forecast_inserts_new(store):
         codes=[1, 2],
         rain=[0, 20],
         winds=[10, 15],
-        details="Detailed forecast"
+        description="Detailed forecast"
     )
     store.upsert_forecast(forecast)
     fetched = store.get_forecast("2025-08-01", "Munich, Germany")
@@ -37,7 +37,7 @@ def test_upsert_and_get_forecast_inserts_new(store):
     assert fetched.date == "2025-08-01"
     assert fetched.location == "Munich, Germany"
     assert fetched.summary == "AM☀️15° / PM🌤️25°"
-    assert fetched.details == "Detailed forecast"
+    assert fetched.description == "Detailed forecast"
 
 def test_upsert_updates_existing_record(store):
     if not hasattr(store, "get_forecast"):
@@ -53,16 +53,16 @@ def test_upsert_updates_existing_record(store):
         codes=[61, 0],
         rain=[50, 0],
         winds=[12, 10],
-        details="Initial details"
+        description="Initial description"
     )
     store.upsert_forecast(forecast)
     # Update same date/location
     forecast.summary = "AM🌦️12° / PM☁️21°"
-    forecast.details = "Updated details"
+    forecast.description = "Updated description"
     store.upsert_forecast(forecast)
     fetched = store.get_forecast("2025-08-02", "Munich, Germany")
     assert fetched.summary == "AM🌦️12° / PM☁️21°"
-    assert fetched.details == "Updated details"
+    assert fetched.description == "Updated description"
 
 def test_get_nonexistent_forecast_returns_none(store):
     if not hasattr(store, "get_forecast"):
@@ -84,7 +84,7 @@ def test_data_persistence_across_instances(temp_db_path):
         codes=[3, 1],
         rain=[0, 10],
         winds=[8, 12],
-        details="Persist test"
+        description="Persist test"
     )
     if hasattr(store1, "upsert_forecast") and store1.upsert_forecast.__code__.co_argcount == 2:
         store1.upsert_forecast(forecast)
@@ -98,4 +98,4 @@ def test_data_persistence_across_instances(temp_db_path):
     fetched = store2.get_forecast("2025-08-03", "Berlin, Germany")
     assert fetched is not None
     assert fetched.summary == "AM☁️12° / PM☀️22°"
-    assert fetched.details == "Persist test"
+    assert fetched.description == "Persist test"

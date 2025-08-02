@@ -31,4 +31,8 @@ docker run -d \
   -v $(pwd)/token.json:/app/token.json \
   $CONTAINER_NAME
 
-echo "✅ Redeployment complete. Use 'docker logs -f $CONTAINER_NAME' to view logs."
+echo "✅ Redeployment complete."
+echo "Container status:"
+docker ps --filter "name=$CONTAINER_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+echo "Last 5 log lines:"
+docker logs --tail 5 $CONTAINER_NAME

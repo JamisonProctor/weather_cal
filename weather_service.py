@@ -1,8 +1,10 @@
 import requests
+import os
+import logging
+
 from datetime import datetime
 from statistics import mean
-
-import os
+from collections import Counter
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -28,8 +30,6 @@ def get_coordinates(location_name: str):
 
     result = data["results"][0]
     return result["latitude"], result["longitude"]
-
-from collections import Counter
 
 def map_code_to_emoji(code: int) -> str:
     """
@@ -78,7 +78,7 @@ def fetch_forecast(location: str = DEFAULT_LOCATION):
     params = {
         "latitude": lat,
         "longitude": lon,
-        "hourly": "temperature_2m,weathercode",
+        "hourly": "temperature_2m,weathercode,precipitation_probability,windspeed_10m",
         "timezone": "Europe/Berlin",
         "forecast_days": 7,
     }
@@ -90,6 +90,8 @@ def fetch_forecast(location: str = DEFAULT_LOCATION):
     times = data["hourly"]["time"]
     temps = data["hourly"]["temperature_2m"]
     codes = data["hourly"]["weathercode"]
+    rain_probs = data["hourly"].get("precipitation_probability", [0]*len(times))
+    winds = data["hourly"].get("windspeed_10m", [0]*len(times))
 
     daily_data = {}
 
@@ -97,17 +99,22 @@ def fetch_forecast(location: str = DEFAULT_LOCATION):
         dt = datetime.fromisoformat(t)
         date_str = dt.date().isoformat()
 
-        # Focus on daytime only
+        # Users are primarily interested in daytime information
+        # We only consider times between 06:00 and 22:00 for daily summaries
         if 6 <= dt.hour <= 22:
             if date_str not in daily_data:
                 daily_data[date_str] = {
                     "temps": [],
                     "codes": [],
-                    "times": []
+                    "times": [],
+                    "rain": [],
+                    "winds": []
                 }
             daily_data[date_str]["temps"].append(temp)
             daily_data[date_str]["codes"].append(code)
             daily_data[date_str]["times"].append(t)
+            daily_data[date_str]["rain"].append(rain_probs[times.index(t)])
+            daily_data[date_str]["winds"].append(winds[times.index(t)])
 
     # Convert to list of clean forecasts
     forecasts = []
@@ -115,13 +122,18 @@ def fetch_forecast(location: str = DEFAULT_LOCATION):
         high = max(vals["temps"])
         low = min(vals["temps"])
         morning_emoji, morning_temp, afternoon_emoji, afternoon_temp = map_morning_afternoon(vals["times"], vals["temps"], vals["codes"])
-        summary = f"{morning_emoji}{round(morning_temp)}° ➡️ {afternoon_emoji}{round(afternoon_temp)}°"
+        summary = f"AM{morning_emoji}{round(morning_temp)}° / PM{afternoon_emoji}{round(afternoon_temp)}°"
 
         forecasts.append({
             "date": date,
             "high": round(high),
             "low": round(low),
-            "summary": summary
+            "summary": summary,
+            "times": vals["times"],
+            "temps": vals["temps"],
+            "codes": vals["codes"],
+            "rain": vals["rain"],
+            "winds": vals["winds"]
         })
 
     return forecasts
@@ -141,7 +153,6 @@ def fetch_forecasts_for_locations(locations: list[str]):
             results[loc] = []
     return results
 
-import logging
 logger = logging.getLogger(__name__)
 
 # Add logging to key functions
@@ -172,3 +183,56 @@ def fetch_forecasts_for_locations(locations: list[str]):
     except Exception as e:
         logger.error("Error fetching forecasts for multiple locations", exc_info=True)
         raise
+
+def format_detailed_forecast_hourly(times, temps, codes, rain_probs, winds, daily_high, daily_low):
+    """
+    Formats a detailed forecast string for calendar event description.
+    Groups data into 3-hour blocks (06-08, 09-11, etc.) and displays:
+    TIME EMOJI START°~MID°C 🌧️X% 💨Ykm/h
+    """
+    # Define target starting hours
+    slots = [6, 9, 12, 15, 18, 21]
+    description_lines = []
+    data = list(zip(times, temps, codes, rain_probs, winds))
+
+    for start in slots:
+        block = [d for d in data if datetime.fromisoformat(d[0]).hour in (start, start+1, start+2)]
+        if not block:
+            continue
+
+        start_temp = round(block[0][1])
+        mid_temp = round(block[-1][1]) if len(block) > 1 else start_temp
+        dominant_code = Counter([d[2] for d in block]).most_common(1)[0][0]
+        emoji = map_code_to_emoji(dominant_code)
+        rain = max([d[3] for d in block]) if any(d[3] is not None for d in block) else 0
+        wind = round(max([d[4] for d in block])) if any(d[4] is not None for d in block) else 0
+
+        line = f"{start:02d}:00 {emoji} {start_temp}°~{mid_temp}°C 🌧️{int(rain)}% 💨{wind}km/h"
+        description_lines.append(line)
+
+    description_lines.append(f"\nHigh: {daily_high}°C | Low: {daily_low}°C")
+    return "\n".join(description_lines)
+
+def parse_summary(summary: str):
+    """
+    Parses a forecast summary string in the format 'AM🌤️15° / PM🌧️22°'
+    and returns (morning_emoji, morning_temp, afternoon_emoji, afternoon_temp).
+    Falls back gracefully if format is unexpected.
+    """
+    try:
+        if "AM" in summary and "PM" in summary:
+            am_part = summary.split("AM")[1].split("/")[0].strip()
+            pm_part = summary.split("PM")[1].strip()
+            morning_emoji = ''.join([c for c in am_part if not c.isdigit() and c != '°'])
+            morning_temp = ''.join(filter(str.isdigit, am_part)) or "0"
+            afternoon_emoji = ''.join([c for c in pm_part if not c.isdigit() and c != '°'])
+            afternoon_temp = ''.join(filter(str.isdigit, pm_part)) or "0"
+            return morning_emoji, float(morning_temp), afternoon_emoji, float(afternoon_temp)
+        else:
+            # fallback
+            emoji = summary[0]
+            temp = ''.join(filter(str.isdigit, summary)) or "0"
+            return emoji, float(temp), emoji, float(temp)
+    except Exception:
+        emoji = summary[0] if summary else ""
+        return emoji, 0.0, emoji, 0.0

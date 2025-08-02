@@ -1,8 +1,8 @@
 # test_forecast_service.py
 
 import pytest
-from weather_cal.forecast_service import ForecastService
-from weather_cal.forecast import Forecast
+from src.services.forecast_service import ForecastService
+from src.models.forecast import Forecast
 
 # 1. Mock API responses
 

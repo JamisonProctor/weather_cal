@@ -3,7 +3,7 @@
 from collections import Counter
 from datetime import datetime
 from statistics import mean
-from forecast import Forecast
+from models.forecast import Forecast
 
 def map_code_to_emoji(code: int) -> str:
     """

@@ -2,12 +2,11 @@ import os
 import sys
 import logging
 
-
-from forecast_service import ForecastService
-from utils.forecast_formatting import format_summary, format_detailed_forecast
+from services.forecast_service import ForecastService
+from services.forecast_formatting import format_summary, format_detailed_forecast
 from utils.logging_config import setup_logging
 from utils.location_management import get_locations
-from forecast_store import ForecastStore
+from services.forecast_store import ForecastStore
 
 setup_logging()
 logger = logging.getLogger(__name__)

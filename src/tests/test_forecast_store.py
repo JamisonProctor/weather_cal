@@ -1,7 +1,7 @@
 import os
 import pytest
-from weather_cal.forecast_store import ForecastStore
-from weather_cal.forecast import Forecast
+from src.services.forecast_store import ForecastStore
+from src.models.forecast import Forecast
 
 @pytest.fixture
 def temp_db_path(tmp_path):

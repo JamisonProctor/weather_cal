@@ -5,7 +5,7 @@ import os
 import logging
 
 from datetime import datetime
-from weather_cal.utils.logging_config import setup_logging
+from src.utils.logging_config import setup_logging
 from dotenv import load_dotenv
 
 setup_logging()
@@ -83,7 +83,7 @@ class ForecastStore:
         row = cur.fetchone()
         conn.close()
         if row:
-            from weather_cal.forecast import Forecast
+            from src.models.forecast import Forecast
             return Forecast(
                 date=row[0],
                 location=row[1],

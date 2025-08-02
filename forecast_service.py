@@ -18,7 +18,6 @@ load_dotenv()
 class ForecastService:
     OPEN_METEO_URL = os.getenv("OPEN_METEO_URL")
     GEOCODE_URL = os.getenv("GEOCODE_URL")
-    DEFAULT_LOCATION = os.getenv("DEFAULT_LOCATION", "Munich, Germany")
 
     @classmethod
     def get_coordinates_with_timezone(cls, location_name: str, language: str = "en"):
@@ -49,7 +48,7 @@ class ForecastService:
     @classmethod
     def fetch_forecasts(
         cls,
-        location: str = None,
+        location: str,
         forecast_days: int = 7,
         timezone: str = None,
         language: str = "en",

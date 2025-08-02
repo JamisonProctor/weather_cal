@@ -3,12 +3,13 @@ import logging
 from forecast_service import ForecastService
 from utils.forecast_formatting import format_summary, format_detailed_forecast
 from utils.logging_config import setup_logging
+from utils.location_management import get_locations
 
 setup_logging()
 logger = logging.getLogger(__name__)
 
 def main():
-    location = os.getenv("DEFAULT_LOCATION", ForecastService.DEFAULT_LOCATION)
+    location = get_locations()
     
     try:
         # Fetch forecast objects for next 7 days

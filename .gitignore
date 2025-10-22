@@ -216,3 +216,4 @@ token.json
 data/
 .DS_Store
 *.log
+docker-compose.yml

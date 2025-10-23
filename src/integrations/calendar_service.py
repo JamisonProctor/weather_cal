@@ -20,8 +20,8 @@ class CalendarService:
             logger.error(f"Failed to initialize Google Calendar service: {e}", exc_info=True)
             raise
 
-    def find_event(self, date):
-        """Find the first event on a given date (UTC)."""
+    def find_events(self, date):
+        """Return all events on a given date (UTC)."""
         try:
             events_result = self.service.events().list(
                 calendarId=self.calendar_id,
@@ -30,11 +30,49 @@ class CalendarService:
                 singleEvents=True,
                 orderBy="startTime"
             ).execute()
-            events = events_result.get("items", [])
-            return events[0] if events else None
+            return events_result.get("items", [])
         except Exception as e:
-            logger.error(f"Failed to find event for date {date}: {e}", exc_info=True)
-            return None
+            logger.error(f"Failed to list events for date {date}: {e}", exc_info=True)
+            return []
+
+    def _find_matching_event(self, forecast):
+        """
+        Return the primary event matching the forecast location and any duplicate events
+        that should be cleaned up.
+        """
+        events = self.find_events(forecast.date) or []
+        matching_events = [
+            event for event in events
+            if event.get("location") == forecast.location
+        ]
+
+        if matching_events:
+            primary = matching_events[0]
+            duplicates = matching_events[1:]
+            return primary, duplicates
+
+        return None, []
+
+    def _remove_duplicates(self, duplicates):
+        """Remove duplicate events from Google Calendar."""
+        for event in duplicates:
+            try:
+                self.service.events().delete(
+                    calendarId=self.calendar_id,
+                    eventId=event["id"]
+                ).execute()
+                logger.info(
+                    "Removed duplicate calendar event: id=%s summary=%s",
+                    event.get("id"),
+                    event.get("summary"),
+                )
+            except Exception as e:
+                logger.error(
+                    "Failed to delete duplicate event id=%s: %s",
+                    event.get("id"),
+                    e,
+                    exc_info=True,
+                )
 
     def upsert_event(self, forecast):
         """Insert or update a Google Calendar event based on a Forecast object."""
@@ -48,7 +86,10 @@ class CalendarService:
                 "reminders": {"useDefault": False}
             }
 
-            existing_event = self.find_event(forecast.date)
+            existing_event, duplicates = self._find_matching_event(forecast)
+            if duplicates:
+                self._remove_duplicates(duplicates)
+
             if existing_event:
                 return self.service.events().update(
                     calendarId=self.calendar_id,

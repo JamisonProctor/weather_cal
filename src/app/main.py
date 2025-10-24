@@ -50,6 +50,7 @@ def schedule_jobs():
 
     # For production, switch to midnight only
     schedule.every().day.at("00:00").do(main)
+    logger.info(f"Scheduled job: {job.job_func.__name__} → next run at {job.next_run}")
 
     logger.info("Scheduler started. Waiting for tasks...")
     while True:

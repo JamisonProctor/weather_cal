@@ -19,7 +19,7 @@ def main():
     locations = get_locations()
     store = ForecastStore()
 
-    forecast_days = 7
+    forecast_days = 14
 
     try:
         # Fetch new forecasts and store them

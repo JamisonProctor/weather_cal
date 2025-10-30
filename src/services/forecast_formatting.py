@@ -3,7 +3,17 @@
 from collections import Counter
 from datetime import datetime
 from statistics import mean
+from typing import List, Tuple
+
 from src.models.forecast import Forecast
+
+RAIN_WARNING_CODES = {
+    51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99
+}
+SNOW_WARNING_CODES = {71, 73, 75, 77, 85, 86}
+RAIN_PROB_THRESHOLD = 40
+WIND_SPEED_THRESHOLD = 30
+COLD_TEMP_THRESHOLD = 3
 
 def map_code_to_emoji(code: int) -> str:
     """
@@ -46,12 +56,42 @@ def format_summary(forecast: Forecast) -> str:
     )
     return f"AM{morning_emoji}{round(morning_temp)}° / PM{afternoon_emoji}{round(afternoon_temp)}°"
 
+def _collect_warnings(block: List[Tuple[str, float, int, float, float]]) -> str:
+    """
+    Return concatenated warning icons for a time block based on precipitation,
+    snow, wind, and cold temperatures.
+    """
+    rain_vals = [value for value in (d[3] for d in block) if value is not None]
+    wind_vals = [value for value in (d[4] for d in block) if value is not None]
+    temps = [value for value in (d[1] for d in block) if value is not None]
+    codes = [d[2] for d in block if d[2] is not None]
+
+    warnings: List[str] = []
+    max_rain = max(rain_vals) if rain_vals else 0
+    max_wind = max(wind_vals) if wind_vals else 0
+
+    is_rainy = max_rain >= RAIN_PROB_THRESHOLD or any(code in RAIN_WARNING_CODES for code in codes)
+    if is_rainy:
+        warnings.append("☂️")
+
+    if max_wind >= WIND_SPEED_THRESHOLD:
+        warnings.append("🌬️")
+
+    if temps and min(temps) < COLD_TEMP_THRESHOLD:
+        warnings.append("🥶")
+
+    if any(code in SNOW_WARNING_CODES for code in codes):
+        warnings.append("☃️")
+
+    return "".join(warnings)
+
+
 def format_detailed_forecast(forecast: Forecast) -> str:
     """
     Returns a multiline string with detailed forecast information,
-    with blocks starting at 6, 9, 12, 15, 18, 21, each line showing:
-    time, emoji, temp range, rain %, wind speed
-    Ends with high/low summary line.
+    grouped by core daypart start hours (6, 9, 12, 15, 18, 21).
+    Each line shows time, dominant emoji, temperature range, and optional warning icons.
+    Final line summarizes daily high/low.
     """
     slots = [6, 9, 12, 15, 18, 21]
     description_lines = []
@@ -64,9 +104,10 @@ def format_detailed_forecast(forecast: Forecast) -> str:
         mid_temp = round(block[-1][1]) if len(block) > 1 else start_temp
         dominant_code = Counter([d[2] for d in block]).most_common(1)[0][0]
         emoji = map_code_to_emoji(dominant_code)
-        rain = max([d[3] for d in block]) if any(d[3] is not None for d in block) else 0
-        wind = round(max([d[4] for d in block])) if any(d[4] is not None for d in block) else 0
-        line = f"{start:02d}:00 {emoji} {start_temp}°~{mid_temp}°C 🌧️{int(rain)}% 💨{wind}km/h"
+        warnings = _collect_warnings(block)
+        line = f"{start:02d}:00 {emoji} {start_temp}°~{mid_temp}°C"
+        if warnings:
+            line += f" ⚠️{warnings}"
         description_lines.append(line)
     description_lines.append(f"\nHigh: {forecast.high}°C | Low: {forecast.low}°C")
     return "\n".join(description_lines)

@@ -49,12 +49,24 @@ def map_morning_afternoon(times, temps, codes, start_hour=6, end_hour=22):
 
 def format_summary(forecast: Forecast) -> str:
     """
-    Returns a summary string like 'AM🌧️15° / PM☁️16°' for the given Forecast instance.
+    Returns a concise summary string for the calendar event title.
+    Example outputs:
+      - No hazards: 'AM🌧️15° / PM☁️16°'
+      - With hazards: '⚠️☂️🌬️ AM6° / 13°'
     """
     morning_emoji, morning_temp, afternoon_emoji, afternoon_temp = map_morning_afternoon(
         forecast.times, forecast.temps, forecast.codes
     )
-    return f"AM{morning_emoji}{round(morning_temp)}° / PM{afternoon_emoji}{round(afternoon_temp)}°"
+    data = list(zip(forecast.times, forecast.temps, forecast.codes, forecast.rain, forecast.winds))
+    warnings = _collect_warnings(data) if data else ""
+
+    morning_value = round(morning_temp)
+    afternoon_value = round(afternoon_temp)
+
+    if warnings:
+        return f"⚠️{warnings} AM{morning_value}° / {afternoon_value}°"
+
+    return f"AM{morning_emoji}{morning_value}° / PM{afternoon_emoji}{afternoon_value}°"
 
 def _collect_warnings(block: List[Tuple[str, float, int, float, float]]) -> str:
     """

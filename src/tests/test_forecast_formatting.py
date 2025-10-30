@@ -1,5 +1,55 @@
 from src.models.forecast import Forecast
-from src.services.forecast_formatting import format_detailed_forecast
+from src.services.forecast_formatting import format_detailed_forecast, format_summary
+
+
+def test_format_summary_with_warnings():
+    forecast = Forecast(
+        date="2025-01-01",
+        location="Munich",
+        high=8,
+        low=-2,
+        times=[
+            "2025-01-01T06:00",
+            "2025-01-01T07:00",
+            "2025-01-01T09:00",
+            "2025-01-01T10:00",
+            "2025-01-01T12:00",
+            "2025-01-01T13:00",
+            "2025-01-01T15:00",
+            "2025-01-01T16:00",
+        ],
+        temps=[7, 7, 7, 1, 13, 13, 13, 13],
+        codes=[61, 61, 1, 1, 1, 1, 1, 1],
+        rain=[60, 45, 0, 0, 0, 0, 0, 0],
+        winds=[12, 10, 35, 32, 8, 7, 12, 10],
+    )
+
+    summary = format_summary(forecast)
+
+    assert summary == "⚠️☂️🌬️🥶 AM6° / 13°"
+
+
+def test_format_summary_without_warnings():
+    forecast = Forecast(
+        date="2025-06-01",
+        location="Munich",
+        high=22,
+        low=12,
+        times=[
+            "2025-06-01T06:00",
+            "2025-06-01T09:00",
+            "2025-06-01T12:00",
+            "2025-06-01T15:00",
+        ],
+        temps=[6, 6, 13, 13],
+        codes=[1, 1, 2, 2],
+        rain=[5, 5, 0, 0],
+        winds=[10, 12, 8, 6],
+    )
+
+    summary = format_summary(forecast)
+
+    assert summary == "AM🌤️6° / PM⛅13°"
 
 
 def test_format_detailed_forecast_emits_warnings():

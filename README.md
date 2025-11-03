@@ -1,102 +1,144 @@
 # Weather Calendar
 
-Weather Calendar is a Python-based script that fetches a 7-day weather forecast and automatically adds (or updates) daily all-day events in your Google Calendar. Each event title includes the forecast temperatures and weather conditions with emojis for easy at-a-glance viewing.
+Weather Calendar keeps a rolling 14-day weather forecast synced to Google Calendar. Forecasts are fetched from Open-Meteo, stored in SQLite for change tracking, and rendered as all-day calendar events that stay up to date without duplicate clutter.
 
 ---
 
 ## Features
 
-- Fetches 7-day weather forecast for a specified location (default: Munich, Germany) using the Open Meteo API.
-- Stores forecasts in a local SQLite database for change detection.
-- Creates or updates all-day events in Google Calendar with:
-  - Morning and afternoon weather emojis
-  - Low and high temperatures
-- Automatically updates events if the forecast changes.
-- Disables alerts/notifications for weather events.
-- Includes unit tests and a mocked integration test for reliable behavior.
+- Pulls 14-day forecasts per location using Open-Meteo forecast & geocode APIs.
+- Persists each day’s data in SQLite for diff-aware updates and easy auditing.
+- Builds emoji-rich summaries plus detailed descriptions for Google Calendar events.
+- De-duplicates calendar entries and disables reminders to avoid notification noise.
+- Runs on a scheduler (midnight by default) with logging and multi-location hooks.
+- Ships with pytest coverage over services and integrations to guard regressions.
 
 ---
 
-## Requirements
+## Architecture at a Glance
+
+- `src/app/main.py` — scheduler entry point; orchestrates fetch → store → calendar updates.
+- `src/services/` — weather fetching, formatting, and persistence (`ForecastStore`).
+- `src/integrations/calendar_service.py` — Google Calendar wrapper with duplicate cleanup.
+- `src/models/forecast.py` — dataclass shared across services and integrations.
+- `src/utils/` — logging config and location management helpers.
+- `data/forecast.db` (or `DB_PATH`) — SQLite persistence layer for forecasts.
+- `logs/` — default log destination when `LOG_FILE=logs/weather_cal.log` is set.
+
+---
+
+## Prerequisites
 
 - Python 3.10+
-- A Google account with access to Google Calendar API
-- Packages listed in `requirements.txt` (install with `pip install -r requirements.txt`)
+- Google Cloud project with Calendar API enabled
+- OAuth client credentials (Desktop application) for Calendar access
+
+All required Python packages are listed in `requirements.txt`.
 
 ---
 
 ## Setup
 
-1. **Clone the repository:**
-   ```bash
-   git clone git@github.com:JamisonProctor/weather_cal.git
-   cd weather_cal
-   ```
+Run these commands from the repository root:
 
-2. **Create a virtual environment and activate it:**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Google API credentials
 
-4. **Set up Google API credentials:**
-   - Create OAuth credentials (Desktop app) in Google Cloud Console.
-   - Download the `credentials.json` file to your project root.
-   - Run the script once to generate `token.json` via browser login.
+1. Create OAuth client credentials (Desktop app) in Google Cloud Console.
+2. Save the downloaded `credentials.json` to the project root.
+3. First-time execution will launch a browser flow and produce `token.json`. Keep both files out of source control.
 
-5. **Environment variables (`.env`):**
-   ```
-   GOOGLE_CALENDAR_ID=primary
-   CREDENTIALS_FILE=credentials.json
-   TOKEN_FILE=token.json
-   ```
+### Environment configuration
+
+Create a `.env` file (the project uses `python-dotenv`) and populate required values:
+
+```bash
+DEFAULT_LOCATION=Munich, Germany
+OPEN_METEO_URL=https://api.open-meteo.com/v1/forecast
+GEOCODE_URL=https://geocoding-api.open-meteo.com/v1/search
+GOOGLE_CALENDAR_ID=primary
+CREDENTIALS_FILE=credentials.json
+TOKEN_FILE=token.json
+DB_PATH=data/forecast.db
+LOG_FILE=logs/weather_cal.log
+LOG_LEVEL=INFO
+```
+
+- `DEFAULT_LOCATION` is used unless `load_locations_from_db()` returns records.
+- `DB_PATH` and `LOG_FILE` directories are created on demand; adjust if you prefer different paths.
+- Keep `.env`, `credentials.json`, and `token.json` out of version control.
 
 ---
 
-## Usage
+## Running Locally
 
-Run the main script:
+Activate your virtual environment, ensure the `.env` is loaded, then start the scheduler:
+
 ```bash
-python main.py
+python -m src.app.main
 ```
 
-This will:
-- Fetch the latest forecast
-- Store it in the SQLite database
-- Create or update all-day events in your Google Calendar for the next 7 days
+By default the scheduler runs `main()` daily at midnight. For rapid iteration you can temporarily switch the interval in `schedule_jobs()` to run every minute (see the inline comment).
 
-Events will look like:
+### Run once for an immediate sync
+
+If you just need a single fetch/update cycle without the long-running scheduler:
+
+```bash
+python -c "from src.app.main import main; main()"
 ```
-☀️15° ➡️ 🌧️22°
-```
-and are scheduled with **no alerts**.
+
+Each run will:
+- Fetch forecasts for configured locations.
+- Upsert records in SQLite for change tracking.
+- Push Google Calendar events (one all-day event per location/day) with summaries and descriptions.
+
+Logs are emitted to both stdout and the file pointed to `LOG_FILE`.
+
+---
+
+## Data & Logs
+
+- Forecast data persists in SQLite at the path defined by `DB_PATH` (default `data/forecast.db`).
+- Log rotation is handled by `RotatingFileHandler`; keep an eye on available disk when running over long periods.
+- The scheduler and services assume directories for `DB_PATH` and `LOG_FILE` exist or can be created.
 
 ---
 
 ## Tests
 
-Run all tests:
+Run the full pytest suite:
+
 ```bash
 pytest -v
 ```
 
-Includes:
-- Unit tests for forecast parsing, DB logic, and calendar operations.
-- Mocked integration test for full flow verification.
+Tests live in `src/tests/` and cover forecast formatting, persistence, and calendar integration behaviors. Add new cases alongside the service under test.
 
 ---
 
-## Future Deployment
+## Docker (optional)
 
-For running this script automatically on your server:
-- Set up a **Docker container** for the app.
-- Schedule the script with `cron` or similar to run daily at midnight.
-- Mount a volume to persist `forecast.db` and `token.json`.
+Containerized execution is available via Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+Mount host volumes for `data/`, `logs/`, and OAuth tokens (`credentials.json`, `token.json`) so credentials stay local and forecast history persists between runs.
+
+---
+
+## Operational Tips
+
+- Ensure the machine running the scheduler has continuous network access so the Open-Meteo and Google APIs remain reachable.
+- Update `DEFAULT_LOCATION` or extend `load_locations_from_db()` when you are ready to sync multiple cities.
+- Periodically review `logs/weather_cal.log` for API quota errors or calendar issues, especially after credential refreshes.
 
 ---
 

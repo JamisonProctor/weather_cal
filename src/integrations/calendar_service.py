@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, time, timedelta
 from src.utils.logging_config import setup_logging
 
 setup_logging()
@@ -23,14 +24,30 @@ class CalendarService:
     def find_events(self, date):
         """Return all events on a given date (UTC)."""
         try:
+            target_date = datetime.strptime(date, "%Y-%m-%d").date()
+            # Expand the search window so all-day events created in non-UTC calendars are included.
+            window_start = datetime.combine(target_date - timedelta(days=1), time(0, 0, 0)).isoformat() + "Z"
+            window_end = datetime.combine(target_date + timedelta(days=1), time(23, 59, 59)).isoformat() + "Z"
             events_result = self.service.events().list(
                 calendarId=self.calendar_id,
-                timeMin=f"{date}T00:00:00Z",
-                timeMax=f"{date}T23:59:59Z",
+                timeMin=window_start,
+                timeMax=window_end,
+                timeZone="UTC",
                 singleEvents=True,
                 orderBy="startTime"
             ).execute()
-            return events_result.get("items", [])
+            events = events_result.get("items", [])
+            filtered_events = []
+            for event in events:
+                start = event.get("start", {})
+                event_date = start.get("date")
+                if event_date == date:
+                    filtered_events.append(event)
+                    continue
+                start_dt = start.get("dateTime")
+                if start_dt and start_dt[:10] == date:
+                    filtered_events.append(event)
+            return filtered_events
         except Exception as e:
             logger.error(f"Failed to list events for date {date}: {e}", exc_info=True)
             return []
@@ -74,13 +91,32 @@ class CalendarService:
                     exc_info=True,
                 )
 
+    @staticmethod
+    def _format_fetch_time(fetch_time):
+        if not fetch_time:
+            return None
+        try:
+            parsed = datetime.fromisoformat(fetch_time)
+            return parsed.strftime("%Y-%m-%d %H:%M")
+        except ValueError:
+            return fetch_time
+
     def upsert_event(self, forecast):
         """Insert or update a Google Calendar event based on a Forecast object."""
         try:
+            base_description = forecast.description or ""
+            formatted_fetch_time = self._format_fetch_time(forecast.fetch_time)
+            description_parts = []
+            if base_description:
+                description_parts.append(base_description)
+            if formatted_fetch_time:
+                description_parts.append(f"Forecast last updated: {formatted_fetch_time}")
+            description = "\n\n".join(description_parts).strip()
+
             event_body = {
                 "summary": forecast.summary,
                 "location": forecast.location,
-                "description": forecast.description or "",
+                "description": description,
                 "start": {"date": forecast.date},
                 "end": {"date": forecast.date},
                 "reminders": {"useDefault": False}

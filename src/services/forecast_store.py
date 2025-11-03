@@ -58,7 +58,7 @@ class ForecastStore:
                 description=excluded.description,
                 last_updated=excluded.last_updated
         """, (forecast.date, forecast.location, forecast.high, forecast.low,
-              forecast.summary, forecast.description, datetime.now().isoformat()))
+              forecast.summary, forecast.description, forecast.fetch_time or datetime.now().isoformat()))
         conn.commit()
         conn.close()
 
@@ -70,7 +70,7 @@ class ForecastStore:
         conn = sqlite3.connect(self.db_path)
         cur = conn.cursor()
         cur.execute("""
-            SELECT date, location, high, low, summary, description
+            SELECT date, location, high, low, summary, description, last_updated
             FROM forecast
             WHERE date >= ?
             ORDER BY date ASC
@@ -88,6 +88,7 @@ class ForecastStore:
                 low=row[3],
                 summary=row[4],
                 description=row[5],
+                fetch_time=row[6],
                 times=[],
                 temps=[],
                 codes=[],

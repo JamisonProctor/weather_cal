@@ -1,6 +1,6 @@
-# test_forecast_service.py
-
 import pytest
+import requests
+
 from src.services.forecast_service import ForecastService
 from src.models.forecast import Forecast
 
@@ -228,3 +228,56 @@ def test_fetch_forecasts_partial(monkeypatch):
     assert forecasts[0].temps == [None]
     assert forecasts[0].rain == [None]
     assert forecasts[0].winds == [None]
+
+
+def test_request_json_retries_timeout_then_succeeds(monkeypatch):
+    calls = {"count": 0}
+
+    def mock_get(*args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] < 3:
+            raise requests.exceptions.ReadTimeout("slow")
+        return MockResponse({"ok": True})
+
+    sleep_calls = []
+
+    monkeypatch.setattr("requests.get", mock_get)
+    monkeypatch.setattr("src.services.forecast_service.time.sleep", lambda seconds: sleep_calls.append(seconds))
+    monkeypatch.setattr(ForecastService, "MAX_ATTEMPTS", 3)
+    monkeypatch.setattr(ForecastService, "RETRY_BACKOFF_SECONDS", (1, 2))
+
+    data = ForecastService._request_json_with_retry(
+        "https://example.com",
+        params={"a": 1},
+        context="test request",
+    )
+
+    assert data == {"ok": True}
+    assert calls["count"] == 3
+    assert sleep_calls == [1, 2]
+
+
+def test_request_json_does_not_retry_client_error(monkeypatch):
+    class ErrorResponse:
+        status_code = 400
+
+    def mock_get(*args, **kwargs):
+        response = MockResponse({}, status_code=200)
+        error = requests.exceptions.HTTPError("bad request")
+        error.response = ErrorResponse()
+        raise error
+
+    sleep_calls = []
+
+    monkeypatch.setattr("requests.get", mock_get)
+    monkeypatch.setattr("src.services.forecast_service.time.sleep", lambda seconds: sleep_calls.append(seconds))
+    monkeypatch.setattr(ForecastService, "MAX_ATTEMPTS", 3)
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        ForecastService._request_json_with_retry(
+            "https://example.com",
+            params={"a": 1},
+            context="test request",
+        )
+
+    assert sleep_calls == []

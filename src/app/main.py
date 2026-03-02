@@ -15,6 +15,16 @@ logger = logging.getLogger(__name__)
 
 from src.integrations.calendar_service import CalendarService
 
+
+def get_schedule_time() -> str:
+    schedule_time = os.getenv("SCHEDULE_TIME", "00:23")
+    try:
+        time.strptime(schedule_time, "%H:%M")
+    except ValueError:
+        logger.warning("Invalid SCHEDULE_TIME=%s. Falling back to 00:23.", schedule_time)
+        return "00:23"
+    return schedule_time
+
 def main():
     locations = get_locations()
     store = ForecastStore()
@@ -45,11 +55,7 @@ def main():
         logger.error(f"Failed to fetch, process, store, or update calendar with forecasts: {e}", exc_info=True)
 
 def schedule_jobs():
-    # For testing, run every minute
-    # job = schedule.every(1).minutes.do(main)
-
-    # For production, switch to midnight only
-    job = schedule.every().day.at("00:00").do(main)
+    job = schedule.every().day.at(get_schedule_time()).do(main)
     logger.info(f"Scheduled job: {job.job_func.__name__} → next run at {job.next_run}")
 
     logger.info("Scheduler started. Waiting for tasks...")

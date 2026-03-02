@@ -1,12 +1,12 @@
-# forecast_service.py
-
 import os
-import requests
 import logging
+import time
 
 from typing import List
 from datetime import datetime
 from dotenv import load_dotenv
+import requests
+
 from src.utils.logging_config import setup_logging
 from src.models.forecast import Forecast
 
@@ -18,6 +18,72 @@ load_dotenv()
 class ForecastService:
     OPEN_METEO_URL = os.getenv("OPEN_METEO_URL")
     GEOCODE_URL = os.getenv("GEOCODE_URL")
+    CONNECT_TIMEOUT = float(os.getenv("WEATHER_API_CONNECT_TIMEOUT", "10"))
+    READ_TIMEOUT = float(os.getenv("WEATHER_API_READ_TIMEOUT", "60"))
+    MAX_ATTEMPTS = max(1, int(os.getenv("WEATHER_API_MAX_ATTEMPTS", "3")))
+    RETRY_BACKOFF_SECONDS = (
+        int(os.getenv("WEATHER_API_RETRY_DELAY_FIRST", "15")),
+        int(os.getenv("WEATHER_API_RETRY_DELAY_SECOND", "45")),
+    )
+
+    @classmethod
+    def _get_request_timeout(cls) -> tuple[float, float]:
+        return cls.CONNECT_TIMEOUT, cls.READ_TIMEOUT
+
+    @classmethod
+    def _is_retryable_http_error(cls, exc: requests.exceptions.HTTPError) -> bool:
+        response = getattr(exc, "response", None)
+        if response is None or response.status_code is None:
+            return False
+        return 500 <= response.status_code < 600
+
+    @classmethod
+    def _request_json_with_retry(cls, url: str, *, params: dict, context: str) -> dict:
+        timeout = cls._get_request_timeout()
+        last_exc = None
+
+        for attempt in range(1, cls.MAX_ATTEMPTS + 1):
+            try:
+                response = requests.get(url, params=params, timeout=timeout)
+                response.raise_for_status()
+                return response.json()
+            except requests.exceptions.HTTPError as exc:
+                last_exc = exc
+                retryable = cls._is_retryable_http_error(exc)
+                error_summary = f"HTTP {exc.response.status_code}" if getattr(exc, "response", None) else str(exc)
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as exc:
+                last_exc = exc
+                retryable = True
+                error_summary = exc.__class__.__name__
+            except requests.exceptions.RequestException as exc:
+                last_exc = exc
+                retryable = False
+                error_summary = exc.__class__.__name__
+            if attempt >= cls.MAX_ATTEMPTS or not retryable:
+                logger.error(
+                    "Request failed for %s on attempt %s/%s: %s",
+                    context,
+                    attempt,
+                    cls.MAX_ATTEMPTS,
+                    error_summary,
+                    exc_info=True,
+                )
+                raise last_exc
+
+            backoff_index = min(attempt - 1, len(cls.RETRY_BACKOFF_SECONDS) - 1)
+            delay = cls.RETRY_BACKOFF_SECONDS[backoff_index]
+            logger.warning(
+                "Transient request failure for %s on attempt %s/%s: %s. Retrying in %ss.",
+                context,
+                attempt,
+                cls.MAX_ATTEMPTS,
+                error_summary,
+                delay,
+            )
+            time.sleep(delay)
+
+        if last_exc is not None:
+            raise last_exc
 
     @classmethod
     def get_coordinates_with_timezone(cls, location_name: str, language: str = "en"):
@@ -29,9 +95,11 @@ class ForecastService:
                 "language": language,
                 "format": "json"
             }
-            resp = requests.get(cls.GEOCODE_URL, params=params, timeout=10)
-            resp.raise_for_status()
-            data = resp.json()
+            data = cls._request_json_with_retry(
+                cls.GEOCODE_URL,
+                params=params,
+                context=f"geocoding '{location_name}'",
+            )
             if "results" not in data or not data["results"]:
                 logger.error(f"Location '{location_name}' not found in geocode API response")
                 raise ValueError(f"Location '{location_name}' not found")
@@ -72,13 +140,14 @@ class ForecastService:
             "forecast_days": forecast_days,
         }
         try:
-            response = requests.get(cls.OPEN_METEO_URL, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
+            data = cls._request_json_with_retry(
+                cls.OPEN_METEO_URL,
+                params=params,
+                context=f"forecast lat={lat}, lon={lon}",
+            )
             logger.debug(f"Raw forecast data: {data}")
         except Exception:
             logger.error(f"Error fetching forecast data for lat={lat}, lon={lon}")
-            logger.exception("Exception description:")
             raise
 
         times = data["hourly"]["time"]

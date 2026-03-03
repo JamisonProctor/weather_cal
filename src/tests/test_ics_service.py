@@ -95,3 +95,58 @@ def test_warning_uid_is_stable():
     uids2 = {str(e["UID"]) for e in events2}
 
     assert uids1 == uids2
+
+
+def test_generate_ics_with_rain_disabled_prefs():
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00"],
+        temps=[12, 12],
+        codes=[61, 61],
+        rain=[70, 70],
+        winds=[5, 5],
+    )
+    prefs = {
+        "warn_in_allday": 1, "warn_rain": 0, "warn_wind": 1,
+        "warn_cold": 1, "warn_snow": 1, "warn_sunny": 0, "cold_threshold": 3.0,
+    }
+    ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
+    events = _parse_events(ics_bytes)
+    # Only the all-day event — no timed rain warning
+    assert len(events) == 1
+    assert not hasattr(events[0]["DTSTART"].dt, "hour")
+
+
+def test_generate_ics_with_sunny_enabled_prefs():
+    forecast = _make_forecast(
+        times=["2026-03-10T06:00", "2026-03-10T09:00", "2026-03-10T12:00"],
+        temps=[20, 22, 24],
+        codes=[0, 0, 1],
+        rain=[0, 0, 0],
+        winds=[5, 5, 5],
+    )
+    prefs = {
+        "warn_in_allday": 1, "warn_rain": 1, "warn_wind": 1,
+        "warn_cold": 1, "warn_snow": 1, "warn_sunny": 1, "cold_threshold": 3.0,
+    }
+    ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
+    events = _parse_events(ics_bytes)
+    timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
+    assert any("Sunny" in str(e["SUMMARY"]) for e in timed)
+
+
+def test_generate_ics_summary_uses_prefs_cold_threshold():
+    forecast = _make_forecast(
+        times=["2026-03-10T06:00", "2026-03-10T09:00", "2026-03-10T12:00", "2026-03-10T15:00"],
+        temps=[15, 15, 15, 15],
+        codes=[1, 1, 2, 2],
+        rain=[0, 0, 0, 0],
+        winds=[5, 5, 5, 5],
+    )
+    prefs = {
+        "warn_in_allday": 1, "warn_rain": 1, "warn_wind": 1,
+        "warn_cold": 1, "warn_snow": 1, "warn_sunny": 0, "cold_threshold": 20.0,
+    }
+    ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
+    events = _parse_events(ics_bytes)
+    all_day = next(e for e in events if not hasattr(e["DTSTART"].dt, "hour"))
+    assert "🥶" in str(all_day["SUMMARY"])

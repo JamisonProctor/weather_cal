@@ -56,6 +56,33 @@ def test_upsert_and_get_future_forecasts(store):
     assert stored.fetch_time == "2098-12-31T23:00:00"
 
 
+def test_get_forecasts_for_locations(store):
+    munich = Forecast(
+        date="2099-01-01",
+        location="Munich, Germany",
+        high=15,
+        low=5,
+        summary="Sunny",
+        description="Clear skies",
+    )
+    berlin = Forecast(
+        date="2099-01-01",
+        location="Berlin, Germany",
+        high=12,
+        low=3,
+        summary="Cloudy",
+        description="Overcast",
+    )
+    store.upsert_forecast(munich)
+    store.upsert_forecast(berlin)
+
+    forecasts = store.get_forecasts_for_locations(["Munich, Germany", "Berlin, Germany"])
+    locations = {f.location for f in forecasts}
+    assert "Munich, Germany" in locations
+    assert "Berlin, Germany" in locations
+    assert len(forecasts) == 2
+
+
 def test_upsert_forecast_updates_existing_row(store):
     original = Forecast(
         date="2099-02-01",

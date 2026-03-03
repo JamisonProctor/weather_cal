@@ -22,6 +22,16 @@
     .copy-btn:hover { background: #e5e7eb; }
     .reconnect-link { display: inline-block; margin-top: 12px; color: #2563eb; text-decoration: none; font-size: 0.9rem; }
     .reconnect-link:hover { text-decoration: underline; }
+    .change-location-link { display: inline-block; margin-top: 8px; color: #2563eb; text-decoration: none; font-size: 0.9rem; }
+    .change-location-link:hover { text-decoration: underline; }
+    .prefs-form { margin-top: 8px; }
+    .prefs-form label { display: block; margin-bottom: 10px; font-size: 0.95rem; cursor: pointer; }
+    .prefs-form .threshold-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .prefs-form .threshold-row input[type="number"] { width: 72px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem; text-align: center; }
+    .prefs-form input[type="checkbox"] { margin-right: 8px; }
+    .save-btn { padding: 10px 22px; background: #111; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; margin-top: 8px; }
+    .save-btn:hover { background: #333; }
+    .section-divider { border: none; border-top: 1px solid #e5e7eb; margin: 32px 0; }
   </style>
 </head>
 <body>
@@ -41,6 +51,8 @@
     {% else %}
     <p class="no-feed">No location set.</p>
     {% endfor %}
+    <br>
+    <a href="/setup" class="change-location-link">Change location &rarr;</a>
   </div>
 
   <div class="section">
@@ -54,6 +66,46 @@
     {% else %}
     <p class="no-feed">No feed token found. Please contact support.</p>
     {% endif %}
+  </div>
+
+  <hr class="section-divider">
+
+  <div class="section">
+    <h2>Preferences</h2>
+    <form method="post" action="/settings" class="prefs-form">
+      <div class="threshold-row">
+        <span>I feel cold below</span>
+        <input type="number" name="cold_threshold" value="{{ prefs.cold_threshold }}" step="0.5" min="-30" max="40">
+        <span>°C</span>
+      </div>
+
+      <label>
+        <input type="checkbox" name="warn_in_allday" {% if prefs.warn_in_allday %}checked{% endif %}>
+        Show warnings in all-day event title
+      </label>
+      <label>
+        <input type="checkbox" name="warn_rain" {% if prefs.warn_rain %}checked{% endif %}>
+        ☂️ Rain warnings
+      </label>
+      <label>
+        <input type="checkbox" name="warn_wind" {% if prefs.warn_wind %}checked{% endif %}>
+        🌬️ Wind warnings
+      </label>
+      <label>
+        <input type="checkbox" name="warn_cold" {% if prefs.warn_cold %}checked{% endif %}>
+        🥶 Cold warnings
+      </label>
+      <label>
+        <input type="checkbox" name="warn_snow" {% if prefs.warn_snow %}checked{% endif %}>
+        ☃️ Snow warnings
+      </label>
+      <label>
+        <input type="checkbox" name="warn_sunny" {% if prefs.warn_sunny %}checked{% endif %}>
+        ☀️ Sunny events (off by default)
+      </label>
+
+      <button type="submit" class="save-btn">Save preferences</button>
+    </form>
   </div>
 </body>
 </html>

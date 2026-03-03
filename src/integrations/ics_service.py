@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from icalendar import Calendar, Event
 
 from src.models.forecast import Forecast
-from src.services.forecast_formatting import get_warning_windows
+from src.services.forecast_formatting import format_summary, get_warning_windows
 
 
 def _stable_uid(date_str: str, location: str) -> str:
@@ -19,7 +19,7 @@ def _warning_uid(start_time: str, location: str, warning_type: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()[:16] + "@weathercal.app"
 
 
-def generate_ics(forecasts: List[Forecast], location_name: str) -> bytes:
+def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None) -> bytes:
     """Generate an ICS calendar bytes from a list of Forecast objects."""
     city = location_name.split(",")[0].strip() if "," in location_name else location_name
 
@@ -42,7 +42,8 @@ def generate_ics(forecasts: List[Forecast], location_name: str) -> bytes:
 
         event = Event()
         event.add("uid", _stable_uid(forecast.date, forecast.location))
-        event.add("summary", forecast.summary or f"Weather: {city}")
+        summary = format_summary(forecast, prefs) if prefs is not None else (forecast.summary or f"Weather: {city}")
+        event.add("summary", summary)
         event.add("description", forecast.description or "")
         event.add("location", forecast.location)
         event.add("dtstart", event_date)
@@ -58,7 +59,7 @@ def generate_ics(forecasts: List[Forecast], location_name: str) -> bytes:
         except ZoneInfoNotFoundError:
             tz = timezone.utc
 
-        for window in get_warning_windows(forecast):
+        for window in get_warning_windows(forecast, prefs):
             w_event = Event()
             w_event.add("uid", _warning_uid(window.start_time, forecast.location, window.warning_type))
             w_event.add("summary", f"{window.emoji} {window.label}")

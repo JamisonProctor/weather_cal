@@ -14,17 +14,21 @@ from src.services.forecast_store import ForecastStore
 from src.services.forecast_service import ForecastService
 from src.web.auth import create_session_token, decode_session_token
 from src.web.db import (
+    DEFAULT_PREFS,
     check_password,
     create_feed_token,
     create_feedback_table,
     create_user,
     create_user_location,
+    create_user_preferences_table,
     get_feed_token_by_user,
     get_rows_by_token,
     get_user_by_email,
     get_user_by_id,
     get_user_locations,
+    get_user_preferences,
     save_feedback,
+    upsert_user_preferences,
     wipe_accounts,
 )
 
@@ -55,6 +59,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 ForecastStore(db_path=DB_PATH)  # ensures all tables exist before anything else runs
 create_feedback_table(DB_PATH)
+create_user_preferences_table(DB_PATH)
 if os.getenv("WIPE_ACCOUNTS_ON_START"):
     wipe_accounts(DB_PATH)
 
@@ -127,6 +132,9 @@ async def setup_post(
     if not user_id:
         return RedirectResponse(url="/login", status_code=303)
 
+    existing_locations = get_user_locations(DB_PATH, user_id)
+    is_location_change = len(existing_locations) > 0
+
     if lat and lon and timezone:
         resolved_lat, resolved_lon, resolved_tz = float(lat), float(lon), timezone
     else:
@@ -141,7 +149,8 @@ async def setup_post(
 
     create_user_location(DB_PATH, user_id, location, resolved_lat, resolved_lon, resolved_tz)
     background_tasks.add_task(_initial_forecast_fetch, location, DB_PATH, resolved_lat, resolved_lon, resolved_tz)
-    return RedirectResponse(url="/connect", status_code=303)
+    redirect_url = "/settings" if is_location_change else "/connect"
+    return RedirectResponse(url=redirect_url, status_code=303)
 
 
 @app.get("/geocode")
@@ -249,6 +258,8 @@ async def settings(request: Request):
     feed_token = get_feed_token_by_user(DB_PATH, user_id)
     locations = get_user_locations(DB_PATH, user_id)
     webcal_url, google_cal_url = _build_feed_urls(request, feed_token) if feed_token else (None, None)
+    prefs_row = get_user_preferences(DB_PATH, user_id)
+    prefs = dict(prefs_row) if prefs_row else DEFAULT_PREFS
 
     return templates.TemplateResponse(
         "settings.html",
@@ -259,8 +270,38 @@ async def settings(request: Request):
             "webcal_url": webcal_url,
             "google_cal_url": google_cal_url,
             "locations": locations,
+            "prefs": prefs,
         },
     )
+
+
+@app.post("/settings")
+async def settings_post(
+    request: Request,
+    cold_threshold: float = Form(default=3.0),
+    warn_in_allday: str = Form(default=""),
+    warn_rain: str = Form(default=""),
+    warn_wind: str = Form(default=""),
+    warn_cold: str = Form(default=""),
+    warn_snow: str = Form(default=""),
+    warn_sunny: str = Form(default=""),
+):
+    user_id = _get_user_id(request)
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    upsert_user_preferences(
+        DB_PATH,
+        user_id,
+        cold_threshold=cold_threshold,
+        warn_in_allday=1 if warn_in_allday == "on" else 0,
+        warn_rain=1 if warn_rain == "on" else 0,
+        warn_wind=1 if warn_wind == "on" else 0,
+        warn_cold=1 if warn_cold == "on" else 0,
+        warn_snow=1 if warn_snow == "on" else 0,
+        warn_sunny=1 if warn_sunny == "on" else 0,
+    )
+    return RedirectResponse(url="/settings", status_code=303)
 
 
 @app.get("/feedback", response_class=HTMLResponse)
@@ -321,12 +362,15 @@ async def feed(token: str):
     if not rows:
         return Response(content="Invalid or expired token.", status_code=404)
 
+    user_id = rows[0]["id"]
     locations = list({row["location"] for row in rows})
     store = ForecastStore(db_path=DB_PATH)
     forecasts = store.get_forecasts_for_locations(locations, days=14)
 
     location_name = locations[0] if locations else "Unknown"
-    ics_content = generate_ics(forecasts, location_name)
+    prefs_row = get_user_preferences(DB_PATH, user_id)
+    prefs = dict(prefs_row) if prefs_row else DEFAULT_PREFS
+    ics_content = generate_ics(forecasts, location_name, prefs=prefs)
 
     return Response(
         content=ics_content,

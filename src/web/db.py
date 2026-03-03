@@ -184,6 +184,84 @@ def save_feedback(
         conn.close()
 
 
+DEFAULT_PREFS = {
+    "cold_threshold": 3.0,
+    "warn_in_allday": 1,
+    "warn_rain": 1,
+    "warn_wind": 1,
+    "warn_cold": 1,
+    "warn_snow": 1,
+    "warn_sunny": 0,
+}
+
+
+def create_user_preferences_table(db_path: str) -> None:
+    conn = _conn(db_path)
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS user_preferences (
+                user_id         INTEGER PRIMARY KEY,
+                cold_threshold  REAL    DEFAULT 3.0,
+                warn_in_allday  INTEGER DEFAULT 1,
+                warn_rain       INTEGER DEFAULT 1,
+                warn_wind       INTEGER DEFAULT 1,
+                warn_cold       INTEGER DEFAULT 1,
+                warn_snow       INTEGER DEFAULT 1,
+                warn_sunny      INTEGER DEFAULT 0,
+                updated_at      TEXT
+            )
+        """)
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_user_preferences(db_path: str, user_id: int):
+    conn = _conn(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM user_preferences WHERE user_id = ?", (user_id,))
+        return cur.fetchone()
+    finally:
+        conn.close()
+
+
+def upsert_user_preferences(
+    db_path: str,
+    user_id: int,
+    cold_threshold: float,
+    warn_in_allday: int,
+    warn_rain: int,
+    warn_wind: int,
+    warn_cold: int,
+    warn_snow: int,
+    warn_sunny: int,
+) -> None:
+    updated_at = datetime.now().isoformat()
+    conn = _conn(db_path)
+    try:
+        conn.execute(
+            """
+            INSERT INTO user_preferences
+                (user_id, cold_threshold, warn_in_allday, warn_rain, warn_wind, warn_cold, warn_snow, warn_sunny, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                cold_threshold = excluded.cold_threshold,
+                warn_in_allday = excluded.warn_in_allday,
+                warn_rain      = excluded.warn_rain,
+                warn_wind      = excluded.warn_wind,
+                warn_cold      = excluded.warn_cold,
+                warn_snow      = excluded.warn_snow,
+                warn_sunny     = excluded.warn_sunny,
+                updated_at     = excluded.updated_at
+            """,
+            (user_id, cold_threshold, warn_in_allday, warn_rain, warn_wind, warn_cold, warn_snow, warn_sunny, updated_at),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def wipe_accounts(db_path: str) -> None:
     """Delete all user accounts, locations, and feed tokens. Forecast cache is preserved.
     Only call this when WIPE_ACCOUNTS_ON_START is set — debug/dev use only.

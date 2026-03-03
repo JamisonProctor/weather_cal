@@ -69,6 +69,7 @@ def test_main_runs_full_pipeline(monkeypatch):
         def sync_warning_events(self, date, location, windows, timezone):
             synced_warnings.append((date, location, windows))
 
+    monkeypatch.setenv("ENABLE_GOOGLE_CALENDAR_SYNC", "true")
     monkeypatch.setattr(main, "get_locations", lambda: ["Munich, Germany", "Berlin, Germany"])
     monkeypatch.setattr(main, "ForecastStore", FakeStore)
     monkeypatch.setattr(
@@ -114,6 +115,7 @@ def test_main_does_not_update_calendar_when_fetch_fails(monkeypatch):
     def fail_fetch(location, forecast_days):
         raise RuntimeError("upstream unavailable")
 
+    monkeypatch.setenv("ENABLE_GOOGLE_CALENDAR_SYNC", "true")
     monkeypatch.setattr(main, "get_locations", lambda: ["Munich, Germany"])
     monkeypatch.setattr(main, "ForecastStore", FakeStore)
     monkeypatch.setattr(main.ForecastService, "fetch_forecasts", fail_fetch)

@@ -21,7 +21,7 @@ class ForecastStore:
         logger.info(f"Initialized ForecastStore with database at {self.db_path}")
 
     def _init_db(self):
-        """Initialize the SQLite database and create the forecast table if not exists."""
+        """Initialize the SQLite database and create tables if not exists."""
         conn = sqlite3.connect(self.db_path)
         cur = conn.cursor()
         cur.execute("""
@@ -38,6 +38,34 @@ class ForecastStore:
                 description TEXT,
                 last_updated TEXT,
                 PRIMARY KEY (date, location)
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                email         TEXT    NOT NULL UNIQUE,
+                password_hash TEXT    NOT NULL,
+                created_at    TEXT    NOT NULL,
+                is_active     INTEGER NOT NULL DEFAULT 1
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS user_locations (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                location     TEXT    NOT NULL,
+                lat          REAL,
+                lon          REAL,
+                timezone     TEXT,
+                created_at   TEXT    NOT NULL
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS feed_tokens (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                token      TEXT    NOT NULL UNIQUE,
+                created_at TEXT    NOT NULL
             )
         """)
         conn.commit()
@@ -61,6 +89,43 @@ class ForecastStore:
               forecast.summary, forecast.description, forecast.fetch_time or datetime.now().isoformat()))
         conn.commit()
         conn.close()
+
+    def get_forecasts_for_locations(self, locations: list, days: int = 14) -> list:
+        """Retrieve forecasts from today onwards for a list of locations."""
+        if not locations:
+            return []
+        from datetime import date
+        today = date.today().isoformat()
+        placeholders = ",".join("?" * len(locations))
+        conn = sqlite3.connect(self.db_path)
+        cur = conn.cursor()
+        cur.execute(f"""
+            SELECT date, location, high, low, summary, description, last_updated
+            FROM forecast
+            WHERE date >= ? AND location IN ({placeholders})
+            ORDER BY location, date ASC
+            LIMIT ?
+        """, [today] + list(locations) + [days * len(locations)])
+        rows = cur.fetchall()
+        conn.close()
+        from src.models.forecast import Forecast
+        forecasts = []
+        for row in rows:
+            forecasts.append(Forecast(
+                date=row[0],
+                location=row[1],
+                high=row[2],
+                low=row[3],
+                summary=row[4],
+                description=row[5],
+                fetch_time=row[6],
+                times=[],
+                temps=[],
+                codes=[],
+                rain=[],
+                winds=[]
+            ))
+        return forecasts
 
     def get_forecasts_future(self, days:int = 7):
         """Retrieve forecasts from today onwards, limited to the given number of days."""

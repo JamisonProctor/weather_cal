@@ -184,7 +184,8 @@ class ForecastService:
                 codes=vals["codes"],
                 rain=vals["rain"],
                 winds=vals["winds"],
-                description=None
+                description=None,
+                timezone=tz,
             ))
             logger.info(f"Created forecast for {date}: high={high}, low={low}")
         return forecasts

@@ -60,9 +60,14 @@ def test_main_runs_full_pipeline(monkeypatch):
             assert days == 14
             return list(saved_forecasts)
 
+    synced_warnings = []
+
     class FakeCalendarService:
         def upsert_event(self, forecast):
             updated_forecasts.append(forecast)
+
+        def sync_warning_events(self, date, location, windows, timezone):
+            synced_warnings.append((date, location, windows))
 
     monkeypatch.setattr(main, "get_locations", lambda: ["Munich, Germany", "Berlin, Germany"])
     monkeypatch.setattr(main, "ForecastStore", FakeStore)
@@ -73,6 +78,7 @@ def test_main_runs_full_pipeline(monkeypatch):
     )
     monkeypatch.setattr(main, "format_summary", lambda forecast: f"summary-{forecast.location}")
     monkeypatch.setattr(main, "format_detailed_forecast", lambda forecast: f"description-{forecast.location}")
+    monkeypatch.setattr(main, "get_warning_windows", lambda forecast: [])
     monkeypatch.setattr(main, "CalendarService", FakeCalendarService)
 
     main.main()
@@ -83,6 +89,7 @@ def test_main_runs_full_pipeline(monkeypatch):
     assert all(forecast.summary.startswith("summary-") for forecast in saved_forecasts)
     assert all(forecast.description.startswith("description-") for forecast in saved_forecasts)
     assert updated_forecasts == saved_forecasts
+    assert len(synced_warnings) == 2
 
 
 def test_main_does_not_update_calendar_when_fetch_fails(monkeypatch):
@@ -117,4 +124,4 @@ def test_main_does_not_update_calendar_when_fetch_fails(monkeypatch):
     assert store_calls["created"] == 1
     assert store_calls["upsert"] == 0
     assert store_calls["get_future"] == 0
-    assert calendar_calls["created"] == 0
+    assert calendar_calls["created"] == 1  # CalendarService is now initialised before the fetch loop

@@ -2,6 +2,7 @@ import pytest
 
 from src.integrations.calendar_service import CalendarService
 from src.models.forecast import Forecast
+from src.services.forecast_formatting import WarningWindow
 
 
 class FakeEventsClient:
@@ -168,3 +169,82 @@ def test_find_events_filters_to_requested_date(monkeypatch):
     returned_ids = {event["id"] for event in events}
     assert returned_ids == {"match-date", "match-datetime"}
     assert fake_service.events_client.list_kwargs["timeZone"] == "UTC"
+
+
+def test_sync_warning_events_deletes_existing_and_inserts_new(monkeypatch):
+    existing_events = [
+        {
+            "id": "rain-evt",
+            "location": "Munich",
+            "summary": "☂️ Rain Warning",
+            "start": {"dateTime": "2025-10-21T10:00:00+02:00"},
+        },
+        {
+            "id": "allday-evt",
+            "location": "Munich",
+            "summary": "AM⛅15° / PM☁️19°",
+            "start": {"date": "2025-10-21"},
+        },
+        {
+            "id": "other-location",
+            "location": "Berlin",
+            "summary": "☂️ Rain Warning",
+            "start": {"dateTime": "2025-10-21T10:00:00+02:00"},
+        },
+    ]
+    fake_service = FakeService(existing_events)
+    monkeypatch.setattr(CalendarService, "get_calendar_service", staticmethod(lambda: fake_service))
+
+    calendar = CalendarService()
+    windows = [
+        WarningWindow(
+            warning_type="wind",
+            emoji="🌬️",
+            label="Wind Warning",
+            start_time="2025-10-21T14:00",
+            end_time="2025-10-21T17:00",
+        )
+    ]
+
+    calendar.sync_warning_events("2025-10-21", "Munich", windows, "Europe/Berlin")
+
+    # The stale rain warning for Munich is deleted; all-day and other-location are untouched
+    assert fake_service.events_client.deleted_ids == ["rain-evt"]
+    # One new wind warning event is inserted
+    assert len(fake_service.events_client.inserted_calls) == 1
+    inserted = fake_service.events_client.inserted_calls[0]
+    assert inserted["summary"] == "🌬️ Wind Warning"
+    assert inserted["location"] == "Munich"
+    assert inserted["start"]["dateTime"] == "2025-10-21T14:00:00"
+    assert inserted["end"]["dateTime"] == "2025-10-21T17:00:00"
+    assert inserted["start"]["timeZone"] == "Europe/Berlin"
+
+
+def test_sync_warning_events_no_windows_clears_existing(monkeypatch):
+    existing_events = [
+        {
+            "id": "old-wind",
+            "location": "Munich",
+            "summary": "🌬️ Wind Warning",
+            "start": {"dateTime": "2025-10-21T09:00:00+02:00"},
+        },
+    ]
+    fake_service = FakeService(existing_events)
+    monkeypatch.setattr(CalendarService, "get_calendar_service", staticmethod(lambda: fake_service))
+
+    calendar = CalendarService()
+    calendar.sync_warning_events("2025-10-21", "Munich", [], "Europe/Berlin")
+
+    assert fake_service.events_client.deleted_ids == ["old-wind"]
+    assert fake_service.events_client.inserted_calls == []
+
+
+def test_sync_warning_events_no_existing_no_windows(monkeypatch):
+    fake_service = FakeService([])
+    monkeypatch.setattr(CalendarService, "get_calendar_service", staticmethod(lambda: fake_service))
+
+    calendar = CalendarService()
+    calendar.sync_warning_events("2025-10-21", "Munich", [], "Europe/Berlin")
+
+    assert fake_service.events_client.deleted_ids == []
+    assert fake_service.events_client.inserted_calls == []

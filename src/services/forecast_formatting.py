@@ -1,7 +1,8 @@
 # forecast_formatting.py
 
 from collections import Counter
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 from statistics import mean
 from typing import List, Tuple
 
@@ -96,6 +97,81 @@ def _collect_warnings(block: List[Tuple[str, float, int, float, float]]) -> str:
         warnings.append("☃️")
 
     return "".join(warnings)
+
+
+@dataclass
+class WarningWindow:
+    """A contiguous time block during which a weather warning condition is active."""
+    warning_type: str   # "rain", "wind", "cold", "snow"
+    emoji: str          # e.g. "☂️"
+    label: str          # e.g. "Rain Warning"
+    start_time: str     # ISO datetime e.g. "2025-08-01T10:00"
+    end_time: str       # ISO datetime e.g. "2025-08-01T14:00" (exclusive — last active hour + 1h)
+
+
+_WARNING_CHECKS = [
+    (
+        "rain", "☂️", "Rain Warning",
+        lambda temp, code, rain, wind: (rain or 0) >= RAIN_PROB_THRESHOLD or code in RAIN_WARNING_CODES,
+    ),
+    (
+        "wind", "🌬️", "Wind Warning",
+        lambda temp, code, rain, wind: (wind or 0) >= WIND_SPEED_THRESHOLD,
+    ),
+    (
+        "cold", "🥶", "Cold Warning",
+        lambda temp, code, rain, wind: (temp is not None) and temp < COLD_TEMP_THRESHOLD,
+    ),
+    (
+        "snow", "☃️", "Snow Warning",
+        lambda temp, code, rain, wind: code in SNOW_WARNING_CODES,
+    ),
+]
+
+
+def get_warning_windows(forecast: Forecast) -> List[WarningWindow]:
+    """
+    Return a list of WarningWindow objects for each contiguous block of hours
+    where a warning condition (rain, wind, cold, snow) is active.
+    Each warning type is evaluated independently, so overlapping windows of
+    different types are possible.
+    """
+    data = list(zip(forecast.times, forecast.temps, forecast.codes, forecast.rain, forecast.winds))
+    windows: List[WarningWindow] = []
+
+    for wtype, emoji, label, check in _WARNING_CHECKS:
+        run_start = None
+        run_last = None
+
+        for t, temp, code, rain, wind in data:
+            if check(temp, code, rain, wind):
+                if run_start is None:
+                    run_start = t
+                run_last = t
+            else:
+                if run_start is not None:
+                    end_dt = datetime.fromisoformat(run_last) + timedelta(hours=1)
+                    windows.append(WarningWindow(
+                        warning_type=wtype,
+                        emoji=emoji,
+                        label=label,
+                        start_time=run_start,
+                        end_time=end_dt.strftime("%Y-%m-%dT%H:%M"),
+                    ))
+                    run_start = None
+                    run_last = None
+
+        if run_start is not None:
+            end_dt = datetime.fromisoformat(run_last) + timedelta(hours=1)
+            windows.append(WarningWindow(
+                warning_type=wtype,
+                emoji=emoji,
+                label=label,
+                start_time=run_start,
+                end_time=end_dt.strftime("%Y-%m-%dT%H:%M"),
+            ))
+
+    return windows
 
 
 def format_detailed_forecast(forecast: Forecast) -> str:

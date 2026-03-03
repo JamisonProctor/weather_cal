@@ -1,5 +1,5 @@
 from src.models.forecast import Forecast
-from src.services.forecast_formatting import format_detailed_forecast, format_summary
+from src.services.forecast_formatting import format_detailed_forecast, format_summary, get_warning_windows
 
 
 def test_format_summary_with_warnings():
@@ -102,3 +102,100 @@ def test_format_detailed_forecast_no_warnings():
 
     description = format_detailed_forecast(forecast)
     assert "⚠️" not in description
+
+
+def _make_forecast(times, temps, codes, rain, winds):
+    return Forecast(
+        date="2025-08-01",
+        location="Munich",
+        high=max(temps),
+        low=min(temps),
+        times=times,
+        temps=temps,
+        codes=codes,
+        rain=rain,
+        winds=winds,
+    )
+
+
+def test_get_warning_windows_single_rain_window():
+    forecast = _make_forecast(
+        times=["2025-08-01T10:00", "2025-08-01T11:00", "2025-08-01T12:00", "2025-08-01T13:00"],
+        temps=[15, 15, 15, 15],
+        codes=[61, 61, 1, 1],
+        rain=[60, 55, 5, 5],
+        winds=[10, 10, 10, 10],
+    )
+    windows = get_warning_windows(forecast)
+    rain = [w for w in windows if w.warning_type == "rain"]
+    assert len(rain) == 1
+    assert rain[0].start_time == "2025-08-01T10:00"
+    assert rain[0].end_time == "2025-08-01T12:00"
+    assert rain[0].emoji == "☂️"
+    assert rain[0].label == "Rain Warning"
+
+
+def test_get_warning_windows_two_separate_rain_windows():
+    forecast = _make_forecast(
+        times=[
+            "2025-08-01T06:00", "2025-08-01T07:00",
+            "2025-08-01T10:00",
+            "2025-08-01T14:00", "2025-08-01T15:00",
+        ],
+        temps=[15, 15, 15, 15, 15],
+        codes=[61, 61, 1, 63, 63],
+        rain=[60, 60, 5, 70, 70],
+        winds=[10, 10, 10, 10, 10],
+    )
+    windows = get_warning_windows(forecast)
+    rain = [w for w in windows if w.warning_type == "rain"]
+    assert len(rain) == 2
+    assert rain[0].start_time == "2025-08-01T06:00"
+    assert rain[0].end_time == "2025-08-01T08:00"
+    assert rain[1].start_time == "2025-08-01T14:00"
+    assert rain[1].end_time == "2025-08-01T16:00"
+
+
+def test_get_warning_windows_wind_and_cold_independent():
+    forecast = _make_forecast(
+        times=["2025-08-01T06:00", "2025-08-01T07:00", "2025-08-01T08:00"],
+        temps=[1, 2, 10],
+        codes=[1, 1, 1],
+        rain=[0, 0, 0],
+        winds=[35, 35, 10],
+    )
+    windows = get_warning_windows(forecast)
+    wind = [w for w in windows if w.warning_type == "wind"]
+    cold = [w for w in windows if w.warning_type == "cold"]
+    assert len(wind) == 1
+    assert wind[0].start_time == "2025-08-01T06:00"
+    assert wind[0].end_time == "2025-08-01T08:00"
+    assert len(cold) == 1
+    assert cold[0].start_time == "2025-08-01T06:00"
+    assert cold[0].end_time == "2025-08-01T08:00"
+
+
+def test_get_warning_windows_no_warnings():
+    forecast = _make_forecast(
+        times=["2025-08-01T10:00", "2025-08-01T11:00"],
+        temps=[20, 21],
+        codes=[1, 2],
+        rain=[5, 0],
+        winds=[10, 8],
+    )
+    assert get_warning_windows(forecast) == []
+
+
+def test_get_warning_windows_snow_all_day():
+    forecast = _make_forecast(
+        times=["2025-01-01T06:00", "2025-01-01T09:00", "2025-01-01T12:00"],
+        temps=[-2, -3, -1],
+        codes=[71, 73, 75],
+        rain=[0, 0, 0],
+        winds=[10, 10, 10],
+    )
+    windows = get_warning_windows(forecast)
+    snow = [w for w in windows if w.warning_type == "snow"]
+    assert len(snow) == 1
+    assert snow[0].start_time == "2025-01-01T06:00"
+    assert snow[0].end_time == "2025-01-01T13:00"

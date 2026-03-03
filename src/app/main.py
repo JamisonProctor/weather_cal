@@ -5,7 +5,7 @@ import time
 import schedule
 
 from src.services.forecast_service import ForecastService
-from src.services.forecast_formatting import format_summary, format_detailed_forecast
+from src.services.forecast_formatting import format_summary, format_detailed_forecast, get_warning_windows
 from src.utils.logging_config import setup_logging
 from src.utils.location_management import get_locations
 from src.services.forecast_store import ForecastStore
@@ -32,7 +32,9 @@ def main():
     forecast_days = 14
 
     try:
-        # Fetch new forecasts and store them
+        calendar = CalendarService()
+
+        # Fetch new forecasts, store them, and sync warning events while hourly data is available
         for loc in locations:
             forecasts = ForecastService.fetch_forecasts(location=loc, forecast_days=forecast_days)
 
@@ -41,11 +43,19 @@ def main():
                 forecast.description = format_detailed_forecast(forecast)
                 store.upsert_forecast(forecast)
 
-        # Populate calendar with future events from DB
+                warning_windows = get_warning_windows(forecast)
+                tz = forecast.timezone or "UTC"
+                logger.info(
+                    "Syncing %d warning event(s) for date=%s, location=%s",
+                    len(warning_windows),
+                    forecast.date,
+                    forecast.location,
+                )
+                calendar.sync_warning_events(forecast.date, forecast.location, warning_windows, tz)
+
+        # Populate calendar with all-day summary events from DB
         logger.info("Retrieving forecasts from DB for calendar population...")
         all_forecasts = store.get_forecasts_future(days=forecast_days)
-
-        calendar = CalendarService()
 
         for forecast in all_forecasts:
             logger.info(f"Updating calendar for date={forecast.date}, location={forecast.location}")

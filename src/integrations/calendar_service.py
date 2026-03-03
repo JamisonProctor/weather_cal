@@ -1,9 +1,18 @@
 import logging
 from datetime import datetime, time, timedelta
+from typing import List
 from src.utils.logging_config import setup_logging
 
 setup_logging()
 logger = logging.getLogger(__name__)
+
+_WARNING_SUMMARIES = {
+    "☂️ Rain Warning",
+    "🌬️ Wind Warning",
+    "🥶 Cold Warning",
+    "☃️ Snow Warning",
+}
+
 
 class CalendarService:
     def __init__(self, calendar_id="primary"):
@@ -139,4 +148,67 @@ class CalendarService:
             ).execute()
         except Exception as e:
             logger.error(f"Failed to upsert event for {forecast.date}: {e}", exc_info=True)
+            raise
+
+    def sync_warning_events(self, date: str, location: str, warning_windows: List, timezone: str) -> None:
+        """
+        Replace all existing timed warning events for a given date and location with
+        new events derived from warning_windows. Each WarningWindow becomes one
+        non-all-day calendar event spanning its start_time to end_time.
+        """
+        try:
+            events = self.find_events(date)
+            for event in events:
+                is_warning = (
+                    event.get("location") == location
+                    and event.get("summary") in _WARNING_SUMMARIES
+                    and "dateTime" in event.get("start", {})
+                )
+                if is_warning:
+                    try:
+                        self.service.events().delete(
+                            calendarId=self.calendar_id,
+                            eventId=event["id"]
+                        ).execute()
+                        logger.info(
+                            "Deleted stale warning event: id=%s summary=%s",
+                            event.get("id"),
+                            event.get("summary"),
+                        )
+                    except Exception as e:
+                        logger.error(
+                            "Failed to delete warning event id=%s: %s",
+                            event.get("id"),
+                            e,
+                            exc_info=True,
+                        )
+
+            for window in warning_windows:
+                summary = f"{window.emoji} {window.label}"
+                event_body = {
+                    "summary": summary,
+                    "location": location,
+                    "start": {"dateTime": window.start_time + ":00", "timeZone": timezone},
+                    "end": {"dateTime": window.end_time + ":00", "timeZone": timezone},
+                    "reminders": {"useDefault": False},
+                }
+                self.service.events().insert(
+                    calendarId=self.calendar_id,
+                    body=event_body
+                ).execute()
+                logger.info(
+                    "Inserted warning event: summary=%s start=%s end=%s location=%s",
+                    summary,
+                    window.start_time,
+                    window.end_time,
+                    location,
+                )
+        except Exception as e:
+            logger.error(
+                "Failed to sync warning events for date=%s location=%s: %s",
+                date,
+                location,
+                e,
+                exc_info=True,
+            )
             raise

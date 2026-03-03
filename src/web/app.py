@@ -30,14 +30,14 @@ logger = logging.getLogger(__name__)
 DB_PATH = os.getenv("DB_PATH", "data/forecast.db")
 
 
-def _initial_forecast_fetch(location: str, db_path: str):
+def _initial_forecast_fetch(location: str, db_path: str, lat: float = None, lon: float = None, timezone: str = None):
     """Fetch and store 14-day forecasts for a newly registered location."""
     from src.services.forecast_formatting import format_detailed_forecast, format_summary
     from src.services.forecast_service import ForecastService
     from src.services.forecast_store import ForecastStore
     try:
         store = ForecastStore(db_path=db_path)
-        forecasts = ForecastService.fetch_forecasts(location=location, forecast_days=14)
+        forecasts = ForecastService.fetch_forecasts(location=location, forecast_days=14, lat=lat, lon=lon, timezone=timezone)
         for f in forecasts:
             f.summary = format_summary(f)
             f.description = format_detailed_forecast(f)
@@ -135,7 +135,7 @@ async def setup_post(
             )
 
     create_user_location(DB_PATH, user_id, location, resolved_lat, resolved_lon, resolved_tz)
-    background_tasks.add_task(_initial_forecast_fetch, location, DB_PATH)
+    background_tasks.add_task(_initial_forecast_fetch, location, DB_PATH, resolved_lat, resolved_lon, resolved_tz)
     return RedirectResponse(url="/dashboard", status_code=303)
 
 

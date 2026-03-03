@@ -116,6 +116,12 @@
 
         <form method="post" action="/settings">
 
+          <div class="threshold-row" style="margin-bottom:20px">
+            <span>Warn me when the temp is below</span>
+            <input type="number" name="cold_threshold" value="{{ prefs.cold_threshold }}" step="0.5" min="-30" max="40">
+            <span>°C</span>
+          </div>
+
           <!-- All-day events card -->
           <div class="pref-card">
             <p class="pref-card-title">All-day events</p>
@@ -155,11 +161,6 @@
                   <span class="checkmark"></span>
                   ☃️ Snow
                 </label>
-                <label class="check-label">
-                  <input type="checkbox" name="allday_sunny" {% if prefs.allday_sunny %}checked{% endif %}>
-                  <span class="checkmark"></span>
-                  ☀️ Sunny weather
-                </label>
               </div>
             </div>
           </div>
@@ -168,12 +169,6 @@
           <div class="pref-card">
             <p class="pref-card-title">Timed events during the day</p>
             <p class="pref-card-desc">Controls separate timed events that block time on your calendar when conditions are active.</p>
-
-            <div class="threshold-row">
-              <span>Warn me when the temp is below</span>
-              <input type="number" name="cold_threshold" value="{{ prefs.cold_threshold }}" step="0.5" min="-30" max="40">
-              <span>°C</span>
-            </div>
 
             <label class="check-label">
               <input type="checkbox" name="timed_events_enabled" {% if prefs.timed_events_enabled %}checked{% endif %} data-controls="group-timed">

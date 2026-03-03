@@ -5,6 +5,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import BackgroundTasks, FastAPI, Form, Query, Request
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
@@ -47,6 +48,7 @@ def _initial_forecast_fetch(location: str, db_path: str, lat: float = None, lon:
         logger.exception("Initial forecast fetch failed for location=%s", location)
 
 app = FastAPI()
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 ForecastStore(db_path=DB_PATH)  # ensures all tables exist before anything else runs

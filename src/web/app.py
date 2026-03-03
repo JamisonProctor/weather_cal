@@ -23,6 +23,7 @@ from src.web.db import (
     create_user_preferences_table,
     delete_user_account,
     get_feed_token_by_user,
+    get_last_forecast_update,
     get_rows_by_token,
     get_user_by_email,
     get_user_by_id,
@@ -264,6 +265,17 @@ async def settings(request: Request, success: str = Query(default=""), error: st
     prefs_row = get_user_preferences(DB_PATH, user_id)
     prefs = dict(prefs_row) if prefs_row else DEFAULT_PREFS
 
+    location_names = [loc["location"] for loc in locations]
+    last_updated_raw = get_last_forecast_update(DB_PATH, location_names)
+    if last_updated_raw:
+        from datetime import datetime as _dt
+        try:
+            last_updated = _dt.fromisoformat(last_updated_raw).strftime("%-d %b %Y, %H:%M UTC")
+        except Exception:
+            last_updated = last_updated_raw
+    else:
+        last_updated = None
+
     return templates.TemplateResponse(
         "settings.html",
         {
@@ -276,6 +288,7 @@ async def settings(request: Request, success: str = Query(default=""), error: st
             "prefs": prefs,
             "success": success,
             "error": error,
+            "last_updated": last_updated,
         },
     )
 
@@ -385,6 +398,43 @@ async def settings_delete_post(
     return response
 
 
+@app.post("/settings/feedback")
+async def settings_feedback_post(
+    request: Request,
+    topic: str = Form(default=""),
+    description: str = Form(default=""),
+    user_agent: str = Form(default=""),
+    platform: str = Form(default=""),
+    screen_width: str = Form(default=""),
+    screen_height: str = Form(default=""),
+    timezone: str = Form(default=""),
+):
+    user_id = _get_user_id(request)
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    user = get_user_by_id(DB_PATH, user_id)
+    email = user["email"] if user else ""
+    feed_token = get_feed_token_by_user(DB_PATH, user_id)
+    webcal_url, _ = _build_feed_urls(request, feed_token) if feed_token else (None, None)
+    locations = get_user_locations(DB_PATH, user_id)
+    locations_str = ", ".join(loc["location"] for loc in locations)
+
+    save_feedback(
+        DB_PATH, user_id, email,
+        feed_url=webcal_url or "",
+        locations=locations_str,
+        calendar_app=topic,
+        description=description,
+        user_agent=user_agent,
+        platform=platform,
+        screen_width=screen_width,
+        screen_height=screen_height,
+        timezone=timezone,
+    )
+    return RedirectResponse(url="/settings?success=feedback#feedback", status_code=303)
+
+
 @app.get("/feedback", response_class=HTMLResponse)
 async def feedback_get(request: Request):
     user_id = _get_user_id(request)
@@ -438,7 +488,7 @@ async def feedback_post(
 
 
 @app.get("/feed/{token}/weather.ics")
-async def feed(token: str):
+async def feed(request: Request, token: str):
     rows = get_rows_by_token(DB_PATH, token)
     if not rows:
         return Response(content="Invalid or expired token.", status_code=404)
@@ -451,7 +501,8 @@ async def feed(token: str):
     location_name = locations[0] if locations else "Unknown"
     prefs_row = get_user_preferences(DB_PATH, user_id)
     prefs = dict(prefs_row) if prefs_row else DEFAULT_PREFS
-    ics_content = generate_ics(forecasts, location_name, prefs=prefs)
+    settings_url = str(request.base_url).rstrip("/") + "/settings"
+    ics_content = generate_ics(forecasts, location_name, prefs=prefs, settings_url=settings_url)
 
     return Response(
         content=ics_content,

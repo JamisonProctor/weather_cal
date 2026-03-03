@@ -302,6 +302,24 @@ def upsert_user_preferences(
         conn.close()
 
 
+def get_last_forecast_update(db_path: str, locations: list) -> str | None:
+    """Return the most recent last_updated timestamp across the given locations."""
+    if not locations:
+        return None
+    conn = _conn(db_path)
+    try:
+        placeholders = ",".join("?" * len(locations))
+        cur = conn.cursor()
+        cur.execute(
+            f"SELECT MAX(last_updated) FROM forecast WHERE location IN ({placeholders})",
+            locations,
+        )
+        row = cur.fetchone()
+        return row[0] if row else None
+    finally:
+        conn.close()
+
+
 def update_user_email(db_path: str, user_id: int, new_email: str) -> None:
     """Update a user's email. Raises sqlite3.IntegrityError if email already taken."""
     conn = _conn(db_path)

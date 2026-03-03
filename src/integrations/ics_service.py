@@ -19,7 +19,7 @@ def _warning_uid(start_time: str, location: str, warning_type: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()[:16] + "@weathercal.app"
 
 
-def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None) -> bytes:
+def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, settings_url: str = None) -> bytes:
     """Generate an ICS calendar bytes from a list of Forecast objects."""
     city = location_name.split(",")[0].strip() if "," in location_name else location_name
 
@@ -52,6 +52,8 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None) -> b
             event.add("dtend", event_date + timedelta(days=1))
             event.add("transp", "TRANSPARENT")
             event.add("dtstamp", now)
+            if settings_url:
+                event.add("url", settings_url)
             cal.add_component(event)
 
         # Timed warning events
@@ -70,6 +72,8 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None) -> b
                 w_event.add("dtend", datetime.fromisoformat(window.end_time).replace(tzinfo=tz))
                 w_event.add("transp", "TRANSPARENT")
                 w_event.add("dtstamp", now)
+                if settings_url:
+                    w_event.add("url", settings_url)
                 cal.add_component(w_event)
 
     return cal.to_ical()

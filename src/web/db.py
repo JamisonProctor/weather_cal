@@ -129,6 +129,61 @@ def check_password(password: str, password_hash: str) -> bool:
     return bcrypt.checkpw(password.encode(), password_hash.encode())
 
 
+def create_feedback_table(db_path: str) -> None:
+    conn = _conn(db_path)
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS feedback (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                email TEXT,
+                feed_url TEXT,
+                locations TEXT,
+                calendar_app TEXT,
+                description TEXT,
+                user_agent TEXT,
+                platform TEXT,
+                screen_width TEXT,
+                screen_height TEXT,
+                timezone TEXT,
+                created_at TEXT
+            )
+        """)
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def save_feedback(
+    db_path: str,
+    user_id: int,
+    email: str,
+    feed_url: str,
+    locations: str,
+    calendar_app: str,
+    description: str,
+    user_agent: str,
+    platform: str,
+    screen_width: str,
+    screen_height: str,
+    timezone: str,
+) -> None:
+    created_at = datetime.now().isoformat()
+    conn = _conn(db_path)
+    try:
+        conn.execute(
+            """INSERT INTO feedback
+               (user_id, email, feed_url, locations, calendar_app, description,
+                user_agent, platform, screen_width, screen_height, timezone, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (user_id, email, feed_url, locations, calendar_app, description,
+             user_agent, platform, screen_width, screen_height, timezone, created_at),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def wipe_accounts(db_path: str) -> None:
     """Delete all user accounts, locations, and feed tokens. Forecast cache is preserved.
     Only call this when WIPE_ACCOUNTS_ON_START is set — debug/dev use only.

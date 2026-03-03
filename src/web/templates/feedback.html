@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Having trouble — WeatherCal</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 400px; margin: 60px auto; padding: 0 24px; color: #111; }
+    h1 { margin-bottom: 0.4rem; }
+    .subtitle { color: #333; margin-bottom: 1.5rem; }
+    label { display: block; margin: 16px 0 4px; font-weight: 500; font-size: 0.95rem; }
+    select, textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-family: inherit; }
+    select:focus, textarea:focus { outline: 2px solid #2563eb; border-color: transparent; }
+    textarea { resize: vertical; min-height: 120px; }
+    button { margin-top: 24px; width: 100%; padding: 12px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
+    .back-link { display: block; margin-top: 20px; color: #6b7280; text-decoration: none; font-size: 0.9rem; }
+    .back-link:hover { color: #111; text-decoration: underline; }
+    .success { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; color: #166534; }
+    .success h2 { margin: 0 0 8px; font-size: 1.1rem; }
+    .success p { margin: 0; font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  {% if sent %}
+  <div class="success">
+    <h2>Thanks, we got your message.</h2>
+    <p>We'll look into it and follow up if we need more info.</p>
+  </div>
+  <a href="/connect" class="back-link">&larr; Back to Connect</a>
+  {% else %}
+  <h1>Having trouble?</h1>
+  <p class="subtitle">Tell us what happened and we'll look into it.</p>
+
+  <form method="post" action="/feedback" id="feedback-form">
+    <input type="hidden" name="feed_url" value="{{ webcal_url or '' }}">
+    <input type="hidden" name="locations" value="{{ locations | join(', ', attribute='location') }}">
+    <input type="hidden" name="user_agent" id="f-user-agent">
+    <input type="hidden" name="platform" id="f-platform">
+    <input type="hidden" name="screen_width" id="f-screen-width">
+    <input type="hidden" name="screen_height" id="f-screen-height">
+    <input type="hidden" name="timezone" id="f-timezone">
+
+    <label for="calendar_app">Which app were you trying to add to?</label>
+    <select name="calendar_app" id="calendar_app" required>
+      <option value="" disabled selected>Select an app…</option>
+      <option value="Apple Calendar">Apple Calendar</option>
+      <option value="Google Calendar">Google Calendar</option>
+      <option value="Outlook">Outlook</option>
+      <option value="Other">Other</option>
+    </select>
+
+    <label for="description">What went wrong? What did you see?</label>
+    <textarea name="description" id="description" required placeholder="Describe what happened…"></textarea>
+
+    <button type="submit">Send feedback</button>
+  </form>
+
+  <a href="/connect" class="back-link">&larr; Back to Connect</a>
+
+  <script>
+    document.getElementById('f-user-agent').value = navigator.userAgent;
+    document.getElementById('f-platform').value = navigator.platform;
+    document.getElementById('f-screen-width').value = screen.width;
+    document.getElementById('f-screen-height').value = screen.height;
+    document.getElementById('f-timezone').value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  </script>
+  {% endif %}
+</body>
+</html>

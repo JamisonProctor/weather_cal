@@ -6,17 +6,13 @@
   <title>Connect your calendar — WeatherCal</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; color: #111; }
-    nav { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #e5e7eb; margin-bottom: 32px; }
-    nav strong { font-size: 1.1rem; }
-    .logout-btn { background: none; border: none; color: #6b7280; cursor: pointer; font-size: 0.95rem; padding: 0; }
-    .logout-btn:hover { color: #111; }
-    h1 { font-size: 1.8rem; margin-bottom: 0.4rem; }
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 400px; margin: 60px auto; padding: 0 24px; color: #111; }
+    h1 { margin-bottom: 0.4rem; }
     .subtitle { color: #333; margin-bottom: 2rem; }
     .btn-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }
     .btn-wrapper { display: flex; flex-direction: column; gap: 4px; }
     .btn-note { font-size: 0.8rem; color: #6b7280; padding-left: 4px; }
-    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 20px; border-radius: 8px; font-size: 1rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 20px; border-radius: 8px; font-size: 1rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; width: 100%; }
     .btn-blue { background: #2563eb; color: #fff; }
     .btn-blue:hover { background: #1d4ed8; }
     .btn-red { background: #ea4335; color: #fff; }
@@ -29,18 +25,14 @@
     .copy-btn { padding: 10px 16px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
     .copy-btn:hover { background: #e5e7eb; }
     .copy-hint { font-size: 0.8rem; color: #6b7280; margin-top: 6px; }
-    .settings-link { display: block; margin-top: 28px; color: #2563eb; text-decoration: none; font-size: 0.95rem; }
-    .settings-link:hover { text-decoration: underline; }
+    .cta-section { margin-top: 28px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+    .btn-success { background: #16a34a; color: #fff; }
+    .btn-success:hover { background: #15803d; }
+    .trouble-link { color: #6b7280; font-size: 0.9rem; text-decoration: none; }
+    .trouble-link:hover { color: #111; text-decoration: underline; }
   </style>
 </head>
 <body>
-  <nav>
-    <strong>WeatherCal ☀️</strong>
-    <form method="post" action="/logout" style="margin:0">
-      <button class="logout-btn" type="submit">Logout</button>
-    </form>
-  </nav>
-
   <h1>Connect your calendar</h1>
   <p class="subtitle">Add your feed to a calendar app and forecasts will appear automatically.</p>
 
@@ -73,6 +65,9 @@
     <p class="copy-hint">Or paste this URL directly into any calendar app.</p>
   </div>
 
-  <a href="/settings" class="settings-link">Go to Settings &rarr;</a>
+  <div class="cta-section">
+    <a href="/settings" class="btn btn-success">&#10003; It worked — go to Settings</a>
+    <a href="/feedback" class="trouble-link">Having trouble?</a>
+  </div>
 </body>
 </html>

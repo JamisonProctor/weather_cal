@@ -16,6 +16,7 @@ from src.web.auth import create_session_token, decode_session_token
 from src.web.db import (
     check_password,
     create_feed_token,
+    create_feedback_table,
     create_user,
     create_user_location,
     get_feed_token_by_user,
@@ -23,6 +24,7 @@ from src.web.db import (
     get_user_by_email,
     get_user_by_id,
     get_user_locations,
+    save_feedback,
     wipe_accounts,
 )
 
@@ -52,6 +54,7 @@ app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 ForecastStore(db_path=DB_PATH)  # ensures all tables exist before anything else runs
+create_feedback_table(DB_PATH)
 if os.getenv("WIPE_ACCOUNTS_ON_START"):
     wipe_accounts(DB_PATH)
 
@@ -257,6 +260,58 @@ async def settings(request: Request):
             "google_cal_url": google_cal_url,
             "locations": locations,
         },
+    )
+
+
+@app.get("/feedback", response_class=HTMLResponse)
+async def feedback_get(request: Request):
+    user_id = _get_user_id(request)
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    feed_token = get_feed_token_by_user(DB_PATH, user_id)
+    locations = get_user_locations(DB_PATH, user_id)
+    webcal_url, _ = _build_feed_urls(request, feed_token) if feed_token else (None, None)
+
+    return templates.TemplateResponse(
+        "feedback.html",
+        {"request": request, "webcal_url": webcal_url, "locations": locations, "sent": False},
+    )
+
+
+@app.post("/feedback", response_class=HTMLResponse)
+async def feedback_post(
+    request: Request,
+    calendar_app: str = Form(default=""),
+    description: str = Form(default=""),
+    user_agent: str = Form(default=""),
+    platform: str = Form(default=""),
+    screen_width: str = Form(default=""),
+    screen_height: str = Form(default=""),
+    timezone: str = Form(default=""),
+    feed_url: str = Form(default=""),
+    locations: str = Form(default=""),
+):
+    user_id = _get_user_id(request)
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    user = get_user_by_id(DB_PATH, user_id)
+    email = user["email"] if user else ""
+
+    save_feedback(
+        DB_PATH, user_id, email, feed_url, locations,
+        calendar_app, description, user_agent, platform,
+        screen_width, screen_height, timezone,
+    )
+
+    user_locations = get_user_locations(DB_PATH, user_id)
+    feed_token = get_feed_token_by_user(DB_PATH, user_id)
+    webcal_url, _ = _build_feed_urls(request, feed_token) if feed_token else (None, None)
+
+    return templates.TemplateResponse(
+        "feedback.html",
+        {"request": request, "webcal_url": webcal_url, "locations": user_locations, "sent": True},
     )
 
 

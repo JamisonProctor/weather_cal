@@ -7,11 +7,18 @@
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; max-width: 400px; margin: 60px auto; padding: 0 24px; color: #111; }
     h1 { margin-bottom: 0.4rem; }
-    .subtitle { color: #555; margin-bottom: 1.5rem; }
+    .subtitle { color: #333; margin-bottom: 1.5rem; }
     label { display: block; margin: 16px 0 4px; font-weight: 500; font-size: 0.95rem; }
-    input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; }
-    input:focus { outline: 2px solid #2563eb; border-color: transparent; }
-    .hint { font-size: 0.82rem; color: #6b7280; margin-top: 3px; }
+    .input-wrap { position: relative; }
+    input[type="text"] { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; }
+    input[type="text"]:focus { outline: 2px solid #2563eb; border-color: transparent; }
+    .dropdown { position: absolute; top: 100%; left: 0; right: 0; margin: 0; padding: 0; background: #fff; border: 1px solid #d1d5db; border-top: none; border-radius: 0 0 6px 6px; z-index: 10; max-height: 240px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .dropdown li { list-style: none; padding: 10px 12px; cursor: pointer; font-size: 0.95rem; border-bottom: 1px solid #f3f4f6; }
+    .dropdown li:last-child { border-bottom: none; }
+    .dropdown li:hover, .dropdown li.active { background: #eff6ff; }
+    .dropdown li .city { font-weight: 500; }
+    .dropdown li .region { color: #6b7280; font-size: 0.85rem; margin-left: 6px; }
+    .hint { font-size: 0.82rem; color: #6b7280; margin-top: 4px; }
     button { margin-top: 24px; width: 100%; padding: 12px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
     button:hover { background: #1d4ed8; }
     .error { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 0.95rem; }
@@ -23,11 +30,116 @@
   {% if error %}
   <div class="error">{{ error }}</div>
   {% endif %}
-  <form method="post" action="/setup">
-    <label for="location">City</label>
-    <input type="text" id="location" name="location" required placeholder="e.g. Munich, London, New York" autocomplete="off" autofocus>
+  <form method="post" action="/setup" id="setup-form">
+    <label for="location-input">City</label>
+    <div class="input-wrap">
+      <input type="text" id="location-input" autocomplete="off" autofocus spellcheck="false" placeholder="Munich Bavaria, Germany">
+      <ul class="dropdown" id="dropdown" hidden></ul>
+    </div>
+    <p class="hint" id="hint"></p>
 
-    <button type="submit">Set location</button>
+    <input type="hidden" name="location" id="location">
+    <input type="hidden" name="lat" id="lat">
+    <input type="hidden" name="lon" id="lon">
+    <input type="hidden" name="timezone" id="timezone">
+
+    <button type="submit" id="submit-btn">Set location</button>
   </form>
+
+  <script>
+    const input = document.getElementById('location-input');
+    const dropdown = document.getElementById('dropdown');
+    const hint = document.getElementById('hint');
+    const submitBtn = document.getElementById('submit-btn');
+    const hiddenLocation = document.getElementById('location');
+    const hiddenLat = document.getElementById('lat');
+    const hiddenLon = document.getElementById('lon');
+    const hiddenTz = document.getElementById('timezone');
+
+    let activeIndex = -1;
+    let results = [];
+    let debounceTimer;
+
+    function clearSelection() {
+      hiddenLocation.value = '';
+      hiddenLat.value = '';
+      hiddenLon.value = '';
+      hiddenTz.value = '';
+    }
+
+    function selectResult(r) {
+      const label = r.admin1 ? `${r.name}, ${r.admin1}, ${r.country}` : `${r.name}, ${r.country}`;
+      input.value = label;
+      hiddenLocation.value = label;
+      hiddenLat.value = r.lat;
+      hiddenLon.value = r.lon;
+      hiddenTz.value = r.timezone;
+      closeDropdown();
+      hint.textContent = '';
+    }
+
+    function closeDropdown() {
+      dropdown.hidden = true;
+      dropdown.innerHTML = '';
+      activeIndex = -1;
+      results = [];
+    }
+
+    function renderDropdown(data) {
+      results = data;
+      dropdown.innerHTML = '';
+      activeIndex = -1;
+      if (!data.length) {
+        dropdown.hidden = true;
+        return;
+      }
+      data.forEach((r, i) => {
+        const li = document.createElement('li');
+        const region = r.admin1 ? `${r.admin1}, ${r.country}` : r.country;
+        li.innerHTML = `<span class="city">${r.name}</span><span class="region">${region}</span>`;
+        li.addEventListener('mousedown', (e) => { e.preventDefault(); selectResult(r); });
+        dropdown.appendChild(li);
+      });
+      dropdown.hidden = false;
+    }
+
+    function updateActive() {
+      Array.from(dropdown.children).forEach((li, i) => {
+        li.classList.toggle('active', i === activeIndex);
+      });
+    }
+
+    input.addEventListener('input', () => {
+      clearSelection();
+      clearTimeout(debounceTimer);
+      const q = input.value.trim();
+      if (q.length < 3) { closeDropdown(); hint.textContent = ''; return; }
+      hint.textContent = 'Searching…';
+      debounceTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(`/geocode?q=${encodeURIComponent(q)}`);
+          const data = await res.json();
+          renderDropdown(data);
+          hint.textContent = data.length ? 'Select your city from the list.' : 'No results found. Try a different spelling.';
+        } catch {
+          hint.textContent = 'Search unavailable. Try again.';
+        }
+      }, 250);
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (dropdown.hidden) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); activeIndex = Math.min(activeIndex + 1, results.length - 1); updateActive(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); activeIndex = Math.max(activeIndex - 1, 0); updateActive(); }
+      else if (e.key === 'Enter') { e.preventDefault(); if (activeIndex >= 0) selectResult(results[activeIndex]); }
+      else if (e.key === 'Escape') { closeDropdown(); }
+    });
+
+    input.addEventListener('blur', () => { setTimeout(closeDropdown, 150); });
+
+    document.getElementById('setup-form').addEventListener('submit', (e) => {
+      if (!hiddenLat.value) { e.preventDefault(); hint.textContent = 'Please select a city from the list.'; input.focus(); }
+    });
+  </script>
 </body>
 </html>

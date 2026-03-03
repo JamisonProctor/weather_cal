@@ -4,8 +4,8 @@ import sqlite3
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import BackgroundTasks, FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi import BackgroundTasks, FastAPI, Form, Query, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from src.integrations.ics_service import generate_ics
@@ -114,23 +114,57 @@ async def setup_post(
     request: Request,
     background_tasks: BackgroundTasks,
     location: str = Form(...),
+    lat: str = Form(default=""),
+    lon: str = Form(default=""),
+    timezone: str = Form(default=""),
 ):
     user_id = _get_user_id(request)
     if not user_id:
         return RedirectResponse(url="/login", status_code=303)
 
-    try:
-        lat, lon, tz = ForecastService.get_coordinates_with_timezone(location)
-    except Exception:
-        return templates.TemplateResponse(
-            "setup.html",
-            {"request": request, "error": "We couldn't find that location. Please try a different city name."},
-            status_code=422,
-        )
+    if lat and lon and timezone:
+        resolved_lat, resolved_lon, resolved_tz = float(lat), float(lon), timezone
+    else:
+        try:
+            resolved_lat, resolved_lon, resolved_tz = ForecastService.get_coordinates_with_timezone(location)
+        except Exception:
+            return templates.TemplateResponse(
+                "setup.html",
+                {"request": request, "error": "We couldn't find that location. Please try a different city name."},
+                status_code=422,
+            )
 
-    create_user_location(DB_PATH, user_id, location, lat, lon, tz)
+    create_user_location(DB_PATH, user_id, location, resolved_lat, resolved_lon, resolved_tz)
     background_tasks.add_task(_initial_forecast_fetch, location, DB_PATH)
     return RedirectResponse(url="/dashboard", status_code=303)
+
+
+@app.get("/geocode")
+async def geocode(q: str = Query(default="", min_length=0)):
+    if len(q) < 3:
+        return JSONResponse([])
+    try:
+        import requests as _requests
+        resp = _requests.get(
+            ForecastService.GEOCODE_URL,
+            params={"name": q, "count": 8, "language": "en", "format": "json"},
+            timeout=(5, 10),
+        )
+        resp.raise_for_status()
+        results = resp.json().get("results", [])
+        return JSONResponse([
+            {
+                "name": r.get("name", ""),
+                "country": r.get("country", ""),
+                "admin1": r.get("admin1", ""),
+                "lat": r["latitude"],
+                "lon": r["longitude"],
+                "timezone": r.get("timezone", "UTC"),
+            }
+            for r in results
+        ])
+    except Exception:
+        return JSONResponse([])
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -160,7 +194,7 @@ async def login_post(
 
 @app.post("/logout")
 async def logout():
-    response = RedirectResponse(url="/", status_code=303)
+    response = RedirectResponse(url="/login", status_code=303)
     response.delete_cookie("session")
     return response
 

@@ -108,6 +108,8 @@ def test_generate_ics_with_rain_disabled_prefs():
     prefs = {
         "warn_in_allday": 1, "warn_rain": 0, "warn_wind": 1,
         "warn_cold": 1, "warn_snow": 1, "warn_sunny": 0, "cold_threshold": 3.0,
+        "show_allday_events": 1, "timed_events_enabled": 1,
+        "allday_rain": 1, "allday_wind": 1, "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0,
     }
     ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
     events = _parse_events(ics_bytes)
@@ -127,6 +129,8 @@ def test_generate_ics_with_sunny_enabled_prefs():
     prefs = {
         "warn_in_allday": 1, "warn_rain": 1, "warn_wind": 1,
         "warn_cold": 1, "warn_snow": 1, "warn_sunny": 1, "cold_threshold": 3.0,
+        "show_allday_events": 1, "timed_events_enabled": 1,
+        "allday_rain": 1, "allday_wind": 1, "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0,
     }
     ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
     events = _parse_events(ics_bytes)
@@ -145,6 +149,8 @@ def test_generate_ics_summary_uses_prefs_cold_threshold():
     prefs = {
         "warn_in_allday": 1, "warn_rain": 1, "warn_wind": 1,
         "warn_cold": 1, "warn_snow": 1, "warn_sunny": 0, "cold_threshold": 20.0,
+        "show_allday_events": 1, "timed_events_enabled": 1,
+        "allday_rain": 1, "allday_wind": 1, "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0,
     }
     ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
     events = _parse_events(ics_bytes)

@@ -49,11 +49,28 @@
     .danger-zone h2 { color: #dc2626; border-bottom-color: #fecaca; }
     .danger-hint { font-size: 0.875rem; color: #6b7280; margin: 0 0 14px; }
 
-    .prefs-form .threshold-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-    .prefs-form .threshold-row input[type="number"] { width: 72px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem; text-align: center; }
-    .prefs-form label { display: block; margin-bottom: 10px; font-size: 0.95rem; cursor: pointer; }
-    .prefs-form input[type="checkbox"] { margin-right: 8px; }
     .pref-note { color: #6b7280; font-size: 0.85rem; }
+
+    /* Preference cards */
+    .pref-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
+    .pref-card-title { font-size: 0.95rem; font-weight: 600; color: #374151; margin: 0 0 4px; }
+    .pref-card-desc { font-size: 0.85rem; color: #6b7280; margin: 0 0 16px; }
+
+    /* Custom checkboxes */
+    .check-label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; margin-bottom: 10px; font-size: 0.95rem; position: relative; }
+    .check-label input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
+    .checkmark { width: 20px; height: 20px; flex-shrink: 0; border: 2px solid #d1d5db; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; transition: background 0.15s, border-color 0.15s; }
+    .check-label input:checked ~ .checkmark { background: #16a34a; border-color: #16a34a; }
+    .check-label input:checked ~ .checkmark::after { content: '\2713'; color: #fff; font-size: 13px; font-weight: 700; }
+
+    /* Nested indentation */
+    .nested-group { margin-left: 30px; margin-top: 4px; }
+    .nested-group .nested-group { margin-left: 30px; }
+    .nested-group.group-disabled { opacity: 0.4; pointer-events: none; }
+
+    /* Threshold row */
+    .threshold-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; font-size: 0.95rem; }
+    .threshold-row input[type="number"] { width: 72px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem; text-align: center; }
 
     .feed-input-row { display: flex; gap: 8px; }
     .feed-url { flex: 1; padding: 10px 12px; font-family: monospace; font-size: 0.82rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px; color: #374151; cursor: text; }
@@ -83,12 +100,120 @@
 
   <div class="settings-layout">
     <aside class="sidebar">
-      <a href="#personal" class="sidebar-link">Personal</a>
       <a href="#preferences" class="sidebar-link">Preferences</a>
+      <a href="#personal" class="sidebar-link">Personal</a>
       <a href="#reconnect" class="sidebar-link">Reconnect</a>
     </aside>
 
     <main class="content">
+
+      <!-- Preferences tab -->
+      <div id="panel-preferences" class="panel">
+
+        {% if success == 'prefs' %}
+        <div class="alert alert-success">Preferences saved.</div>
+        {% endif %}
+
+        <form method="post" action="/settings">
+
+          <!-- All-day events card -->
+          <div class="pref-card">
+            <p class="pref-card-title">All-day events</p>
+            <p class="pref-card-desc">Controls the all-day event that appears at the top of each day in your calendar.</p>
+
+            <label class="check-label">
+              <input type="checkbox" name="show_allday_events" {% if prefs.show_allday_events %}checked{% endif %} data-controls="group-allday">
+              <span class="checkmark"></span>
+              Show all-day events
+            </label>
+
+            <div id="group-allday" class="nested-group">
+              <label class="check-label">
+                <input type="checkbox" name="warn_in_allday" {% if prefs.warn_in_allday %}checked{% endif %} data-controls="group-allday-icons">
+                <span class="checkmark"></span>
+                ⚠️ Show warning icons in title
+              </label>
+
+              <div id="group-allday-icons" class="nested-group">
+                <label class="check-label">
+                  <input type="checkbox" name="allday_rain" {% if prefs.allday_rain %}checked{% endif %}>
+                  <span class="checkmark"></span>
+                  ☂️ Rain
+                </label>
+                <label class="check-label">
+                  <input type="checkbox" name="allday_wind" {% if prefs.allday_wind %}checked{% endif %}>
+                  <span class="checkmark"></span>
+                  🌬️ Wind
+                </label>
+                <label class="check-label">
+                  <input type="checkbox" name="allday_cold" {% if prefs.allday_cold %}checked{% endif %}>
+                  <span class="checkmark"></span>
+                  🥶 Cold
+                </label>
+                <label class="check-label">
+                  <input type="checkbox" name="allday_snow" {% if prefs.allday_snow %}checked{% endif %}>
+                  <span class="checkmark"></span>
+                  ☃️ Snow
+                </label>
+                <label class="check-label">
+                  <input type="checkbox" name="allday_sunny" {% if prefs.allday_sunny %}checked{% endif %}>
+                  <span class="checkmark"></span>
+                  ☀️ Sunny weather
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Timed events card -->
+          <div class="pref-card">
+            <p class="pref-card-title">Timed events during the day</p>
+            <p class="pref-card-desc">Controls separate timed events that block time on your calendar when conditions are active.</p>
+
+            <div class="threshold-row">
+              <span>Warn me when the temp is below</span>
+              <input type="number" name="cold_threshold" value="{{ prefs.cold_threshold }}" step="0.5" min="-30" max="40">
+              <span>°C</span>
+            </div>
+
+            <label class="check-label">
+              <input type="checkbox" name="timed_events_enabled" {% if prefs.timed_events_enabled %}checked{% endif %} data-controls="group-timed">
+              <span class="checkmark"></span>
+              Show timed warning events
+            </label>
+
+            <div id="group-timed" class="nested-group">
+              <label class="check-label">
+                <input type="checkbox" name="warn_rain" {% if prefs.warn_rain %}checked{% endif %}>
+                <span class="checkmark"></span>
+                ☂️ Rain warnings
+              </label>
+              <label class="check-label">
+                <input type="checkbox" name="warn_wind" {% if prefs.warn_wind %}checked{% endif %}>
+                <span class="checkmark"></span>
+                🌬️ Wind warnings
+              </label>
+              <label class="check-label">
+                <input type="checkbox" name="warn_cold" {% if prefs.warn_cold %}checked{% endif %}>
+                <span class="checkmark"></span>
+                🥶 Cold warnings
+              </label>
+              <label class="check-label">
+                <input type="checkbox" name="warn_snow" {% if prefs.warn_snow %}checked{% endif %}>
+                <span class="checkmark"></span>
+                ☃️ Snow warnings
+              </label>
+              <label class="check-label">
+                <input type="checkbox" name="warn_sunny" {% if prefs.warn_sunny %}checked{% endif %}>
+                <span class="checkmark"></span>
+                ☀️ Sunny weather <span class="pref-note">(in case you like good news too)</span>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary">Save preferences</button>
+        </form>
+
+      </div>
 
       <!-- Personal tab -->
       <div id="panel-personal" class="panel">
@@ -170,53 +295,6 @@
 
       </div>
 
-      <!-- Preferences tab -->
-      <div id="panel-preferences" class="panel">
-
-        {% if success == 'prefs' %}
-        <div class="alert alert-success">Preferences saved.</div>
-        {% endif %}
-
-        <div class="section">
-          <h2>Preferences</h2>
-          <form method="post" action="/settings" class="prefs-form">
-            <div class="threshold-row">
-              <span>I feel cold below</span>
-              <input type="number" name="cold_threshold" value="{{ prefs.cold_threshold }}" step="0.5" min="-30" max="40">
-              <span>°C</span>
-            </div>
-
-            <label>
-              <input type="checkbox" name="warn_in_allday" {% if prefs.warn_in_allday %}checked{% endif %}>
-              ⚠️ Show warnings in all-day event title
-            </label>
-            <label>
-              <input type="checkbox" name="warn_rain" {% if prefs.warn_rain %}checked{% endif %}>
-              ☂️ Rain warnings <span class="pref-note">(timed event during the day)</span>
-            </label>
-            <label>
-              <input type="checkbox" name="warn_wind" {% if prefs.warn_wind %}checked{% endif %}>
-              🌬️ Wind warnings <span class="pref-note">(timed event during the day)</span>
-            </label>
-            <label>
-              <input type="checkbox" name="warn_cold" {% if prefs.warn_cold %}checked{% endif %}>
-              🥶 Cold warnings <span class="pref-note">(timed event during the day)</span>
-            </label>
-            <label>
-              <input type="checkbox" name="warn_snow" {% if prefs.warn_snow %}checked{% endif %}>
-              ☃️ Snow warnings <span class="pref-note">(timed event during the day)</span>
-            </label>
-            <label>
-              <input type="checkbox" name="warn_sunny" {% if prefs.warn_sunny %}checked{% endif %}>
-              ☀️ Sunny events <span class="pref-note">(in case you like good news too)</span>
-            </label>
-
-            <button type="submit" class="btn-primary" style="margin-top:8px">Save preferences</button>
-          </form>
-        </div>
-
-      </div>
-
       <!-- Reconnect tab -->
       <div id="panel-reconnect" class="panel">
 
@@ -259,7 +337,7 @@
 
   <script>
     (function () {
-      var tabs = ['personal', 'preferences', 'reconnect'];
+      var tabs = ['preferences', 'personal', 'reconnect'];
 
       function showTab(name) {
         tabs.forEach(function (t) {
@@ -274,7 +352,9 @@
         if (tabs.indexOf(hash) !== -1) return hash;
         var params = new URLSearchParams(window.location.search);
         if (params.get('success') === 'prefs') return 'preferences';
-        return 'personal';
+        if (params.get('success') === 'email' || params.get('success') === 'password') return 'personal';
+        if (params.get('error')) return 'personal';
+        return 'preferences';
       }
 
       showTab(getActiveTab());
@@ -290,6 +370,22 @@
           history.pushState(null, '', '#' + hash);
           showTab(hash);
         });
+      });
+
+      // Disable nested groups when parent unchecked
+      document.querySelectorAll('[data-controls]').forEach(function (chk) {
+        var groupId = chk.getAttribute('data-controls');
+        var group = document.getElementById(groupId);
+        if (!group) return;
+        function update() {
+          if (chk.checked) {
+            group.classList.remove('group-disabled');
+          } else {
+            group.classList.add('group-disabled');
+          }
+        }
+        chk.addEventListener('change', update);
+        update();
       });
     })();
   </script>

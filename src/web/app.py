@@ -290,6 +290,13 @@ async def settings_post(
     warn_cold: str = Form(default=""),
     warn_snow: str = Form(default=""),
     warn_sunny: str = Form(default=""),
+    show_allday_events: str = Form(default=""),
+    timed_events_enabled: str = Form(default=""),
+    allday_rain: str = Form(default=""),
+    allday_wind: str = Form(default=""),
+    allday_cold: str = Form(default=""),
+    allday_snow: str = Form(default=""),
+    allday_sunny: str = Form(default=""),
 ):
     user_id = _get_user_id(request)
     if not user_id:
@@ -305,6 +312,13 @@ async def settings_post(
         warn_cold=1 if warn_cold == "on" else 0,
         warn_snow=1 if warn_snow == "on" else 0,
         warn_sunny=1 if warn_sunny == "on" else 0,
+        show_allday_events=1 if show_allday_events == "on" else 0,
+        timed_events_enabled=1 if timed_events_enabled == "on" else 0,
+        allday_rain=1 if allday_rain == "on" else 0,
+        allday_wind=1 if allday_wind == "on" else 0,
+        allday_cold=1 if allday_cold == "on" else 0,
+        allday_snow=1 if allday_snow == "on" else 0,
+        allday_sunny=1 if allday_sunny == "on" else 0,
     )
     return RedirectResponse(url="/settings?success=prefs", status_code=303)
 

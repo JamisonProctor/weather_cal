@@ -40,18 +40,19 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None) -> b
         except ValueError:
             continue
 
-        event = Event()
-        event.add("uid", _stable_uid(forecast.date, forecast.location))
-        summary = format_summary(forecast, prefs) if prefs is not None else (forecast.summary or f"Weather: {city}")
-        event.add("summary", summary)
-        event.add("description", forecast.description or "")
-        event.add("location", forecast.location)
-        event.add("dtstart", event_date)
-        event.add("dtend", event_date + timedelta(days=1))
-        event.add("transp", "TRANSPARENT")
-        event.add("dtstamp", now)
-
-        cal.add_component(event)
+        show_allday = prefs.get("show_allday_events", 1) if prefs else 1
+        if show_allday:
+            event = Event()
+            event.add("uid", _stable_uid(forecast.date, forecast.location))
+            summary = format_summary(forecast, prefs) if prefs is not None else (forecast.summary or f"Weather: {city}")
+            event.add("summary", summary)
+            event.add("description", forecast.description or "")
+            event.add("location", forecast.location)
+            event.add("dtstart", event_date)
+            event.add("dtend", event_date + timedelta(days=1))
+            event.add("transp", "TRANSPARENT")
+            event.add("dtstamp", now)
+            cal.add_component(event)
 
         # Timed warning events
         try:
@@ -59,14 +60,16 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None) -> b
         except ZoneInfoNotFoundError:
             tz = timezone.utc
 
-        for window in get_warning_windows(forecast, prefs):
-            w_event = Event()
-            w_event.add("uid", _warning_uid(window.start_time, forecast.location, window.warning_type))
-            w_event.add("summary", f"{window.emoji} {window.label}")
-            w_event.add("dtstart", datetime.fromisoformat(window.start_time).replace(tzinfo=tz))
-            w_event.add("dtend", datetime.fromisoformat(window.end_time).replace(tzinfo=tz))
-            w_event.add("transp", "TRANSPARENT")
-            w_event.add("dtstamp", now)
-            cal.add_component(w_event)
+        timed_enabled = prefs.get("timed_events_enabled", 1) if prefs else 1
+        if timed_enabled:
+            for window in get_warning_windows(forecast, prefs):
+                w_event = Event()
+                w_event.add("uid", _warning_uid(window.start_time, forecast.location, window.warning_type))
+                w_event.add("summary", f"{window.emoji} {window.label}")
+                w_event.add("dtstart", datetime.fromisoformat(window.start_time).replace(tzinfo=tz))
+                w_event.add("dtend", datetime.fromisoformat(window.end_time).replace(tzinfo=tz))
+                w_event.add("transp", "TRANSPARENT")
+                w_event.add("dtstamp", now)
+                cal.add_component(w_event)
 
     return cal.to_ical()

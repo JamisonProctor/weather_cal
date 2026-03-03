@@ -92,6 +92,13 @@ def test_settings_post_saves_preferences(client, db_path):
             "warn_cold": "on",
             "warn_snow": "",
             "warn_sunny": "on",
+            "show_allday_events": "on",
+            "timed_events_enabled": "on",
+            "allday_rain": "on",
+            "allday_wind": "",
+            "allday_cold": "on",
+            "allday_snow": "on",
+            "allday_sunny": "",
         },
         cookies=cookies,
     )
@@ -102,6 +109,11 @@ def test_settings_post_saves_preferences(client, db_path):
     assert prefs["warn_rain"] == 1
     assert prefs["warn_wind"] == 0
     assert prefs["warn_sunny"] == 1
+    assert prefs["show_allday_events"] == 1
+    assert prefs["timed_events_enabled"] == 1
+    assert prefs["allday_rain"] == 1
+    assert prefs["allday_wind"] == 0
+    assert prefs["allday_cold"] == 1
 
 
 # --- Setup ---

@@ -89,24 +89,24 @@ def _collect_warnings(block: List[Tuple[str, float, int, float, float]], prefs=N
     max_rain = max(rain_vals) if rain_vals else 0
     max_wind = max(wind_vals) if wind_vals else 0
 
-    if prefs is None or prefs.get("warn_rain", 1):
+    if prefs is None or prefs.get("allday_rain", 1):
         is_rainy = max_rain >= RAIN_PROB_THRESHOLD or any(code in RAIN_WARNING_CODES for code in codes)
         if is_rainy:
             warnings.append("☂️")
 
-    if prefs is None or prefs.get("warn_wind", 1):
+    if prefs is None or prefs.get("allday_wind", 1):
         if max_wind >= WIND_SPEED_THRESHOLD:
             warnings.append("🌬️")
 
-    if prefs is None or prefs.get("warn_cold", 1):
+    if prefs is None or prefs.get("allday_cold", 1):
         if temps and min(temps) < cold_threshold:
             warnings.append("🥶")
 
-    if prefs is None or prefs.get("warn_snow", 1):
+    if prefs is None or prefs.get("allday_snow", 1):
         if any(code in SNOW_WARNING_CODES for code in codes):
             warnings.append("☃️")
 
-    if prefs is not None and prefs.get("warn_sunny", 0):
+    if prefs is not None and prefs.get("allday_sunny", 0):
         if codes and all(code in SUNNY_CODES for code in codes):
             warnings.append("☀️")
 

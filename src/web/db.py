@@ -192,6 +192,13 @@ DEFAULT_PREFS = {
     "warn_cold": 1,
     "warn_snow": 1,
     "warn_sunny": 0,
+    "show_allday_events": 1,
+    "timed_events_enabled": 1,
+    "allday_rain": 1,
+    "allday_wind": 1,
+    "allday_cold": 1,
+    "allday_snow": 1,
+    "allday_sunny": 0,
 }
 
 
@@ -211,6 +218,21 @@ def create_user_preferences_table(db_path: str) -> None:
                 updated_at      TEXT
             )
         """)
+        # Migrate: add new columns for existing DBs
+        new_columns = [
+            "show_allday_events  INTEGER DEFAULT 1",
+            "timed_events_enabled INTEGER DEFAULT 1",
+            "allday_rain         INTEGER DEFAULT 1",
+            "allday_wind         INTEGER DEFAULT 1",
+            "allday_cold         INTEGER DEFAULT 1",
+            "allday_snow         INTEGER DEFAULT 1",
+            "allday_sunny        INTEGER DEFAULT 0",
+        ]
+        for col_def in new_columns:
+            try:
+                conn.execute(f"ALTER TABLE user_preferences ADD COLUMN {col_def}")
+            except sqlite3.OperationalError:
+                pass  # column already exists
         conn.commit()
     finally:
         conn.close()
@@ -236,6 +258,13 @@ def upsert_user_preferences(
     warn_cold: int,
     warn_snow: int,
     warn_sunny: int,
+    show_allday_events: int = 1,
+    timed_events_enabled: int = 1,
+    allday_rain: int = 1,
+    allday_wind: int = 1,
+    allday_cold: int = 1,
+    allday_snow: int = 1,
+    allday_sunny: int = 0,
 ) -> None:
     updated_at = datetime.now().isoformat()
     conn = _conn(db_path)
@@ -243,19 +272,30 @@ def upsert_user_preferences(
         conn.execute(
             """
             INSERT INTO user_preferences
-                (user_id, cold_threshold, warn_in_allday, warn_rain, warn_wind, warn_cold, warn_snow, warn_sunny, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (user_id, cold_threshold, warn_in_allday, warn_rain, warn_wind, warn_cold, warn_snow, warn_sunny,
+                 show_allday_events, timed_events_enabled, allday_rain, allday_wind, allday_cold, allday_snow, allday_sunny,
+                 updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(user_id) DO UPDATE SET
-                cold_threshold = excluded.cold_threshold,
-                warn_in_allday = excluded.warn_in_allday,
-                warn_rain      = excluded.warn_rain,
-                warn_wind      = excluded.warn_wind,
-                warn_cold      = excluded.warn_cold,
-                warn_snow      = excluded.warn_snow,
-                warn_sunny     = excluded.warn_sunny,
-                updated_at     = excluded.updated_at
+                cold_threshold       = excluded.cold_threshold,
+                warn_in_allday       = excluded.warn_in_allday,
+                warn_rain            = excluded.warn_rain,
+                warn_wind            = excluded.warn_wind,
+                warn_cold            = excluded.warn_cold,
+                warn_snow            = excluded.warn_snow,
+                warn_sunny           = excluded.warn_sunny,
+                show_allday_events   = excluded.show_allday_events,
+                timed_events_enabled = excluded.timed_events_enabled,
+                allday_rain          = excluded.allday_rain,
+                allday_wind          = excluded.allday_wind,
+                allday_cold          = excluded.allday_cold,
+                allday_snow          = excluded.allday_snow,
+                allday_sunny         = excluded.allday_sunny,
+                updated_at           = excluded.updated_at
             """,
-            (user_id, cold_threshold, warn_in_allday, warn_rain, warn_wind, warn_cold, warn_snow, warn_sunny, updated_at),
+            (user_id, cold_threshold, warn_in_allday, warn_rain, warn_wind, warn_cold, warn_snow, warn_sunny,
+             show_allday_events, timed_events_enabled, allday_rain, allday_wind, allday_cold, allday_snow, allday_sunny,
+             updated_at),
         )
         conn.commit()
     finally:

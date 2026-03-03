@@ -1,6 +1,7 @@
 import pytest
 
 from src.models.forecast import Forecast
+from src.integrations.ics_service import generate_ics
 from src.services.forecast_formatting import format_summary, get_warning_windows
 from src.services.forecast_store import ForecastStore
 from src.web.db import (
@@ -79,6 +80,13 @@ def test_default_prefs_values():
     assert DEFAULT_PREFS["warn_cold"] == 1
     assert DEFAULT_PREFS["warn_snow"] == 1
     assert DEFAULT_PREFS["warn_sunny"] == 0
+    assert DEFAULT_PREFS["show_allday_events"] == 1
+    assert DEFAULT_PREFS["timed_events_enabled"] == 1
+    assert DEFAULT_PREFS["allday_rain"] == 1
+    assert DEFAULT_PREFS["allday_wind"] == 1
+    assert DEFAULT_PREFS["allday_cold"] == 1
+    assert DEFAULT_PREFS["allday_snow"] == 1
+    assert DEFAULT_PREFS["allday_sunny"] == 0
 
 
 # --- format_summary prefs tests ---
@@ -104,7 +112,7 @@ def test_format_summary_filters_rain_warning():
         rain=[70, 70],
         winds=[5, 5],
     )
-    prefs = {**DEFAULT_PREFS, "warn_rain": 0}
+    prefs = {**DEFAULT_PREFS, "allday_rain": 0}
     summary = format_summary(forecast, prefs=prefs)
     assert "☂️" not in summary
 
@@ -182,3 +190,63 @@ def test_get_warning_windows_custom_cold_threshold():
     windows = get_warning_windows(forecast, prefs=prefs)
     cold = [w for w in windows if w.warning_type == "cold"]
     assert len(cold) == 1
+
+
+# --- New prefs: show_allday_events / timed_events_enabled / allday_* ---
+
+def _parse_ics_events(ics_bytes):
+    from icalendar import Calendar
+    cal = Calendar.from_ical(ics_bytes)
+    return [c for c in cal.walk() if c.name == "VEVENT"]
+
+
+def _make_rainy_forecast():
+    return _make_forecast(
+        times=["2025-08-01T10:00", "2025-08-01T11:00", "2025-08-01T12:00"],
+        temps=[15, 15, 15],
+        codes=[61, 61, 61],
+        rain=[70, 70, 70],
+        winds=[5, 5, 5],
+    )
+
+
+def test_upsert_includes_new_columns(db_path):
+    upsert_user_preferences(
+        db_path, 1,
+        cold_threshold=3.0, warn_in_allday=1, warn_rain=1,
+        warn_wind=1, warn_cold=1, warn_snow=1, warn_sunny=0,
+        show_allday_events=0, timed_events_enabled=0,
+        allday_rain=0, allday_wind=1, allday_cold=1, allday_snow=1, allday_sunny=1,
+    )
+    prefs = get_user_preferences(db_path, 1)
+    assert prefs["show_allday_events"] == 0
+    assert prefs["timed_events_enabled"] == 0
+    assert prefs["allday_rain"] == 0
+    assert prefs["allday_sunny"] == 1
+
+
+def test_show_allday_events_false_suppresses_allday_event():
+    forecast = _make_rainy_forecast()
+    prefs = {**DEFAULT_PREFS, "show_allday_events": 0}
+    events = _parse_ics_events(generate_ics([forecast], "Munich, Germany", prefs=prefs))
+    allday = [e for e in events if not hasattr(e["DTSTART"].dt, "hour")]
+    assert len(allday) == 0
+
+
+def test_timed_events_enabled_false_suppresses_timed_events():
+    forecast = _make_rainy_forecast()
+    prefs = {**DEFAULT_PREFS, "timed_events_enabled": 0}
+    events = _parse_ics_events(generate_ics([forecast], "Munich, Germany", prefs=prefs))
+    timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
+    assert len(timed) == 0
+
+
+def test_allday_rain_false_hides_rain_icon_but_timed_event_remains():
+    forecast = _make_rainy_forecast()
+    # allday_rain=0 hides icon in all-day summary; warn_rain=1 keeps timed event
+    prefs = {**DEFAULT_PREFS, "allday_rain": 0, "warn_rain": 1}
+    events = _parse_ics_events(generate_ics([forecast], "Munich, Germany", prefs=prefs))
+    allday = next(e for e in events if not hasattr(e["DTSTART"].dt, "hour"))
+    timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
+    assert "☂️" not in str(allday["SUMMARY"])
+    assert any("Rain Warning" in str(e["SUMMARY"]) for e in timed)

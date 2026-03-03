@@ -21,6 +21,7 @@ from src.web.db import (
     create_user,
     create_user_location,
     create_user_preferences_table,
+    delete_user_account,
     get_feed_token_by_user,
     get_rows_by_token,
     get_user_by_email,
@@ -28,6 +29,8 @@ from src.web.db import (
     get_user_locations,
     get_user_preferences,
     save_feedback,
+    update_user_email,
+    update_user_password,
     upsert_user_preferences,
     wipe_accounts,
 )
@@ -246,7 +249,7 @@ async def connect(request: Request):
 
 
 @app.get("/settings", response_class=HTMLResponse)
-async def settings(request: Request):
+async def settings(request: Request, success: str = Query(default=""), error: str = Query(default="")):
     user_id = _get_user_id(request)
     if not user_id:
         return RedirectResponse(url="/login", status_code=303)
@@ -271,6 +274,8 @@ async def settings(request: Request):
             "google_cal_url": google_cal_url,
             "locations": locations,
             "prefs": prefs,
+            "success": success,
+            "error": error,
         },
     )
 
@@ -301,7 +306,69 @@ async def settings_post(
         warn_snow=1 if warn_snow == "on" else 0,
         warn_sunny=1 if warn_sunny == "on" else 0,
     )
-    return RedirectResponse(url="/settings", status_code=303)
+    return RedirectResponse(url="/settings?success=prefs", status_code=303)
+
+
+@app.post("/settings/email")
+async def settings_email_post(
+    request: Request,
+    new_email: str = Form(...),
+    current_password: str = Form(...),
+):
+    user_id = _get_user_id(request)
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    user = get_user_by_id(DB_PATH, user_id)
+    if not user or not check_password(current_password, user["password_hash"]):
+        return RedirectResponse(url="/settings?error=wrong_password", status_code=303)
+
+    try:
+        update_user_email(DB_PATH, user_id, new_email)
+    except sqlite3.IntegrityError:
+        return RedirectResponse(url="/settings?error=email_taken", status_code=303)
+
+    return RedirectResponse(url="/settings?success=email", status_code=303)
+
+
+@app.post("/settings/password")
+async def settings_password_post(
+    request: Request,
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+):
+    user_id = _get_user_id(request)
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    user = get_user_by_id(DB_PATH, user_id)
+    if not user or not check_password(current_password, user["password_hash"]):
+        return RedirectResponse(url="/settings?error=wrong_password", status_code=303)
+
+    if len(new_password) < 12:
+        return RedirectResponse(url="/settings?error=password_too_short", status_code=303)
+
+    update_user_password(DB_PATH, user_id, new_password)
+    return RedirectResponse(url="/settings?success=password", status_code=303)
+
+
+@app.post("/settings/delete")
+async def settings_delete_post(
+    request: Request,
+    confirm_email: str = Form(...),
+):
+    user_id = _get_user_id(request)
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    user = get_user_by_id(DB_PATH, user_id)
+    if not user or confirm_email.strip().lower() != user["email"].lower():
+        return RedirectResponse(url="/settings?error=email_mismatch", status_code=303)
+
+    delete_user_account(DB_PATH, user_id)
+    response = RedirectResponse(url="/", status_code=303)
+    response.delete_cookie("session")
+    return response
 
 
 @app.get("/feedback", response_class=HTMLResponse)

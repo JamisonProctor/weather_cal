@@ -262,6 +262,38 @@ def upsert_user_preferences(
         conn.close()
 
 
+def update_user_email(db_path: str, user_id: int, new_email: str) -> None:
+    """Update a user's email. Raises sqlite3.IntegrityError if email already taken."""
+    conn = _conn(db_path)
+    try:
+        conn.execute("UPDATE users SET email = ? WHERE id = ?", (new_email, user_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def update_user_password(db_path: str, user_id: int, new_password: str) -> None:
+    """Hash and store a new password for the given user."""
+    password_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
+    conn = _conn(db_path)
+    try:
+        conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (password_hash, user_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def delete_user_account(db_path: str, user_id: int) -> None:
+    """Soft-delete a user account and remove their feed token (stops feed immediately)."""
+    conn = _conn(db_path)
+    try:
+        conn.execute("UPDATE users SET is_active = 0 WHERE id = ?", (user_id,))
+        conn.execute("DELETE FROM feed_tokens WHERE user_id = ?", (user_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def wipe_accounts(db_path: str) -> None:
     """Delete all user accounts, locations, and feed tokens. Forecast cache is preserved.
     Only call this when WIPE_ACCOUNTS_ON_START is set — debug/dev use only.

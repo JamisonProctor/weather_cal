@@ -1,5 +1,6 @@
 # forecast_store.py
 
+import json
 import sqlite3
 import os
 import logging
@@ -68,6 +69,12 @@ class ForecastStore:
                 created_at TEXT    NOT NULL
             )
         """)
+        # Add columns introduced after initial schema (idempotent)
+        for col_def in ["hourly_json TEXT", "timezone TEXT"]:
+            try:
+                cur.execute(f"ALTER TABLE forecast ADD COLUMN {col_def}")
+            except sqlite3.OperationalError:
+                pass  # column already exists
         conn.commit()
         conn.close()
 
@@ -76,17 +83,27 @@ class ForecastStore:
         logger.info(f"Upserting forecast for date={forecast.date}, location={forecast.location}")
         conn = sqlite3.connect(self.db_path)
         cur = conn.cursor()
+        hourly_json = json.dumps({
+            "times": forecast.times or [],
+            "temps": forecast.temps or [],
+            "codes": forecast.codes or [],
+            "rain": forecast.rain or [],
+            "winds": forecast.winds or [],
+        })
         cur.execute("""
-            INSERT INTO forecast (date, location, high, low, summary, description, last_updated)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO forecast (date, location, high, low, summary, description, last_updated, hourly_json, timezone)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(date, location) DO UPDATE SET
                 high=excluded.high,
                 low=excluded.low,
                 summary=excluded.summary,
                 description=excluded.description,
-                last_updated=excluded.last_updated
+                last_updated=excluded.last_updated,
+                hourly_json=excluded.hourly_json,
+                timezone=excluded.timezone
         """, (forecast.date, forecast.location, forecast.high, forecast.low,
-              forecast.summary, forecast.description, forecast.fetch_time or datetime.now().isoformat()))
+              forecast.summary, forecast.description, forecast.fetch_time or datetime.now().isoformat(),
+              hourly_json, forecast.timezone))
         conn.commit()
         conn.close()
 
@@ -100,7 +117,7 @@ class ForecastStore:
         conn = sqlite3.connect(self.db_path)
         cur = conn.cursor()
         cur.execute(f"""
-            SELECT date, location, high, low, summary, description, last_updated
+            SELECT date, location, high, low, summary, description, last_updated, hourly_json, timezone
             FROM forecast
             WHERE date >= ? AND location IN ({placeholders})
             ORDER BY location, date ASC
@@ -111,6 +128,7 @@ class ForecastStore:
         from src.models.forecast import Forecast
         forecasts = []
         for row in rows:
+            hourly = json.loads(row[7]) if row[7] else {}
             forecasts.append(Forecast(
                 date=row[0],
                 location=row[1],
@@ -119,11 +137,12 @@ class ForecastStore:
                 summary=row[4],
                 description=row[5],
                 fetch_time=row[6],
-                times=[],
-                temps=[],
-                codes=[],
-                rain=[],
-                winds=[]
+                times=hourly.get("times", []),
+                temps=hourly.get("temps", []),
+                codes=hourly.get("codes", []),
+                rain=hourly.get("rain", []),
+                winds=hourly.get("winds", []),
+                timezone=row[8],
             ))
         return forecasts
 
@@ -135,7 +154,7 @@ class ForecastStore:
         conn = sqlite3.connect(self.db_path)
         cur = conn.cursor()
         cur.execute("""
-            SELECT date, location, high, low, summary, description, last_updated
+            SELECT date, location, high, low, summary, description, last_updated, hourly_json, timezone
             FROM forecast
             WHERE date >= ?
             ORDER BY date ASC
@@ -146,6 +165,7 @@ class ForecastStore:
         forecasts = []
         from src.models.forecast import Forecast
         for row in rows:
+            hourly = json.loads(row[7]) if row[7] else {}
             forecasts.append(Forecast(
                 date=row[0],
                 location=row[1],
@@ -154,10 +174,11 @@ class ForecastStore:
                 summary=row[4],
                 description=row[5],
                 fetch_time=row[6],
-                times=[],
-                temps=[],
-                codes=[],
-                rain=[],
-                winds=[]
+                times=hourly.get("times", []),
+                temps=hourly.get("temps", []),
+                codes=hourly.get("codes", []),
+                rain=hourly.get("rain", []),
+                winds=hourly.get("winds", []),
+                timezone=row[8],
             ))
         return forecasts

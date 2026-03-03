@@ -22,6 +22,7 @@ from src.web.db import (
     get_user_by_email,
     get_user_by_id,
     get_user_locations,
+    wipe_accounts,
 )
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,10 @@ def _initial_forecast_fetch(location: str, db_path: str):
 
 app = FastAPI()
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+
+ForecastStore(db_path=DB_PATH)  # ensures all tables exist before anything else runs
+if os.getenv("WIPE_ACCOUNTS_ON_START"):
+    wipe_accounts(DB_PATH)
 
 
 def _get_user_id(request: Request):

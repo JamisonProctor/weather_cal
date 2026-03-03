@@ -138,7 +138,7 @@ async def setup_post(
 
     create_user_location(DB_PATH, user_id, location, resolved_lat, resolved_lon, resolved_tz)
     background_tasks.add_task(_initial_forecast_fetch, location, DB_PATH, resolved_lat, resolved_lon, resolved_tz)
-    return RedirectResponse(url="/dashboard", status_code=303)
+    return RedirectResponse(url="/connect", status_code=303)
 
 
 @app.get("/geocode")
@@ -189,7 +189,7 @@ async def login_post(
         )
 
     session_token = create_session_token(user["id"])
-    response = RedirectResponse(url="/dashboard", status_code=303)
+    response = RedirectResponse(url="/settings", status_code=303)
     response.set_cookie("session", session_token, httponly=True, samesite="lax")
     return response
 
@@ -201,8 +201,40 @@ async def logout():
     return response
 
 
-@app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request):
+@app.get("/dashboard")
+async def dashboard():
+    return RedirectResponse(url="/settings", status_code=301)
+
+
+def _build_feed_urls(request: Request, feed_token: str):
+    base_url = str(request.base_url).rstrip("/")
+    feed_path = f"/feed/{feed_token}/weather.ics"
+    webcal_url = base_url.replace("https://", "webcal://").replace("http://", "webcal://") + feed_path
+    google_cal_url = f"https://calendar.google.com/calendar/r?cid={quote(webcal_url, safe='')}"
+    return webcal_url, google_cal_url
+
+
+@app.get("/connect", response_class=HTMLResponse)
+async def connect(request: Request):
+    user_id = _get_user_id(request)
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    feed_token = get_feed_token_by_user(DB_PATH, user_id)
+    webcal_url, google_cal_url = _build_feed_urls(request, feed_token) if feed_token else (None, None)
+
+    return templates.TemplateResponse(
+        "connect.html",
+        {
+            "request": request,
+            "webcal_url": webcal_url,
+            "google_cal_url": google_cal_url,
+        },
+    )
+
+
+@app.get("/settings", response_class=HTMLResponse)
+async def settings(request: Request):
     user_id = _get_user_id(request)
     if not user_id:
         return RedirectResponse(url="/login", status_code=303)
@@ -213,18 +245,10 @@ async def dashboard(request: Request):
 
     feed_token = get_feed_token_by_user(DB_PATH, user_id)
     locations = get_user_locations(DB_PATH, user_id)
-
-    webcal_url = None
-    google_cal_url = None
-    if feed_token:
-        base_url = str(request.base_url).rstrip("/")
-        feed_path = f"/feed/{feed_token}/weather.ics"
-        webcal_url = base_url.replace("https://", "webcal://").replace("http://", "webcal://") + feed_path
-        https_url = base_url + feed_path
-        google_cal_url = f"https://calendar.google.com/calendar/r?cid={quote(webcal_url, safe='')}"
+    webcal_url, google_cal_url = _build_feed_urls(request, feed_token) if feed_token else (None, None)
 
     return templates.TemplateResponse(
-        "dashboard.html",
+        "settings.html",
         {
             "request": request,
             "user": user,

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — WeatherCal</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; color: #111; }
+    nav { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #e5e7eb; margin-bottom: 32px; }
+    nav strong { font-size: 1.1rem; }
+    .logout-btn { background: none; border: none; color: #6b7280; cursor: pointer; font-size: 0.95rem; padding: 0; }
+    .logout-btn:hover { color: #111; }
+    h1 { font-size: 1.8rem; margin-bottom: 2rem; }
+    .section { margin-bottom: 32px; }
+    .section h2 { font-size: 1.1rem; color: #374151; margin-bottom: 12px; }
+    .location-tag { display: inline-block; padding: 6px 14px; background: #f3f4f6; border-radius: 20px; font-size: 0.95rem; }
+    .no-feed { color: #6b7280; font-size: 0.95rem; }
+    .feed-input-row { display: flex; gap: 8px; }
+    .feed-url { flex: 1; padding: 10px 12px; font-family: monospace; font-size: 0.82rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px; color: #374151; cursor: text; }
+    .copy-btn { padding: 10px 16px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
+    .copy-btn:hover { background: #e5e7eb; }
+    .reconnect-link { display: inline-block; margin-top: 12px; color: #2563eb; text-decoration: none; font-size: 0.9rem; }
+    .reconnect-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <nav>
+    <strong>WeatherCal ☀️</strong>
+    <form method="post" action="/logout" style="margin:0">
+      <button class="logout-btn" type="submit">Logout</button>
+    </form>
+  </nav>
+
+  <h1>Settings</h1>
+
+  <div class="section">
+    <h2>Your location</h2>
+    {% for loc in locations %}
+    <span class="location-tag">&#128205; {{ loc["location"] }}</span>
+    {% else %}
+    <p class="no-feed">No location set.</p>
+    {% endfor %}
+  </div>
+
+  <div class="section">
+    <h2>Your feed</h2>
+    {% if webcal_url %}
+    <div class="feed-input-row">
+      <input type="text" class="feed-url" id="feed-url" value="{{ webcal_url }}" readonly onclick="this.select()">
+      <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('feed-url').value); this.textContent='Copied!'">Copy</button>
+    </div>
+    <a href="/connect" class="reconnect-link">Need to reconnect your calendar? &rarr;</a>
+    {% else %}
+    <p class="no-feed">No feed token found. Please contact support.</p>
+    {% endif %}
+  </div>
+</body>
+</html>

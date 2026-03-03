@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connect your calendar — WeatherCal</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; color: #111; }
+    nav { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #e5e7eb; margin-bottom: 32px; }
+    nav strong { font-size: 1.1rem; }
+    .logout-btn { background: none; border: none; color: #6b7280; cursor: pointer; font-size: 0.95rem; padding: 0; }
+    .logout-btn:hover { color: #111; }
+    h1 { font-size: 1.8rem; margin-bottom: 0.4rem; }
+    .subtitle { color: #333; margin-bottom: 2rem; }
+    .btn-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }
+    .btn-wrapper { display: flex; flex-direction: column; gap: 4px; }
+    .btn-note { font-size: 0.8rem; color: #6b7280; padding-left: 4px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 20px; border-radius: 8px; font-size: 1rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-blue:hover { background: #1d4ed8; }
+    .btn-red { background: #ea4335; color: #fff; }
+    .btn-red:hover { background: #c5392c; }
+    .btn-slate { background: #0f172a; color: #fff; }
+    .btn-slate:hover { background: #1e293b; }
+    .copy-section { border-top: 1px solid #e5e7eb; padding-top: 24px; }
+    .feed-input-row { display: flex; gap: 8px; }
+    .feed-url { flex: 1; padding: 10px 12px; font-family: monospace; font-size: 0.82rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px; color: #374151; cursor: text; }
+    .copy-btn { padding: 10px 16px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
+    .copy-btn:hover { background: #e5e7eb; }
+    .copy-hint { font-size: 0.8rem; color: #6b7280; margin-top: 6px; }
+    .settings-link { display: block; margin-top: 28px; color: #2563eb; text-decoration: none; font-size: 0.95rem; }
+    .settings-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <nav>
+    <strong>WeatherCal ☀️</strong>
+    <form method="post" action="/logout" style="margin:0">
+      <button class="logout-btn" type="submit">Logout</button>
+    </form>
+  </nav>
+
+  <h1>Connect your calendar</h1>
+  <p class="subtitle">Add your feed to a calendar app and forecasts will appear automatically.</p>
+
+  <div class="btn-row">
+    <div class="btn-wrapper">
+      <a href="{{ webcal_url }}" class="btn btn-blue">
+        &#128197; Add to Apple Calendar
+      </a>
+      <span class="btn-note">Works on Mac and iPhone</span>
+    </div>
+    <div class="btn-wrapper">
+      <a href="{{ google_cal_url }}" class="btn btn-red" target="_blank" rel="noopener">
+        &#128197; Add to Google Calendar
+      </a>
+      <span class="btn-note">Works on Android and in Gmail</span>
+    </div>
+    <div class="btn-wrapper">
+      <a href="{{ webcal_url }}" class="btn btn-slate">
+        &#128197; Add to Outlook
+      </a>
+      <span class="btn-note">Works on Windows and in Outlook desktop</span>
+    </div>
+  </div>
+
+  <div class="copy-section">
+    <div class="feed-input-row">
+      <input type="text" class="feed-url" id="feed-url" value="{{ webcal_url }}" readonly onclick="this.select()">
+      <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('feed-url').value); this.textContent='Copied!'">Copy</button>
+    </div>
+    <p class="copy-hint">Or paste this URL directly into any calendar app.</p>
+  </div>
+
+  <a href="/settings" class="settings-link">Go to Settings &rarr;</a>
+</body>
+</html>

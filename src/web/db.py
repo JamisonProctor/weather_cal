@@ -192,7 +192,7 @@ DEFAULT_PREFS = {
     "warn_cold": 1,
     "warn_snow": 1,
     "warn_sunny": 0,
-    "warn_hot": 0,
+    "warn_hot": 1,
     "show_allday_events": 1,
     "timed_events_enabled": 1,
     "allday_rain": 1,
@@ -200,7 +200,7 @@ DEFAULT_PREFS = {
     "allday_cold": 1,
     "allday_snow": 1,
     "allday_sunny": 0,
-    "allday_hot": 0,
+    "allday_hot": 1,
     "warm_threshold": 14.0,
     "hot_threshold": 28.0,
 }
@@ -231,8 +231,8 @@ def create_user_preferences_table(db_path: str) -> None:
             "allday_cold         INTEGER DEFAULT 1",
             "allday_snow         INTEGER DEFAULT 1",
             "allday_sunny        INTEGER DEFAULT 0",
-            "warn_hot            INTEGER DEFAULT 0",
-            "allday_hot          INTEGER DEFAULT 0",
+            "warn_hot            INTEGER DEFAULT 1",
+            "allday_hot          INTEGER DEFAULT 1",
             "warm_threshold      REAL    DEFAULT 14.0",
             "hot_threshold       REAL    DEFAULT 28.0",
         ]
@@ -275,8 +275,8 @@ def upsert_user_preferences(
     allday_sunny: int = 0,
     warm_threshold: float = 14.0,
     hot_threshold: float = 28.0,
-    allday_hot: int = 0,
-    warn_hot: int = 0,
+    allday_hot: int = 1,
+    warn_hot: int = 1,
 ) -> None:
     updated_at = datetime.now().isoformat()
     conn = _conn(db_path)

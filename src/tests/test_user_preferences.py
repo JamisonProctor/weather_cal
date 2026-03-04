@@ -82,7 +82,7 @@ def test_default_prefs_values():
     assert DEFAULT_PREFS["warn_cold"] == 1
     assert DEFAULT_PREFS["warn_snow"] == 1
     assert DEFAULT_PREFS["warn_sunny"] == 0
-    assert DEFAULT_PREFS["warn_hot"] == 0
+    assert DEFAULT_PREFS["warn_hot"] == 1
     assert DEFAULT_PREFS["show_allday_events"] == 1
     assert DEFAULT_PREFS["timed_events_enabled"] == 1
     assert DEFAULT_PREFS["allday_rain"] == 1
@@ -90,7 +90,7 @@ def test_default_prefs_values():
     assert DEFAULT_PREFS["allday_cold"] == 1
     assert DEFAULT_PREFS["allday_snow"] == 1
     assert DEFAULT_PREFS["allday_sunny"] == 0
-    assert DEFAULT_PREFS["allday_hot"] == 0
+    assert DEFAULT_PREFS["allday_hot"] == 1
 
 
 # --- format_summary prefs tests ---

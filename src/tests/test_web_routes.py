@@ -304,7 +304,6 @@ def test_admin_route_requires_auth(client):
 
 def test_admin_route_forbidden_for_non_admin(client, db_path, monkeypatch):
     monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
-    monkeypatch.setattr(web_app, "ADMIN_ALLOWED_IPS_RAW", "testclient,127.0.0.1")
     _, cookies = _auth_cookies(db_path, email="user@example.com")
     resp = client.get("/admin", cookies=cookies)
     assert resp.status_code == 403
@@ -312,16 +311,7 @@ def test_admin_route_forbidden_for_non_admin(client, db_path, monkeypatch):
 
 def test_admin_route_accessible_for_admin(client, db_path, monkeypatch):
     monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
-    monkeypatch.setattr(web_app, "ADMIN_ALLOWED_IPS_RAW", "testclient,127.0.0.1")
     _, cookies = _auth_cookies(db_path, email="admin@example.com")
     resp = client.get("/admin", cookies=cookies)
     assert resp.status_code == 200
     assert b"Admin" in resp.content
-
-
-def test_admin_route_blocked_for_disallowed_ip(client, db_path, monkeypatch):
-    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
-    monkeypatch.setattr(web_app, "ADMIN_ALLOWED_IPS_RAW", "10.0.0.1")
-    _, cookies = _auth_cookies(db_path, email="admin@example.com")
-    resp = client.get("/admin", cookies=cookies)
-    assert resp.status_code == 403

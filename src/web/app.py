@@ -1,3 +1,4 @@
+import ipaddress
 import logging
 import os
 import sqlite3
@@ -43,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 DB_PATH = os.getenv("DB_PATH", "data/forecast.db")
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")
+ADMIN_ALLOWED_IPS_RAW = os.getenv("ADMIN_ALLOWED_IPS", "127.0.0.1,::1")
 
 
 def _initial_forecast_fetch(location: str, db_path: str, lat: float = None, lon: float = None, timezone: str = None):
@@ -84,6 +86,29 @@ def _is_admin(user_id: int) -> bool:
         return False
     user = get_user_by_id(DB_PATH, user_id)
     return bool(user and user["email"] == ADMIN_EMAIL)
+
+
+def _is_allowed_ip(host: str) -> bool:
+    """Return True if host is in the ADMIN_ALLOWED_IPS list (supports CIDR notation)."""
+    allowed = [s.strip() for s in ADMIN_ALLOWED_IPS_RAW.split(",") if s.strip()]
+    if not allowed:
+        return False
+    try:
+        client_ip = ipaddress.ip_address(host)
+        for entry in allowed:
+            try:
+                if "/" in entry:
+                    if client_ip in ipaddress.ip_network(entry, strict=False):
+                        return True
+                else:
+                    if client_ip == ipaddress.ip_address(entry):
+                        return True
+            except ValueError:
+                continue
+        return False
+    except ValueError:
+        # host is not a valid IP (e.g. test client) — exact string match
+        return host in allowed
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -557,6 +582,9 @@ async def admin(request: Request):
     user_id = _get_user_id(request)
     if not user_id:
         return RedirectResponse(url="/login", status_code=303)
+    client_host = request.client.host if request.client else ""
+    if not _is_allowed_ip(client_host):
+        return Response(content="Forbidden", status_code=403)
     if not _is_admin(user_id):
         return Response(content="Forbidden", status_code=403)
     stats = get_admin_stats(DB_PATH)

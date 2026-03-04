@@ -19,16 +19,16 @@ def _warning_uid(start_time: str, location: str, warning_type: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()[:16] + "@weathercal.app"
 
 
-def _sunny_summary(window, forecast) -> str:
+def _sunny_summary(window, forecast, warm_threshold: float = 14.0) -> str:
     try:
         start = datetime.fromisoformat(window.start_time)
         end = datetime.fromisoformat(window.end_time)
         temps_in_window = [
             t for slot, t in zip(forecast.times, forecast.temps)
-            if start <= datetime.fromisoformat(slot) <= end
+            if start <= datetime.fromisoformat(slot) <= end and t >= warm_threshold
         ]
         if temps_in_window:
-            return f"☀️ {round(min(temps_in_window))}–{round(max(temps_in_window))}°C"
+            return f"☀️ {round(min(temps_in_window))} ~ {round(max(temps_in_window))}°C"
     except Exception:
         pass
     return f"{window.emoji} {window.label}"
@@ -87,7 +87,8 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, sett
                 w_event = Event()
                 w_event.add("uid", _warning_uid(window.start_time, forecast.location, window.warning_type))
                 if window.warning_type == "sunny":
-                    summary = _sunny_summary(window, forecast)
+                    warm_threshold = prefs.get("warm_threshold", 14.0) if prefs else 14.0
+                    summary = _sunny_summary(window, forecast, warm_threshold)
                 else:
                     summary = f"{window.emoji} {window.label}"
                 w_event.add("summary", summary)

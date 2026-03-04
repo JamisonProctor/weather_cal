@@ -137,7 +137,9 @@ def test_generate_ics_with_sunny_enabled_prefs():
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
     sunny = [e for e in timed if "☀️" in str(e["SUMMARY"])]
     assert len(sunny) == 1
-    assert "°C" in str(sunny[0]["SUMMARY"])
+    summary = str(sunny[0]["SUMMARY"])
+    assert "°C" in summary
+    assert " ~ " in summary
 
 
 def test_x_published_ttl_present():

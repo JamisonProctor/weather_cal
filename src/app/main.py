@@ -24,6 +24,21 @@ def get_schedule_time() -> str:
         return "00:23"
     return schedule_time
 
+def short_term_main():
+    """Refresh near-term (3-day) forecasts for all active user locations every 4 hours."""
+    locations = get_locations()
+    store = ForecastStore()
+    for loc in locations:
+        try:
+            forecasts = ForecastService.fetch_forecasts(location=loc, forecast_days=3)
+            for f in forecasts:
+                f.summary = format_summary(f)
+                f.description = format_detailed_forecast(f)
+                store.upsert_forecast(f)
+        except Exception:
+            logger.exception("Short-term fetch failed for location=%s", loc)
+
+
 def main():
     locations = get_locations()
     store = ForecastStore()
@@ -70,6 +85,11 @@ def main():
 def schedule_jobs():
     job = schedule.every().day.at(get_schedule_time()).do(main)
     logger.info(f"Scheduled job: {job.job_func.__name__} → next run at {job.next_run}")
+
+    intraday_job = schedule.every(4).hours.do(short_term_main)
+    logger.info(f"Scheduled job: {intraday_job.job_func.__name__} → next run at {intraday_job.next_run}")
+
+    short_term_main()
 
     logger.info("Scheduler started. Waiting for tasks...")
     while True:

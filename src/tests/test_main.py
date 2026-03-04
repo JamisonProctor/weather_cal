@@ -93,6 +93,94 @@ def test_main_runs_full_pipeline(monkeypatch):
     assert len(synced_warnings) == 2
 
 
+def test_short_term_main_fetches_and_stores(monkeypatch):
+    raw_forecasts = {
+        "Munich, Germany": [
+            Forecast(
+                date="2099-01-01",
+                location="Munich, Germany",
+                high=20,
+                low=10,
+                times=["2099-01-01T12:00"],
+                temps=[20],
+                codes=[1],
+                rain=[0],
+                winds=[5],
+            )
+        ],
+        "Berlin, Germany": [
+            Forecast(
+                date="2099-01-01",
+                location="Berlin, Germany",
+                high=18,
+                low=8,
+                times=["2099-01-01T12:00"],
+                temps=[18],
+                codes=[2],
+                rain=[5],
+                winds=[3],
+            )
+        ],
+    }
+    saved_forecasts = []
+
+    class FakeStore:
+        def upsert_forecast(self, forecast):
+            saved_forecasts.append(forecast)
+
+    monkeypatch.setattr(main, "get_locations", lambda: ["Munich, Germany", "Berlin, Germany"])
+    monkeypatch.setattr(main, "ForecastStore", FakeStore)
+    monkeypatch.setattr(
+        main.ForecastService,
+        "fetch_forecasts",
+        lambda location, forecast_days: raw_forecasts[location],
+    )
+    monkeypatch.setattr(main, "format_summary", lambda forecast: f"summary-{forecast.location}")
+    monkeypatch.setattr(main, "format_detailed_forecast", lambda forecast: f"desc-{forecast.location}")
+
+    main.short_term_main()
+
+    assert len(saved_forecasts) == 2
+    assert all(f.summary.startswith("summary-") for f in saved_forecasts)
+    assert all(f.description.startswith("desc-") for f in saved_forecasts)
+
+
+def test_short_term_main_continues_on_error(monkeypatch):
+    """A fetch failure for one location should not abort the others."""
+    good_forecast = Forecast(
+        date="2099-01-01",
+        location="Berlin, Germany",
+        high=15,
+        low=5,
+        times=["2099-01-01T12:00"],
+        temps=[15],
+        codes=[1],
+        rain=[0],
+        winds=[2],
+    )
+    saved_forecasts = []
+
+    class FakeStore:
+        def upsert_forecast(self, forecast):
+            saved_forecasts.append(forecast)
+
+    def fake_fetch(location, forecast_days):
+        if location == "Munich, Germany":
+            raise RuntimeError("fetch failed")
+        return [good_forecast]
+
+    monkeypatch.setattr(main, "get_locations", lambda: ["Munich, Germany", "Berlin, Germany"])
+    monkeypatch.setattr(main, "ForecastStore", FakeStore)
+    monkeypatch.setattr(main.ForecastService, "fetch_forecasts", fake_fetch)
+    monkeypatch.setattr(main, "format_summary", lambda f: "")
+    monkeypatch.setattr(main, "format_detailed_forecast", lambda f: "")
+
+    main.short_term_main()  # should not raise
+
+    assert len(saved_forecasts) == 1
+    assert saved_forecasts[0].location == "Berlin, Germany"
+
+
 def test_main_does_not_update_calendar_when_fetch_fails(monkeypatch):
     store_calls = {"created": 0, "get_future": 0, "upsert": 0}
     calendar_calls = {"created": 0}

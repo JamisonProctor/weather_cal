@@ -13,7 +13,7 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 load_dotenv()
-DB_PATH = os.getenv("DB_PATH", "forecast.db")
+DB_PATH = os.getenv("DB_PATH", "data/forecast.db")
 
 class ForecastStore:
     def __init__(self, db_path=DB_PATH):

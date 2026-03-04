@@ -1,0 +1,38 @@
+services:
+  weather-cal-scheduler:
+    build: .
+    container_name: weather-cal-scheduler
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app/src:/app
+    volumes:
+      - ${DATA_PATH:-./data}:/app/data
+      - ${LOGS_PATH:-./logs}:/var/log
+      - ${TOKEN_PATH:-./token.json}:/app/token.json:ro
+    restart: unless-stopped
+
+  weather-cal-web:
+    build: .
+    container_name: weather-cal-web
+    command: uvicorn src.web.app:app --host 0.0.0.0 --port 8000
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app/src:/app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ${DATA_PATH:-./data}:/app/data
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    profiles:
+      - tunnel
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - weather-cal-web
+    restart: unless-stopped

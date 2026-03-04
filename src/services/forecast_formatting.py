@@ -16,6 +16,8 @@ SUNNY_CODES = {0, 1}
 RAIN_PROB_THRESHOLD = 40
 WIND_SPEED_THRESHOLD = 30
 COLD_TEMP_THRESHOLD = 3
+HOT_TEMP_THRESHOLD = 28
+WARM_TEMP_THRESHOLD = 14
 
 def map_code_to_emoji(code: int) -> str:
     """
@@ -110,6 +112,11 @@ def _collect_warnings(block: List[Tuple[str, float, int, float, float]], prefs=N
         if codes and all(code in SUNNY_CODES for code in codes):
             warnings.append("☀️")
 
+    hot_threshold_val = prefs.get("hot_threshold", HOT_TEMP_THRESHOLD) if prefs is not None else HOT_TEMP_THRESHOLD
+    if prefs is not None and prefs.get("allday_hot", 0):
+        if temps and max(temps) > hot_threshold_val:
+            warnings.append("🥵")
+
     return "".join(warnings)
 
 
@@ -141,8 +148,12 @@ _WARNING_CHECKS = [
         lambda temp, code, rain, wind: code in SNOW_WARNING_CODES,
     ),
     (
-        "sunny", "☀️", "Sunny — enjoy!",
-        lambda temp, code, rain, wind: code in SUNNY_CODES,
+        "sunny", "☀️", "Warm and sunny — enjoy!",
+        lambda temp, code, rain, wind: code in SUNNY_CODES and (temp is not None) and temp >= WARM_TEMP_THRESHOLD,
+    ),
+    (
+        "hot", "🥵", "Heat Warning",
+        lambda temp, code, rain, wind: (temp is not None) and temp > HOT_TEMP_THRESHOLD,
     ),
 ]
 
@@ -158,17 +169,22 @@ def get_warning_windows(forecast: Forecast, prefs=None) -> List[WarningWindow]:
     windows: List[WarningWindow] = []
 
     for wtype, emoji, label, check in _WARNING_CHECKS:
-        # Sunny is opt-in: skip unless prefs explicitly enables it
-        if wtype == "sunny" and (prefs is None or not prefs.get("warn_sunny", 0)):
+        # Opt-in types (sunny, hot): skip unless prefs explicitly enables them
+        if wtype in ("sunny", "hot") and (prefs is None or not prefs.get(f"warn_{wtype}", 0)):
             continue
-        # Skip other types disabled by prefs
-        if prefs is not None and wtype != "sunny" and not prefs.get(f"warn_{wtype}", 1):
+        # Opt-out types: skip if prefs explicitly disables them
+        if prefs is not None and wtype not in ("sunny", "hot") and not prefs.get(f"warn_{wtype}", 1):
             continue
 
-        # For cold, use user's threshold if provided
         if wtype == "cold" and prefs is not None:
-            cold_threshold = prefs.get("cold_threshold", COLD_TEMP_THRESHOLD)
-            active_check = lambda temp, code, rain, wind, ct=cold_threshold: (temp is not None) and temp < ct
+            ct = prefs.get("cold_threshold", COLD_TEMP_THRESHOLD)
+            active_check = lambda temp, code, rain, wind, ct=ct: (temp is not None) and temp < ct
+        elif wtype == "hot" and prefs is not None:
+            ht = prefs.get("hot_threshold", HOT_TEMP_THRESHOLD)
+            active_check = lambda temp, code, rain, wind, ht=ht: (temp is not None) and temp > ht
+        elif wtype == "sunny" and prefs is not None:
+            wt = prefs.get("warm_threshold", WARM_TEMP_THRESHOLD)
+            active_check = lambda temp, code, rain, wind, wt=wt: code in SUNNY_CODES and (temp is not None) and temp >= wt
         else:
             active_check = check
 

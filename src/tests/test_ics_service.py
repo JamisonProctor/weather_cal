@@ -135,7 +135,7 @@ def test_generate_ics_with_sunny_enabled_prefs():
     ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
     events = _parse_events(ics_bytes)
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
-    assert any("Sunny" in str(e["SUMMARY"]) for e in timed)
+    assert any("sunny" in str(e["SUMMARY"]).lower() for e in timed)
 
 
 def test_generate_ics_summary_uses_prefs_cold_threshold():

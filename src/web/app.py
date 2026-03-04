@@ -310,6 +310,10 @@ async def settings_post(
     allday_cold: str = Form(default=""),
     allday_snow: str = Form(default=""),
     allday_sunny: str = Form(default=""),
+    warm_threshold: float = Form(default=14.0),
+    hot_threshold: float = Form(default=28.0),
+    allday_hot: str = Form(default=""),
+    warn_hot: str = Form(default=""),
 ):
     user_id = _get_user_id(request)
     if not user_id:
@@ -332,6 +336,10 @@ async def settings_post(
         allday_cold=1 if allday_cold == "on" else 0,
         allday_snow=1 if allday_snow == "on" else 0,
         allday_sunny=1 if allday_sunny == "on" else 0,
+        warm_threshold=warm_threshold,
+        hot_threshold=hot_threshold,
+        allday_hot=1 if allday_hot == "on" else 0,
+        warn_hot=1 if warn_hot == "on" else 0,
     )
     return RedirectResponse(url="/settings?success=prefs", status_code=303)
 

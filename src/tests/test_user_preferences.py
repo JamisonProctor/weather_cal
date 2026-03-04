@@ -74,12 +74,15 @@ def test_upsert_user_preferences_updates_existing(db_path):
 
 def test_default_prefs_values():
     assert DEFAULT_PREFS["cold_threshold"] == 3.0
+    assert DEFAULT_PREFS["warm_threshold"] == 14.0
+    assert DEFAULT_PREFS["hot_threshold"] == 28.0
     assert DEFAULT_PREFS["warn_in_allday"] == 1
     assert DEFAULT_PREFS["warn_rain"] == 1
     assert DEFAULT_PREFS["warn_wind"] == 1
     assert DEFAULT_PREFS["warn_cold"] == 1
     assert DEFAULT_PREFS["warn_snow"] == 1
     assert DEFAULT_PREFS["warn_sunny"] == 0
+    assert DEFAULT_PREFS["warn_hot"] == 0
     assert DEFAULT_PREFS["show_allday_events"] == 1
     assert DEFAULT_PREFS["timed_events_enabled"] == 1
     assert DEFAULT_PREFS["allday_rain"] == 1
@@ -87,6 +90,7 @@ def test_default_prefs_values():
     assert DEFAULT_PREFS["allday_cold"] == 1
     assert DEFAULT_PREFS["allday_snow"] == 1
     assert DEFAULT_PREFS["allday_sunny"] == 0
+    assert DEFAULT_PREFS["allday_hot"] == 0
 
 
 # --- format_summary prefs tests ---
@@ -239,6 +243,46 @@ def test_timed_events_enabled_false_suppresses_timed_events():
     events = _parse_ics_events(generate_ics([forecast], "Munich, Germany", prefs=prefs))
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
     assert len(timed) == 0
+
+
+def test_get_warning_windows_hot_enabled():
+    forecast = _make_forecast(
+        times=["2025-08-01T10:00", "2025-08-01T11:00"],
+        temps=[32, 33],
+        codes=[1, 1],
+        rain=[0, 0],
+        winds=[5, 5],
+    )
+    prefs = {**DEFAULT_PREFS, "warn_hot": 1}
+    windows = get_warning_windows(forecast, prefs=prefs)
+    hot = [w for w in windows if w.warning_type == "hot"]
+    assert len(hot) == 1
+    assert hot[0].emoji == "🥵"
+
+
+def test_get_warning_windows_hot_disabled_by_default():
+    forecast = _make_forecast(
+        times=["2025-08-01T10:00", "2025-08-01T11:00"],
+        temps=[32, 33],
+        codes=[1, 1],
+        rain=[0, 0],
+        winds=[5, 5],
+    )
+    windows = get_warning_windows(forecast, prefs=None)
+    assert not any(w.warning_type == "hot" for w in windows)
+
+
+def test_sunny_requires_warm_temp():
+    forecast = _make_forecast(
+        times=["2025-08-01T10:00", "2025-08-01T11:00"],
+        temps=[5, 6],
+        codes=[0, 0],
+        rain=[0, 0],
+        winds=[5, 5],
+    )
+    prefs = {**DEFAULT_PREFS, "warn_sunny": 1}
+    windows = get_warning_windows(forecast, prefs=prefs)
+    assert not any(w.warning_type == "sunny" for w in windows)
 
 
 def test_allday_rain_false_hides_rain_icon_but_timed_event_remains():

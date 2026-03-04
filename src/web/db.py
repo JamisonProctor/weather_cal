@@ -192,6 +192,7 @@ DEFAULT_PREFS = {
     "warn_cold": 1,
     "warn_snow": 1,
     "warn_sunny": 0,
+    "warn_hot": 0,
     "show_allday_events": 1,
     "timed_events_enabled": 1,
     "allday_rain": 1,
@@ -199,6 +200,9 @@ DEFAULT_PREFS = {
     "allday_cold": 1,
     "allday_snow": 1,
     "allday_sunny": 0,
+    "allday_hot": 0,
+    "warm_threshold": 14.0,
+    "hot_threshold": 28.0,
 }
 
 
@@ -227,6 +231,10 @@ def create_user_preferences_table(db_path: str) -> None:
             "allday_cold         INTEGER DEFAULT 1",
             "allday_snow         INTEGER DEFAULT 1",
             "allday_sunny        INTEGER DEFAULT 0",
+            "warn_hot            INTEGER DEFAULT 0",
+            "allday_hot          INTEGER DEFAULT 0",
+            "warm_threshold      REAL    DEFAULT 14.0",
+            "hot_threshold       REAL    DEFAULT 28.0",
         ]
         for col_def in new_columns:
             try:
@@ -265,6 +273,10 @@ def upsert_user_preferences(
     allday_cold: int = 1,
     allday_snow: int = 1,
     allday_sunny: int = 0,
+    warm_threshold: float = 14.0,
+    hot_threshold: float = 28.0,
+    allday_hot: int = 0,
+    warn_hot: int = 0,
 ) -> None:
     updated_at = datetime.now().isoformat()
     conn = _conn(db_path)
@@ -274,8 +286,9 @@ def upsert_user_preferences(
             INSERT INTO user_preferences
                 (user_id, cold_threshold, warn_in_allday, warn_rain, warn_wind, warn_cold, warn_snow, warn_sunny,
                  show_allday_events, timed_events_enabled, allday_rain, allday_wind, allday_cold, allday_snow, allday_sunny,
+                 warm_threshold, hot_threshold, allday_hot, warn_hot,
                  updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(user_id) DO UPDATE SET
                 cold_threshold       = excluded.cold_threshold,
                 warn_in_allday       = excluded.warn_in_allday,
@@ -291,10 +304,15 @@ def upsert_user_preferences(
                 allday_cold          = excluded.allday_cold,
                 allday_snow          = excluded.allday_snow,
                 allday_sunny         = excluded.allday_sunny,
+                warm_threshold       = excluded.warm_threshold,
+                hot_threshold        = excluded.hot_threshold,
+                allday_hot           = excluded.allday_hot,
+                warn_hot             = excluded.warn_hot,
                 updated_at           = excluded.updated_at
             """,
             (user_id, cold_threshold, warn_in_allday, warn_rain, warn_wind, warn_cold, warn_snow, warn_sunny,
              show_allday_events, timed_events_enabled, allday_rain, allday_wind, allday_cold, allday_snow, allday_sunny,
+             warm_threshold, hot_threshold, allday_hot, warn_hot,
              updated_at),
         )
         conn.commit()

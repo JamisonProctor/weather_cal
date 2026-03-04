@@ -43,6 +43,7 @@
     <input type="hidden" name="lat" id="lat">
     <input type="hidden" name="lon" id="lon">
     <input type="hidden" name="timezone" id="timezone">
+    <input type="hidden" name="country" id="country">
 
     <button type="submit" id="submit-btn">Set location</button>
   </form>
@@ -56,6 +57,7 @@
     const hiddenLat = document.getElementById('lat');
     const hiddenLon = document.getElementById('lon');
     const hiddenTz = document.getElementById('timezone');
+    const hiddenCountry = document.getElementById('country');
 
     let activeIndex = -1;
     let results = [];
@@ -66,6 +68,7 @@
       hiddenLat.value = '';
       hiddenLon.value = '';
       hiddenTz.value = '';
+      hiddenCountry.value = '';
     }
 
     function selectResult(r) {
@@ -75,6 +78,7 @@
       hiddenLat.value = r.lat;
       hiddenLon.value = r.lon;
       hiddenTz.value = r.timezone;
+      hiddenCountry.value = r.country;
       closeDropdown();
       hint.textContent = '';
     }

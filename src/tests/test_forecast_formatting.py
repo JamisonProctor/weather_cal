@@ -186,6 +186,46 @@ def test_get_warning_windows_no_warnings():
     assert get_warning_windows(forecast) == []
 
 
+def test_format_summary_fahrenheit():
+    forecast = Forecast(
+        date="2025-06-01",
+        location="New York",
+        high=30,
+        low=20,
+        times=["2025-06-01T06:00", "2025-06-01T12:00"],
+        temps=[20, 28],
+        codes=[1, 1],
+        rain=[0, 0],
+        winds=[5, 5],
+    )
+    prefs = {"temp_unit": "F", "warn_in_allday": 1, "allday_rain": 1, "allday_wind": 1,
+             "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0, "allday_hot": 0,
+             "cold_threshold": 3.0, "hot_threshold": 28.0}
+    summary = format_summary(forecast, prefs)
+    # 20°C = 68°F, 28°C = 82°F — values should be in F range
+    assert "68" in summary or "82" in summary
+
+
+def test_format_detailed_forecast_fahrenheit():
+    forecast = Forecast(
+        date="2025-06-01",
+        location="New York",
+        high=30,
+        low=20,
+        times=["2025-06-01T06:00", "2025-06-01T12:00"],
+        temps=[20, 28],
+        codes=[1, 1],
+        rain=[0, 0],
+        winds=[5, 5],
+    )
+    prefs = {"temp_unit": "F"}
+    description = format_detailed_forecast(forecast, prefs)
+    assert "°F" in description
+    # 20°C = 68°F, 28°C = 82°F
+    assert "68" in description
+    assert "82" in description
+
+
 def test_get_warning_windows_snow_all_day():
     forecast = _make_forecast(
         times=["2025-01-01T06:00", "2025-01-01T09:00", "2025-01-01T12:00"],

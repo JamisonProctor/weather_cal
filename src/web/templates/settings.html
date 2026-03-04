@@ -128,20 +128,28 @@
 
           <div class="pref-card" style="margin-bottom:20px">
             <p class="pref-card-title">Warning temperature</p>
+            <div style="margin-bottom:14px">
+              <label style="margin-right:16px;font-size:0.95rem;cursor:pointer">
+                <input type="radio" name="temp_unit" value="C" {% if prefs.temp_unit != 'F' %}checked{% endif %}> °C
+              </label>
+              <label style="font-size:0.95rem;cursor:pointer">
+                <input type="radio" name="temp_unit" value="F" {% if prefs.temp_unit == 'F' %}checked{% endif %}> °F
+              </label>
+            </div>
             <div class="threshold-row" style="margin-bottom:0">
               <span>🥶 Warn me when the temp is below</span>
-              <input type="number" name="cold_threshold" value="{{ prefs.cold_threshold }}" step="0.5" min="-30" max="40">
-              <span>°C</span>
+              <input type="number" name="cold_threshold" value="{{ prefs.cold_threshold }}" step="0.5" min="-100" max="150">
+              <span id="label-cold">{% if prefs.temp_unit == 'F' %}°F{% else %}°C{% endif %}</span>
             </div>
             <div class="threshold-row" style="margin-top:10px">
               <span>😎 I feel warm at</span>
-              <input type="number" name="warm_threshold" value="{{ prefs.warm_threshold | default(14.0) }}" step="0.5" min="-30" max="40">
-              <span>°C</span>
+              <input type="number" name="warm_threshold" value="{{ prefs.warm_threshold | default(14.0) }}" step="0.5" min="-100" max="150">
+              <span id="label-warm">{% if prefs.temp_unit == 'F' %}°F{% else %}°C{% endif %}</span>
             </div>
             <div class="threshold-row" style="margin-top:10px">
               <span>🥵 Warn me when the temp is above</span>
-              <input type="number" name="hot_threshold" value="{{ prefs.hot_threshold | default(28.0) }}" step="0.5" min="-30" max="40">
-              <span>°C</span>
+              <input type="number" name="hot_threshold" value="{{ prefs.hot_threshold | default(28.0) }}" step="0.5" min="-100" max="150">
+              <span id="label-hot">{% if prefs.temp_unit == 'F' %}°F{% else %}°C{% endif %}</span>
             </div>
           </div>
 
@@ -444,6 +452,45 @@
           showTab(hash);
         });
       });
+
+      // Temperature unit toggle
+      (function () {
+        var radios = document.querySelectorAll('input[name="temp_unit"]');
+        var fields = {
+          cold: document.querySelector('input[name="cold_threshold"]'),
+          warm: document.querySelector('input[name="warm_threshold"]'),
+          hot:  document.querySelector('input[name="hot_threshold"]'),
+        };
+        var labels = {
+          cold: document.getElementById('label-cold'),
+          warm: document.getElementById('label-warm'),
+          hot:  document.getElementById('label-hot'),
+        };
+
+        function cToF(c) { return Math.round((c * 9 / 5 + 32) * 2) / 2; }
+        function fToC(f) { return Math.round(((f - 32) * 5 / 9) * 2) / 2; }
+
+        var currentUnit = document.querySelector('input[name="temp_unit"]:checked').value;
+
+        if (currentUnit === 'F') {
+          for (var key in fields) {
+            fields[key].value = cToF(parseFloat(fields[key].value));
+          }
+        }
+
+        radios.forEach(function (r) {
+          r.addEventListener('change', function () {
+            var newUnit = this.value;
+            if (newUnit === currentUnit) return;
+            for (var key in fields) {
+              var val = parseFloat(fields[key].value);
+              fields[key].value = newUnit === 'F' ? cToF(val) : fToC(val);
+              labels[key].textContent = '°' + newUnit;
+            }
+            currentUnit = newUnit;
+          });
+        });
+      })();
 
       // Disable nested groups when parent unchecked
       document.querySelectorAll('[data-controls]').forEach(function (chk) {

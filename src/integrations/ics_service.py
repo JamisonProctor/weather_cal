@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from icalendar import Calendar, Event
 
 from src.models.forecast import Forecast
-from src.services.forecast_formatting import format_summary, get_warning_windows
+from src.services.forecast_formatting import c_to_f, format_detailed_forecast, format_summary, get_warning_windows
 
 
 def _stable_uid(date_str: str, location: str) -> str:
@@ -19,7 +19,7 @@ def _warning_uid(start_time: str, location: str, warning_type: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()[:16] + "@weathercal.app"
 
 
-def _sunny_summary(window, forecast, warm_threshold: float = 14.0) -> str:
+def _sunny_summary(window, forecast, warm_threshold: float = 14.0, temp_unit: str = "C") -> str:
     try:
         start = datetime.fromisoformat(window.start_time)
         end = datetime.fromisoformat(window.end_time)
@@ -28,7 +28,13 @@ def _sunny_summary(window, forecast, warm_threshold: float = 14.0) -> str:
             if start <= datetime.fromisoformat(slot) <= end and t >= warm_threshold
         ]
         if temps_in_window:
-            return f"☀️ {round(min(temps_in_window))} ~ {round(max(temps_in_window))}°C"
+            if temp_unit == "F":
+                lo = round(c_to_f(min(temps_in_window)))
+                hi = round(c_to_f(max(temps_in_window)))
+            else:
+                lo = round(min(temps_in_window))
+                hi = round(max(temps_in_window))
+            return f"☀️ {lo} ~ {hi}°{temp_unit}"
     except Exception:
         pass
     return f"{window.emoji} {window.label}"
@@ -62,7 +68,7 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, sett
             event.add("uid", _stable_uid(forecast.date, forecast.location))
             summary = format_summary(forecast, prefs) if prefs is not None else (forecast.summary or f"Weather: {city}")
             event.add("summary", summary)
-            description = forecast.description or ""
+            description = format_detailed_forecast(forecast, prefs) if prefs is not None else (forecast.description or "")
             if settings_url:
                 description += f"\n\n⚙️ Change your settings: {settings_url}"
             event.add("description", description)
@@ -88,7 +94,8 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, sett
                 w_event.add("uid", _warning_uid(window.start_time, forecast.location, window.warning_type))
                 if window.warning_type == "sunny":
                     warm_threshold = prefs.get("warm_threshold", 14.0) if prefs else 14.0
-                    summary = _sunny_summary(window, forecast, warm_threshold)
+                    temp_unit = prefs.get("temp_unit", "C") if prefs else "C"
+                    summary = _sunny_summary(window, forecast, warm_threshold, temp_unit)
                 else:
                     summary = f"{window.emoji} {window.label}"
                 w_event.add("summary", summary)

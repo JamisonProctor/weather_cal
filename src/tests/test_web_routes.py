@@ -13,6 +13,7 @@ from src.web.db import (
     create_user,
     set_user_location,
     create_user_preferences_table,
+    get_user_by_email,
     get_user_preferences,
 )
 
@@ -222,6 +223,77 @@ def test_settings_ref_cal_increments_clicks(client, db_path):
     row = conn.execute("SELECT settings_clicks FROM feed_tokens WHERE user_id = ?", (user_id,)).fetchone()
     conn.close()
     assert row[0] == 2
+
+
+def test_setup_us_location_sets_fahrenheit(client, db_path):
+    _, cookies = _auth_cookies(db_path, email="us@example.com")
+    client.post(
+        "/setup",
+        data={
+            "location": "New York, New York, United States",
+            "lat": "40.713",
+            "lon": "-74.006",
+            "timezone": "America/New_York",
+            "country": "United States",
+        },
+        cookies=cookies,
+    )
+    user = get_user_by_email(db_path, "us@example.com")
+    prefs = get_user_preferences(db_path, user["id"])
+    assert prefs is not None
+    assert prefs["temp_unit"] == "F"
+
+
+def test_setup_non_us_location_does_not_set_fahrenheit(client, db_path):
+    _, cookies = _auth_cookies(db_path, email="de@example.com")
+    client.post(
+        "/setup",
+        data={
+            "location": "Munich, Bavaria, Germany",
+            "lat": "48.137",
+            "lon": "11.576",
+            "timezone": "Europe/Berlin",
+            "country": "Germany",
+        },
+        cookies=cookies,
+    )
+    user = get_user_by_email(db_path, "de@example.com")
+    prefs = get_user_preferences(db_path, user["id"])
+    assert prefs is None  # no prefs auto-created for non-US
+
+
+def test_settings_saves_temp_unit_fahrenheit(client, db_path):
+    user_id, cookies = _auth_cookies(db_path)
+    # 37.4°F = 3°C, 57.2°F = 14°C, 82.4°F = 28°C
+    resp = client.post(
+        "/settings",
+        data={
+            "cold_threshold": "37.4",
+            "warm_threshold": "57.2",
+            "hot_threshold": "82.4",
+            "temp_unit": "F",
+            "warn_in_allday": "on",
+            "warn_rain": "on",
+            "warn_wind": "on",
+            "warn_cold": "on",
+            "warn_snow": "on",
+            "warn_sunny": "",
+            "show_allday_events": "on",
+            "timed_events_enabled": "on",
+            "allday_rain": "on",
+            "allday_wind": "on",
+            "allday_cold": "on",
+            "allday_snow": "on",
+            "allday_sunny": "",
+        },
+        cookies=cookies,
+    )
+    assert resp.status_code == 303
+    prefs = get_user_preferences(db_path, user_id)
+    assert prefs["temp_unit"] == "F"
+    assert abs(prefs["cold_threshold"] - 3.0) < 0.01
+    assert abs(prefs["warm_threshold"] - 14.0) < 0.01
+    assert abs(prefs["hot_threshold"] - 28.0) < 0.01
 
 
 def test_admin_route_requires_auth(client):

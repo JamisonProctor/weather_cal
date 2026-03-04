@@ -17,8 +17,10 @@ from src.web.db import (
     get_rows_by_token,
     get_user_by_email,
     get_user_locations,
+    get_user_preferences,
     increment_settings_clicks,
     update_feed_poll,
+    upsert_user_preferences,
 )
 
 
@@ -106,6 +108,19 @@ def test_get_rows_by_token(db_path):
     assert len(rows) == 1
     assert rows[0]["email"] == "rows@example.com"
     assert rows[0]["location"] == "Berlin, Germany"
+
+
+# --- Preferences ---
+
+def test_upsert_preferences_with_temp_unit(db_path):
+    user_id = create_user(db_path, "prefs_unit@example.com", "password123456")
+    upsert_user_preferences(
+        db_path, user_id,
+        cold_threshold=3.0, warn_in_allday=1, warn_rain=1, warn_wind=1,
+        warn_cold=1, warn_snow=1, warn_sunny=0, temp_unit="F",
+    )
+    prefs = get_user_preferences(db_path, user_id)
+    assert prefs["temp_unit"] == "F"
 
 
 # --- Analytics functions ---

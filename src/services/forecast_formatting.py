@@ -19,6 +19,12 @@ COLD_TEMP_THRESHOLD = 3
 HOT_TEMP_THRESHOLD = 28
 WARM_TEMP_THRESHOLD = 14
 
+def c_to_f(temp: float) -> float:
+    return temp * 9 / 5 + 32
+
+def _fmt_temp(temp: float, unit: str) -> int:
+    return round(c_to_f(temp) if unit == "F" else temp)
+
 def map_code_to_emoji(code: int) -> str:
     """
     Maps Open Meteo weather codes to emoji summary.
@@ -64,8 +70,9 @@ def format_summary(forecast: Forecast, prefs=None) -> str:
     data = list(zip(forecast.times, forecast.temps, forecast.codes, forecast.rain, forecast.winds))
     warnings = _collect_warnings(data, prefs) if data else ""
 
-    morning_value = round(morning_temp)
-    afternoon_value = round(afternoon_temp)
+    unit = prefs.get("temp_unit", "C") if prefs else "C"
+    morning_value = _fmt_temp(morning_temp, unit)
+    afternoon_value = _fmt_temp(afternoon_temp, unit)
 
     if warnings:
         return f"⚠️{warnings} AM{morning_value}° / {afternoon_value}°"
@@ -80,7 +87,7 @@ def _collect_warnings(block: List[Tuple[str, float, int, float, float]], prefs=N
     if prefs is not None and not prefs.get("warn_in_allday", 1):
         return ""
 
-    cold_threshold = prefs["cold_threshold"] if prefs is not None else COLD_TEMP_THRESHOLD
+    cold_threshold = prefs.get("cold_threshold", COLD_TEMP_THRESHOLD) if prefs is not None else COLD_TEMP_THRESHOLD
 
     rain_vals = [value for value in (d[3] for d in block) if value is not None]
     wind_vals = [value for value in (d[4] for d in block) if value is not None]
@@ -222,13 +229,14 @@ def get_warning_windows(forecast: Forecast, prefs=None) -> List[WarningWindow]:
     return windows
 
 
-def format_detailed_forecast(forecast: Forecast) -> str:
+def format_detailed_forecast(forecast: Forecast, prefs=None) -> str:
     """
     Returns a multiline string with detailed forecast information,
     grouped by core daypart start hours (6, 9, 12, 15, 18, 21).
     Each line shows time, dominant emoji, temperature range, and optional warning icons.
     Final line summarizes daily high/low.
     """
+    unit = prefs.get("temp_unit", "C") if prefs else "C"
     slots = [6, 9, 12, 15, 18, 21]
     description_lines = []
     data = list(zip(forecast.times, forecast.temps, forecast.codes, forecast.rain, forecast.winds))
@@ -236,14 +244,16 @@ def format_detailed_forecast(forecast: Forecast) -> str:
         block = [d for d in data if datetime.fromisoformat(d[0]).hour in (start, start+1, start+2)]
         if not block:
             continue
-        start_temp = round(block[0][1])
-        mid_temp = round(block[-1][1]) if len(block) > 1 else start_temp
+        start_temp = _fmt_temp(block[0][1], unit)
+        mid_temp = _fmt_temp(block[-1][1], unit) if len(block) > 1 else start_temp
         dominant_code = Counter([d[2] for d in block]).most_common(1)[0][0]
         emoji = map_code_to_emoji(dominant_code)
-        warnings = _collect_warnings(block)
-        line = f"{start:02d}:00 {emoji} {start_temp}°~{mid_temp}°C"
+        warnings = _collect_warnings(block, prefs)
+        line = f"{start:02d}:00 {emoji} {start_temp}°~{mid_temp}°{unit}"
         if warnings:
             line += f" ⚠️{warnings}"
         description_lines.append(line)
-    description_lines.append(f"\nHigh: {forecast.high}°C | Low: {forecast.low}°C")
+    high = _fmt_temp(forecast.high, unit)
+    low = _fmt_temp(forecast.low, unit)
+    description_lines.append(f"\nHigh: {high}°{unit} | Low: {low}°{unit}")
     return "\n".join(description_lines)

@@ -142,6 +142,7 @@ async def setup_post(
     lat: str = Form(default=""),
     lon: str = Form(default=""),
     timezone: str = Form(default=""),
+    country: str = Form(default=""),
 ):
     user_id = _get_user_id(request)
     if not user_id:
@@ -163,6 +164,9 @@ async def setup_post(
             )
 
     set_user_location(DB_PATH, user_id, location, resolved_lat, resolved_lon, resolved_tz)
+    existing_prefs = get_user_preferences(DB_PATH, user_id)
+    if not existing_prefs and "united states" in country.lower():
+        upsert_user_preferences(DB_PATH, user_id, **{**DEFAULT_PREFS, "temp_unit": "F"})
     background_tasks.add_task(_initial_forecast_fetch, location, DB_PATH, resolved_lat, resolved_lon, resolved_tz)
     redirect_url = "/settings" if is_location_change else "/connect"
     return RedirectResponse(url=redirect_url, status_code=303)
@@ -334,10 +338,16 @@ async def settings_post(
     hot_threshold: float = Form(default=28.0),
     allday_hot: str = Form(default=""),
     warn_hot: str = Form(default=""),
+    temp_unit: str = Form(default="C"),
 ):
     user_id = _get_user_id(request)
     if not user_id:
         return RedirectResponse(url="/login", status_code=303)
+
+    if temp_unit == "F":
+        cold_threshold = (cold_threshold - 32) * 5 / 9
+        warm_threshold = (warm_threshold - 32) * 5 / 9
+        hot_threshold = (hot_threshold - 32) * 5 / 9
 
     upsert_user_preferences(
         DB_PATH,
@@ -360,6 +370,7 @@ async def settings_post(
         hot_threshold=hot_threshold,
         allday_hot=1 if allday_hot == "on" else 0,
         warn_hot=1 if warn_hot == "on" else 0,
+        temp_unit=temp_unit,
     )
     return RedirectResponse(url="/settings?success=prefs", status_code=303)
 

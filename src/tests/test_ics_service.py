@@ -138,6 +138,41 @@ def test_generate_ics_with_sunny_enabled_prefs():
     assert any("sunny" in str(e["SUMMARY"]).lower() for e in timed)
 
 
+def test_x_published_ttl_present():
+    forecast = _make_forecast()
+    ics_bytes = generate_ics([forecast], "Munich, Germany")
+    assert b"X-PUBLISHED-TTL:PT12H" in ics_bytes
+
+
+def test_allday_event_description_contains_settings_url():
+    forecast = _make_forecast(description="Nice day")
+    settings_url = "https://weathercal.app/settings"
+    ics_bytes = generate_ics([forecast], "Munich, Germany", settings_url=settings_url)
+    events = _parse_events(ics_bytes)
+    all_day = next(e for e in events if not hasattr(e["DTSTART"].dt, "hour"))
+    description = str(all_day.get("DESCRIPTION", ""))
+    assert "Change your settings:" in description
+    assert settings_url in description
+
+
+def test_timed_event_description_contains_settings_url():
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00"],
+        temps=[12, 12],
+        codes=[61, 61],
+        rain=[70, 70],
+        winds=[5, 5],
+    )
+    settings_url = "https://weathercal.app/settings"
+    ics_bytes = generate_ics([forecast], "Munich, Germany", settings_url=settings_url)
+    events = _parse_events(ics_bytes)
+    timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
+    assert timed, "Expected at least one timed warning event"
+    description = str(timed[0].get("DESCRIPTION", ""))
+    assert "Change your settings:" in description
+    assert settings_url in description
+
+
 def test_generate_ics_summary_uses_prefs_cold_threshold():
     forecast = _make_forecast(
         times=["2026-03-10T06:00", "2026-03-10T09:00", "2026-03-10T12:00", "2026-03-10T15:00"],

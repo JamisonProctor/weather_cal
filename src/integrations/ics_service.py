@@ -31,6 +31,7 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, sett
     cal.add("X-WR-CALNAME", f"WeatherCal \u2014 {city}")
     cal.add("X-WR-CALDESC", f"Weather forecast for {city} from WeatherCal")
     cal.add("REFRESH-INTERVAL;VALUE=DURATION", "PT12H")
+    cal.add("X-PUBLISHED-TTL", "PT12H")
 
     now = datetime.now(timezone.utc)
 
@@ -46,7 +47,10 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, sett
             event.add("uid", _stable_uid(forecast.date, forecast.location))
             summary = format_summary(forecast, prefs) if prefs is not None else (forecast.summary or f"Weather: {city}")
             event.add("summary", summary)
-            event.add("description", forecast.description or "")
+            description = forecast.description or ""
+            if settings_url:
+                description += f"\n\n⚙️ Change your settings: {settings_url}"
+            event.add("description", description)
             event.add("location", forecast.location)
             event.add("dtstart", event_date)
             event.add("dtend", event_date + timedelta(days=1))
@@ -73,6 +77,7 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, sett
                 w_event.add("transp", "TRANSPARENT")
                 w_event.add("dtstamp", now)
                 if settings_url:
+                    w_event.add("description", f"⚙️ Change your settings: {settings_url}")
                     w_event.add("url", settings_url)
                 cal.add_component(w_event)
 

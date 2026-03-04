@@ -135,7 +135,9 @@ def test_generate_ics_with_sunny_enabled_prefs():
     ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
     events = _parse_events(ics_bytes)
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
-    assert any("sunny" in str(e["SUMMARY"]).lower() for e in timed)
+    sunny = [e for e in timed if "☀️" in str(e["SUMMARY"])]
+    assert len(sunny) == 1
+    assert "°C" in str(sunny[0]["SUMMARY"])
 
 
 def test_x_published_ttl_present():

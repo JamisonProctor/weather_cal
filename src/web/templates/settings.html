@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
   <title>Settings — WeatherCal</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -221,14 +222,14 @@
                 ☃️ Snow warnings
               </label>
               <label class="check-label">
-                <input type="checkbox" name="warn_sunny" {% if prefs.warn_sunny %}checked{% endif %}>
-                <span class="checkmark"></span>
-                ☀️ Warm &amp; sunny <span class="pref-note">(in case you like good news too)</span>
-              </label>
-              <label class="check-label">
                 <input type="checkbox" name="warn_hot" {% if prefs.warn_hot %}checked{% endif %}>
                 <span class="checkmark"></span>
                 🥵 Heat warnings
+              </label>
+              <label class="check-label">
+                <input type="checkbox" name="warn_sunny" {% if prefs.warn_sunny %}checked{% endif %}>
+                <span class="checkmark"></span>
+                ☀️ Warm &amp; sunny <span class="pref-note">(in case you like good news too)</span>
               </label>
             </div>
           </div>

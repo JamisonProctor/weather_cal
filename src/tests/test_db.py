@@ -9,7 +9,7 @@ from src.web.db import (
     create_feed_token,
     create_feedback_table,
     create_user,
-    create_user_location,
+    set_user_location,
     create_user_preferences_table,
     get_feed_token_by_user,
     get_rows_by_token,
@@ -70,7 +70,7 @@ def test_check_password_wrong(db_path):
 
 def test_create_and_get_user_locations(db_path):
     user_id = create_user(db_path, "loc@example.com", "password123456")
-    create_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
     locations = get_user_locations(db_path, user_id)
     assert len(locations) == 1
     assert locations[0]["location"] == "Munich, Germany"
@@ -96,7 +96,7 @@ def test_get_feed_token_by_user(db_path):
 
 def test_get_rows_by_token(db_path):
     user_id = create_user(db_path, "rows@example.com", "password123456")
-    create_user_location(db_path, user_id, "Berlin, Germany", 52.520, 13.405, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Berlin, Germany", 52.520, 13.405, "Europe/Berlin")
     token = create_feed_token(db_path, user_id)
     rows = get_rows_by_token(db_path, token)
     assert len(rows) == 1

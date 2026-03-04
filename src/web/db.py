@@ -51,19 +51,18 @@ def get_user_by_id(db_path: str, user_id: int):
         conn.close()
 
 
-def create_user_location(
+def set_user_location(
     db_path: str, user_id: int, location: str, lat: float, lon: float, timezone: str
-) -> int:
+) -> None:
     created_at = datetime.now().isoformat()
     conn = _conn(db_path)
     try:
-        cur = conn.cursor()
-        cur.execute(
+        conn.execute("DELETE FROM user_locations WHERE user_id = ?", (user_id,))
+        conn.execute(
             "INSERT INTO user_locations (user_id, location, lat, lon, timezone, created_at) VALUES (?, ?, ?, ?, ?, ?)",
             (user_id, location, lat, lon, timezone, created_at),
         )
         conn.commit()
-        return cur.lastrowid
     finally:
         conn.close()
 

@@ -9,7 +9,7 @@ from src.web.db import (
     create_feed_token,
     create_feedback_table,
     create_user,
-    create_user_location,
+    set_user_location,
     create_user_preferences_table,
     get_user_preferences,
 )
@@ -136,7 +136,7 @@ def test_setup_post_first_time_redirects_to_connect(client, db_path):
 
 def test_setup_post_location_change_redirects_to_settings(client, db_path):
     user_id, cookies = _auth_cookies(db_path)
-    create_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
     resp = client.post(
         "/setup",
         data={
@@ -160,7 +160,7 @@ def test_feed_invalid_token_returns_404(client):
 
 def test_feed_valid_token_returns_ics(client, db_path):
     user_id, _ = _auth_cookies(db_path)
-    create_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
     token = create_feed_token(db_path, user_id)
 
     store = ForecastStore(db_path=db_path)

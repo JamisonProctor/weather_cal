@@ -19,7 +19,7 @@ from src.web.db import (
     create_feed_token,
     create_feedback_table,
     create_user,
-    create_user_location,
+    set_user_location,
     create_user_preferences_table,
     delete_user_account,
     get_feed_token_by_user,
@@ -151,7 +151,7 @@ async def setup_post(
                 status_code=422,
             )
 
-    create_user_location(DB_PATH, user_id, location, resolved_lat, resolved_lon, resolved_tz)
+    set_user_location(DB_PATH, user_id, location, resolved_lat, resolved_lon, resolved_tz)
     background_tasks.add_task(_initial_forecast_fetch, location, DB_PATH, resolved_lat, resolved_lon, resolved_tz)
     redirect_url = "/settings" if is_location_change else "/connect"
     return RedirectResponse(url=redirect_url, status_code=303)

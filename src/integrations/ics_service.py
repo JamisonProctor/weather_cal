@@ -77,8 +77,6 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, sett
             event.add("dtend", event_date + timedelta(days=1))
             event.add("transp", "TRANSPARENT")
             event.add("dtstamp", now)
-            if settings_url:
-                event.add("url", settings_url)
             cal.add_component(event)
 
         # Timed warning events
@@ -105,7 +103,6 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, sett
                 w_event.add("dtstamp", now)
                 if settings_url:
                     w_event.add("description", f"⚙️ Change your settings: {settings_url}")
-                    w_event.add("url", settings_url)
                 cal.add_component(w_event)
 
     return cal.to_ical()

@@ -75,6 +75,17 @@ class ForecastStore:
                 cur.execute(f"ALTER TABLE forecast ADD COLUMN {col_def}")
             except sqlite3.OperationalError:
                 pass  # column already exists
+        # Add analytics columns to feed_tokens (idempotent)
+        for col_def in [
+            "last_polled_at TEXT",
+            "poll_count INTEGER DEFAULT 0",
+            "last_user_agent TEXT",
+            "settings_clicks INTEGER DEFAULT 0",
+        ]:
+            try:
+                cur.execute(f"ALTER TABLE feed_tokens ADD COLUMN {col_def}")
+            except sqlite3.OperationalError:
+                pass  # column already exists
         conn.commit()
         conn.close()
 

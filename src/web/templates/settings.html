@@ -106,9 +106,13 @@
       <a href="#personal" class="sidebar-link">Personal</a>
       <a href="#reconnect" class="sidebar-link">Reconnect</a>
       <a href="#feedback" class="sidebar-link">Feedback</a>
+      {% if is_admin %}
+      <a href="/admin" class="sidebar-link">Admin</a>
+      {% endif %}
       {% if last_updated %}
       <div class="sidebar-footer">Last updated<br>{{ last_updated }}</div>
       {% endif %}
+      <div class="sidebar-footer"><a href="/impressum" style="color:#9ca3af;text-decoration:none">Impressum</a></div>
     </aside>
 
     <main class="content">

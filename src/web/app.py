@@ -22,6 +22,7 @@ from src.web.db import (
     set_user_location,
     create_user_preferences_table,
     delete_user_account,
+    get_admin_stats,
     get_feed_token_by_user,
     get_last_forecast_update,
     get_rows_by_token,
@@ -29,7 +30,9 @@ from src.web.db import (
     get_user_by_id,
     get_user_locations,
     get_user_preferences,
+    increment_settings_clicks,
     save_feedback,
+    update_feed_poll,
     update_user_email,
     update_user_password,
     upsert_user_preferences,
@@ -39,6 +42,7 @@ from src.web.db import (
 logger = logging.getLogger(__name__)
 
 DB_PATH = os.getenv("DB_PATH", "data/forecast.db")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")
 
 
 def _initial_forecast_fetch(location: str, db_path: str, lat: float = None, lon: float = None, timezone: str = None):
@@ -73,6 +77,13 @@ def _get_user_id(request: Request):
     if not token:
         return None
     return decode_session_token(token)
+
+
+def _is_admin(user_id: int) -> bool:
+    if not ADMIN_EMAIL:
+        return False
+    user = get_user_by_id(DB_PATH, user_id)
+    return bool(user and user["email"] == ADMIN_EMAIL)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -250,7 +261,12 @@ async def connect(request: Request):
 
 
 @app.get("/settings", response_class=HTMLResponse)
-async def settings(request: Request, success: str = Query(default=""), error: str = Query(default="")):
+async def settings(
+    request: Request,
+    success: str = Query(default=""),
+    error: str = Query(default=""),
+    ref: str = Query(default=""),
+):
     user_id = _get_user_id(request)
     if not user_id:
         return RedirectResponse(url="/login", status_code=303)
@@ -258,6 +274,9 @@ async def settings(request: Request, success: str = Query(default=""), error: st
     user = get_user_by_id(DB_PATH, user_id)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
+
+    if ref == "cal":
+        increment_settings_clicks(DB_PATH, user_id)
 
     feed_token = get_feed_token_by_user(DB_PATH, user_id)
     locations = get_user_locations(DB_PATH, user_id)
@@ -289,6 +308,7 @@ async def settings(request: Request, success: str = Query(default=""), error: st
             "success": success,
             "error": error,
             "last_updated": last_updated,
+            "is_admin": _is_admin(user_id),
         },
     )
 
@@ -501,6 +521,8 @@ async def feed(request: Request, token: str):
     if not rows:
         return Response(content="Invalid or expired token.", status_code=404)
 
+    update_feed_poll(DB_PATH, token, request.headers.get("user-agent", ""))
+
     user_id = rows[0]["id"]
     locations = list({row["location"] for row in rows})
     store = ForecastStore(db_path=DB_PATH)
@@ -509,7 +531,7 @@ async def feed(request: Request, token: str):
     location_name = locations[0] if locations else "Unknown"
     prefs_row = get_user_preferences(DB_PATH, user_id)
     prefs = dict(prefs_row) if prefs_row else DEFAULT_PREFS
-    settings_url = str(request.base_url).rstrip("/") + "/settings"
+    settings_url = str(request.base_url).rstrip("/") + "/settings?ref=cal"
     ics_content = generate_ics(forecasts, location_name, prefs=prefs, settings_url=settings_url)
 
     return Response(
@@ -517,3 +539,19 @@ async def feed(request: Request, token: str):
         media_type="text/calendar; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="weather.ics"'},
     )
+
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin(request: Request):
+    user_id = _get_user_id(request)
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+    if not _is_admin(user_id):
+        return Response(content="Forbidden", status_code=403)
+    stats = get_admin_stats(DB_PATH)
+    return templates.TemplateResponse("admin.html", {"request": request, "stats": stats})
+
+
+@app.get("/impressum", response_class=HTMLResponse)
+async def impressum(request: Request):
+    return templates.TemplateResponse("impressum.html", {"request": request})

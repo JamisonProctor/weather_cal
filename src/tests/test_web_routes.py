@@ -1,3 +1,5 @@
+import sqlite3
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -182,3 +184,62 @@ def test_feed_valid_token_returns_ics(client, db_path):
     resp = client.get(f"/feed/{token}/weather.ics")
     assert resp.status_code == 200
     assert "text/calendar" in resp.headers["content-type"]
+
+
+def test_feed_records_poll(client, db_path):
+    user_id, _ = _auth_cookies(db_path)
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    token = create_feed_token(db_path, user_id)
+
+    store = ForecastStore(db_path=db_path)
+    store.upsert_forecast(Forecast(
+        date="2099-01-01",
+        location="Munich, Germany",
+        high=10, low=2,
+        summary="Test", description="Test",
+        times=["2099-01-01T12:00"], temps=[10], codes=[1], rain=[0], winds=[5],
+        timezone="Europe/Berlin",
+    ))
+
+    client.get(f"/feed/{token}/weather.ics", headers={"user-agent": "TestAgent/1.0"})
+    client.get(f"/feed/{token}/weather.ics", headers={"user-agent": "TestAgent/1.0"})
+
+    conn = sqlite3.connect(db_path)
+    row = conn.execute("SELECT poll_count FROM feed_tokens WHERE token = ?", (token,)).fetchone()
+    conn.close()
+    assert row[0] == 2
+
+
+def test_settings_ref_cal_increments_clicks(client, db_path):
+    user_id, cookies = _auth_cookies(db_path)
+    token = create_feed_token(db_path, user_id)
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+
+    client.get("/settings?ref=cal", cookies=cookies)
+    client.get("/settings?ref=cal", cookies=cookies)
+
+    conn = sqlite3.connect(db_path)
+    row = conn.execute("SELECT settings_clicks FROM feed_tokens WHERE user_id = ?", (user_id,)).fetchone()
+    conn.close()
+    assert row[0] == 2
+
+
+def test_admin_route_requires_auth(client):
+    resp = client.get("/admin")
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/login"
+
+
+def test_admin_route_forbidden_for_non_admin(client, db_path, monkeypatch):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    _, cookies = _auth_cookies(db_path, email="user@example.com")
+    resp = client.get("/admin", cookies=cookies)
+    assert resp.status_code == 403
+
+
+def test_admin_route_accessible_for_admin(client, db_path, monkeypatch):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    _, cookies = _auth_cookies(db_path, email="admin@example.com")
+    resp = client.get("/admin", cookies=cookies)
+    assert resp.status_code == 200
+    assert b"Admin" in resp.content

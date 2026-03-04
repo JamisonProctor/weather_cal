@@ -369,6 +369,159 @@ def delete_user_account(db_path: str, user_id: int) -> None:
         conn.close()
 
 
+def _detect_calendar_app(user_agent: str) -> str:
+    """Identify the calendar app from a User-Agent string."""
+    ua = user_agent.lower()
+    if any(x in ua for x in ["cfnetwork", "dataaccessd", "calendarstore", "darwin"]):
+        return "Apple Calendar"
+    if any(x in ua for x in ["google-calendar", "googlebot"]):
+        return "Google Calendar"
+    if "fantastical" in ua:
+        return "Fantastical"
+    if "busycal" in ua:
+        return "BusyCal"
+    if any(x in ua for x in ["microsoft", "outlook"]):
+        return "Outlook"
+    if any(x in ua for x in ["thunderbird", "lightning"]):
+        return "Thunderbird"
+    if not ua.strip():
+        return "Unknown"
+    return "Other"
+
+
+def update_feed_poll(db_path: str, token: str, user_agent: str) -> None:
+    """Record an ICS feed poll: update timestamp, increment count, store UA."""
+    now = datetime.now().isoformat()
+    conn = _conn(db_path)
+    try:
+        conn.execute(
+            """UPDATE feed_tokens
+               SET last_polled_at = ?,
+                   poll_count = COALESCE(poll_count, 0) + 1,
+                   last_user_agent = ?
+               WHERE token = ?""",
+            (now, user_agent, token),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def increment_settings_clicks(db_path: str, user_id: int) -> None:
+    """Increment the settings link click counter for a user's feed token."""
+    conn = _conn(db_path)
+    try:
+        conn.execute(
+            "UPDATE feed_tokens SET settings_clicks = COALESCE(settings_clicks, 0) + 1 WHERE user_id = ?",
+            (user_id,),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_admin_stats(db_path: str) -> dict:
+    """Return aggregated analytics for the admin dashboard."""
+    conn = _conn(db_path)
+    try:
+        cur = conn.cursor()
+
+        cur.execute("SELECT COUNT(*) FROM users WHERE is_active = 1")
+        total_users = cur.fetchone()[0]
+
+        cur.execute(
+            """SELECT COUNT(DISTINCT ul.location)
+               FROM user_locations ul
+               JOIN users u ON ul.user_id = u.id
+               WHERE u.is_active = 1"""
+        )
+        unique_locations = cur.fetchone()[0]
+
+        changed_prefs_sql = """
+            cold_threshold != 3.0
+            OR warm_threshold != 14.0
+            OR hot_threshold != 28.0
+            OR warn_in_allday != 1
+            OR warn_rain != 1
+            OR warn_wind != 1
+            OR warn_cold != 1
+            OR warn_snow != 1
+            OR warn_sunny != 0
+            OR warn_hot != 1
+            OR show_allday_events != 1
+            OR timed_events_enabled != 1
+            OR allday_rain != 1
+            OR allday_wind != 1
+            OR allday_cold != 1
+            OR allday_snow != 1
+            OR allday_sunny != 0
+            OR allday_hot != 1
+        """
+        cur.execute(
+            f"""SELECT COUNT(*)
+                FROM user_preferences up
+                JOIN users u ON up.user_id = u.id
+                WHERE u.is_active = 1 AND ({changed_prefs_sql})"""
+        )
+        changed_prefs_count = cur.fetchone()[0]
+
+        cur.execute(
+            """SELECT COALESCE(SUM(ft.poll_count), 0), COALESCE(SUM(ft.settings_clicks), 0)
+               FROM feed_tokens ft
+               JOIN users u ON ft.user_id = u.id
+               WHERE u.is_active = 1"""
+        )
+        row = cur.fetchone()
+        total_polls = row[0]
+        total_settings_clicks = row[1]
+
+        cur.execute(
+            f"""SELECT
+                    u.email,
+                    ul.location,
+                    u.created_at,
+                    ft.last_polled_at,
+                    COALESCE(ft.poll_count, 0) AS poll_count,
+                    ft.last_user_agent,
+                    COALESCE(ft.settings_clicks, 0) AS settings_clicks,
+                    (SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END
+                     FROM user_preferences up
+                     WHERE up.user_id = u.id AND ({changed_prefs_sql})) AS changed_prefs
+                FROM users u
+                LEFT JOIN user_locations ul ON ul.user_id = u.id
+                LEFT JOIN feed_tokens ft ON ft.user_id = u.id
+                WHERE u.is_active = 1
+                ORDER BY u.created_at DESC"""
+        )
+        rows = cur.fetchall()
+
+        users = []
+        for r in rows:
+            ua = r["last_user_agent"] or ""
+            last_poll = r["last_polled_at"] or ""
+            users.append({
+                "email": r["email"],
+                "location": r["location"] or "",
+                "created_at": (r["created_at"] or "")[:10],
+                "last_polled_at": last_poll[:10] if last_poll else "",
+                "poll_count": r["poll_count"],
+                "calendar_app": _detect_calendar_app(ua),
+                "settings_clicks": r["settings_clicks"],
+                "changed_prefs": bool(r["changed_prefs"]),
+            })
+
+        return {
+            "total_users": total_users,
+            "unique_locations": unique_locations,
+            "changed_prefs_count": changed_prefs_count,
+            "total_polls": total_polls,
+            "total_settings_clicks": total_settings_clicks,
+            "users": users,
+        }
+    finally:
+        conn.close()
+
+
 def wipe_accounts(db_path: str) -> None:
     """Delete all user accounts, locations, and feed tokens. Forecast cache is preserved.
     Only call this when WIPE_ACCOUNTS_ON_START is set — debug/dev use only.

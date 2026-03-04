@@ -70,12 +70,15 @@ def test_main_runs_full_pipeline(monkeypatch):
             synced_warnings.append((date, location, windows))
 
     monkeypatch.setenv("ENABLE_GOOGLE_CALENDAR_SYNC", "true")
-    monkeypatch.setattr(main, "get_locations", lambda: ["Munich, Germany", "Berlin, Germany"])
+    monkeypatch.setattr(main, "get_locations", lambda: [
+        {"location": "Munich, Germany", "lat": 48.137, "lon": 11.576, "timezone": "Europe/Berlin"},
+        {"location": "Berlin, Germany", "lat": 52.520, "lon": 13.405, "timezone": "Europe/Berlin"},
+    ])
     monkeypatch.setattr(main, "ForecastStore", FakeStore)
     monkeypatch.setattr(
         main.ForecastService,
         "fetch_forecasts",
-        lambda location, forecast_days: raw_forecasts[location],
+        lambda location, forecast_days, **kwargs: raw_forecasts[location],
     )
     monkeypatch.setattr(main, "format_summary", lambda forecast: f"summary-{forecast.location}")
     monkeypatch.setattr(main, "format_detailed_forecast", lambda forecast: f"description-{forecast.location}")
@@ -128,12 +131,15 @@ def test_short_term_main_fetches_and_stores(monkeypatch):
         def upsert_forecast(self, forecast):
             saved_forecasts.append(forecast)
 
-    monkeypatch.setattr(main, "get_locations", lambda: ["Munich, Germany", "Berlin, Germany"])
+    monkeypatch.setattr(main, "get_locations", lambda: [
+        {"location": "Munich, Germany", "lat": 48.137, "lon": 11.576, "timezone": "Europe/Berlin"},
+        {"location": "Berlin, Germany", "lat": 52.520, "lon": 13.405, "timezone": "Europe/Berlin"},
+    ])
     monkeypatch.setattr(main, "ForecastStore", FakeStore)
     monkeypatch.setattr(
         main.ForecastService,
         "fetch_forecasts",
-        lambda location, forecast_days: raw_forecasts[location],
+        lambda location, forecast_days, **kwargs: raw_forecasts[location],
     )
     monkeypatch.setattr(main, "format_summary", lambda forecast: f"summary-{forecast.location}")
     monkeypatch.setattr(main, "format_detailed_forecast", lambda forecast: f"desc-{forecast.location}")
@@ -164,12 +170,15 @@ def test_short_term_main_continues_on_error(monkeypatch):
         def upsert_forecast(self, forecast):
             saved_forecasts.append(forecast)
 
-    def fake_fetch(location, forecast_days):
+    def fake_fetch(location, forecast_days, **kwargs):
         if location == "Munich, Germany":
             raise RuntimeError("fetch failed")
         return [good_forecast]
 
-    monkeypatch.setattr(main, "get_locations", lambda: ["Munich, Germany", "Berlin, Germany"])
+    monkeypatch.setattr(main, "get_locations", lambda: [
+        {"location": "Munich, Germany", "lat": 48.137, "lon": 11.576, "timezone": "Europe/Berlin"},
+        {"location": "Berlin, Germany", "lat": 52.520, "lon": 13.405, "timezone": "Europe/Berlin"},
+    ])
     monkeypatch.setattr(main, "ForecastStore", FakeStore)
     monkeypatch.setattr(main.ForecastService, "fetch_forecasts", fake_fetch)
     monkeypatch.setattr(main, "format_summary", lambda f: "")
@@ -200,11 +209,13 @@ def test_main_does_not_update_calendar_when_fetch_fails(monkeypatch):
         def __init__(self):
             calendar_calls["created"] += 1
 
-    def fail_fetch(location, forecast_days):
+    def fail_fetch(location, forecast_days, **kwargs):
         raise RuntimeError("upstream unavailable")
 
     monkeypatch.setenv("ENABLE_GOOGLE_CALENDAR_SYNC", "true")
-    monkeypatch.setattr(main, "get_locations", lambda: ["Munich, Germany"])
+    monkeypatch.setattr(main, "get_locations", lambda: [
+        {"location": "Munich, Germany", "lat": 48.137, "lon": 11.576, "timezone": "Europe/Berlin"},
+    ])
     monkeypatch.setattr(main, "ForecastStore", FakeStore)
     monkeypatch.setattr(main.ForecastService, "fetch_forecasts", fail_fetch)
     monkeypatch.setattr(main, "CalendarService", FakeCalendarService)

@@ -30,13 +30,16 @@ def short_term_main():
     store = ForecastStore()
     for loc in locations:
         try:
-            forecasts = ForecastService.fetch_forecasts(location=loc, forecast_days=3)
+            forecasts = ForecastService.fetch_forecasts(
+                location=loc["location"], forecast_days=3,
+                lat=loc["lat"], lon=loc["lon"], timezone=loc["timezone"],
+            )
             for f in forecasts:
                 f.summary = format_summary(f)
                 f.description = format_detailed_forecast(f)
                 store.upsert_forecast(f)
         except Exception:
-            logger.exception("Short-term fetch failed for location=%s", loc)
+            logger.exception("Short-term fetch failed for location=%s", loc["location"])
 
 
 def main():
@@ -54,7 +57,10 @@ def main():
 
     try:
         for loc in locations:
-            forecasts = ForecastService.fetch_forecasts(location=loc, forecast_days=forecast_days)
+            forecasts = ForecastService.fetch_forecasts(
+                location=loc["location"], forecast_days=forecast_days,
+                lat=loc["lat"], lon=loc["lon"], timezone=loc["timezone"],
+            )
 
             for forecast in forecasts:
                 forecast.summary = format_summary(forecast)

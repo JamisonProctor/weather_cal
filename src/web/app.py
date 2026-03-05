@@ -166,7 +166,7 @@ async def setup_post(
     existing_prefs = get_user_preferences(DB_PATH, user_id)
     if not existing_prefs and "united states" in country.lower():
         upsert_user_preferences(DB_PATH, user_id, **{**DEFAULT_PREFS, "temp_unit": "F"})
-    if not is_location_change:
+    if not is_location_change and os.getenv("ENABLE_WELCOME_EMAIL"):
         user = get_user_by_id(DB_PATH, user_id)
         feed_token = get_feed_token_by_user(DB_PATH, user_id)
         if feed_token and user:

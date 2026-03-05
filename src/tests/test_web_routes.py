@@ -320,8 +320,9 @@ def test_admin_route_accessible_for_admin(client, db_path, monkeypatch):
 # --- Welcome email ---
 
 def test_setup_triggers_welcome_email_on_first_setup(client, db_path, monkeypatch):
-    """Welcome email is sent once on first location setup."""
+    """Welcome email is sent once on first location setup when ENABLE_WELCOME_EMAIL is set."""
     calls = []
+    monkeypatch.setenv("ENABLE_WELCOME_EMAIL", "true")
     monkeypatch.setattr(web_app, "send_welcome_email", lambda *a, **kw: calls.append(a))
 
     user_id, cookies = _auth_cookies(db_path, email="welcome@example.com")
@@ -343,6 +344,7 @@ def test_setup_triggers_welcome_email_on_first_setup(client, db_path, monkeypatc
 def test_setup_does_not_trigger_welcome_email_on_location_change(client, db_path, monkeypatch):
     """Welcome email is NOT sent when user already has a location."""
     calls = []
+    monkeypatch.setenv("ENABLE_WELCOME_EMAIL", "true")
     monkeypatch.setattr(web_app, "send_welcome_email", lambda *a, **kw: calls.append(a))
 
     user_id, cookies = _auth_cookies(db_path, email="existing@example.com")

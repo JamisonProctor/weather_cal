@@ -1,29 +1,18 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
-  <title>Impressum — WeatherCal</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 640px; margin: 0 auto; padding: 40px 24px; color: #111; }
-    nav { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #e5e7eb; margin-bottom: 32px; }
-    nav strong { font-size: 1.1rem; }
-    .nav-link { color: #6b7280; text-decoration: none; font-size: 0.95rem; }
-    .nav-link:hover { color: #111; }
-    h1 { font-size: 1.5rem; margin: 0 0 24px; }
-    p { margin: 0 0 10px; font-size: 0.95rem; line-height: 1.6; color: #374151; }
-    .label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; margin-top: 20px; margin-bottom: 2px; }
-    a { color: #2563eb; }
-  </style>
-</head>
-<body>
-  <nav>
-    <strong>WeatherCal ☀️</strong>
-    <a href="/" class="nav-link">← Home</a>
-  </nav>
+{% extends "base.html" %}
 
+{% block title %}Impressum — WeatherCal{% endblock %}
+
+{% block body_class %}layout-medium{% endblock %}
+
+{% block extra_style %}
+<style>
+  h1 { font-size: 1.5rem; margin: 0 0 24px; }
+  p { margin: 0 0 10px; font-size: 0.95rem; line-height: 1.6; color: #374151; }
+  .label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; margin-top: 20px; margin-bottom: 2px; }
+</style>
+{% endblock %}
+
+{% block content %}
   <h1>Impressum</h1>
 
   <p class="label">Angaben gemäß § 5 TMG</p>
@@ -45,5 +34,4 @@
   <p>
     Umsatzsteuer-Identifikationsnummer gemäß § 27a Umsatzsteuergesetz: nicht vorhanden (keine gewerbliche Tätigkeit i.S.d. UStG).
   </p>
-</body>
-</html>
+{% endblock %}

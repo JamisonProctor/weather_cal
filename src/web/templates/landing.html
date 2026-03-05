@@ -1,22 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
-  <title>WeatherCal — Weather in your calendar</title>
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 640px; margin: 80px auto; padding: 0 24px; color: #111; }
-    h1 { font-size: 2.4rem; margin-bottom: 0.5rem; }
-    p.lead { font-size: 1.15rem; color: #333; margin-bottom: 2rem; text-align: justify; }
-    ul.features { list-style: none; padding: 0; margin: 0; }
-    ul.features li { display: flex; gap: 12px; margin: 16px 0; font-size: 1.05rem; color: #333; text-align: justify; }
-    ul.features li .icon { flex-shrink: 0; width: 1.5em; }
-    .cta { display: inline-block; margin-top: 36px; padding: 14px 32px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600; }
-    .cta:hover { background: #1d4ed8; }
-  </style>
-</head>
-<body>
+{% extends "base.html" %}
+
+{% block title %}WeatherCal — Weather in your calendar{% endblock %}
+
+{% block body_class %}layout-medium{% endblock %}
+
+{% block nav_right %}
+<a href="/login" class="nav-link">Sign in</a>
+{% endblock %}
+
+{% block extra_style %}
+<style>
+  h1 { font-size: 2.4rem; margin-bottom: 0.5rem; }
+  p.lead { font-size: 1.15rem; color: #333; margin-bottom: 2rem; text-align: justify; }
+  ul.features { list-style: none; padding: 0; margin: 0; }
+  ul.features li { display: flex; gap: 12px; margin: 16px 0; font-size: 1.05rem; color: #333; text-align: justify; }
+  ul.features li .icon { flex-shrink: 0; width: 1.5em; }
+  .cta { display: inline-block; margin-top: 36px; padding: 14px 32px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600; }
+  .cta:hover { background: #1d4ed8; }
+</style>
+{% endblock %}
+
+{% block content %}
   <h1>WeatherCal ☀️</h1>
   <p class="lead">It's a weather forecast in your calendar app. More useful than you'd think.</p>
   <ul class="features">
@@ -28,5 +32,4 @@
   </ul>
   <a href="/signup" class="cta">Get started</a>
   <p style="margin-top:40px;font-size:0.82rem;color:#9ca3af"><a href="/impressum" style="color:#9ca3af">Impressum</a></p>
-</body>
-</html>
+{% endblock %}

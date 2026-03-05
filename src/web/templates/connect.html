@@ -1,39 +1,38 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
-  <title>Connect your calendar — WeatherCal</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 400px; margin: 60px auto; padding: 0 24px; color: #111; }
-    h1 { margin-bottom: 0.4rem; }
-    .subtitle { color: #333; margin-bottom: 2rem; }
-    .btn-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }
-    .btn-wrapper { display: flex; flex-direction: column; gap: 4px; }
-    .btn-note { font-size: 0.8rem; color: #6b7280; padding-left: 4px; }
-    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 20px; border-radius: 8px; font-size: 1rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; width: 100%; }
-    .btn-blue { background: #2563eb; color: #fff; }
-    .btn-blue:hover { background: #1d4ed8; }
-    .btn-red { background: #ea4335; color: #fff; }
-    .btn-red:hover { background: #c5392c; }
-    .btn-slate { background: #0f172a; color: #fff; }
-    .btn-slate:hover { background: #1e293b; }
-    .copy-section { border-top: 1px solid #e5e7eb; padding-top: 24px; }
-    .feed-input-row { display: flex; gap: 8px; }
-    .feed-url { flex: 1; padding: 10px 12px; font-family: monospace; font-size: 0.82rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px; color: #374151; cursor: text; }
-    .copy-btn { padding: 10px 16px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
-    .copy-btn:hover { background: #e5e7eb; }
-    .copy-hint { font-size: 0.8rem; color: #6b7280; margin-top: 6px; }
-    .cta-section { margin-top: 28px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
-    .btn-success { background: #16a34a; color: #fff; }
-    .btn-success:hover { background: #15803d; }
-    .trouble-link { color: #6b7280; font-size: 0.9rem; text-decoration: none; }
-    .trouble-link:hover { color: #111; text-decoration: underline; }
-  </style>
-</head>
-<body>
+{% extends "base.html" %}
+
+{% block title %}Connect your calendar — WeatherCal{% endblock %}
+
+{% block body_class %}layout-narrow{% endblock %}
+
+{% block extra_style %}
+<style>
+  h1 { margin-bottom: 0.4rem; }
+  .subtitle { color: #333; margin-bottom: 2rem; }
+  .btn-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }
+  .btn-wrapper { display: flex; flex-direction: column; gap: 4px; }
+  .btn-note { font-size: 0.8rem; color: #6b7280; padding-left: 4px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 20px; border-radius: 8px; font-size: 1rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; width: 100%; }
+  .btn-blue { background: #2563eb; color: #fff; }
+  .btn-blue:hover { background: #1d4ed8; }
+  .btn-red { background: #ea4335; color: #fff; }
+  .btn-red:hover { background: #c5392c; }
+  .btn-slate { background: #0f172a; color: #fff; }
+  .btn-slate:hover { background: #1e293b; }
+  .copy-section { border-top: 1px solid #e5e7eb; padding-top: 24px; }
+  .feed-input-row { display: flex; gap: 8px; }
+  .feed-url { flex: 1; padding: 10px 12px; font-family: monospace; font-size: 0.82rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px; color: #374151; cursor: text; }
+  .copy-btn { padding: 10px 16px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
+  .copy-btn:hover { background: #e5e7eb; }
+  .copy-hint { font-size: 0.8rem; color: #6b7280; margin-top: 6px; }
+  .cta-section { margin-top: 28px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+  .btn-success { background: #16a34a; color: #fff; }
+  .btn-success:hover { background: #15803d; }
+  .trouble-link { color: #6b7280; font-size: 0.9rem; text-decoration: none; }
+  .trouble-link:hover { color: #111; text-decoration: underline; }
+</style>
+{% endblock %}
+
+{% block content %}
   <h1>Connect your calendar</h1>
   <p class="subtitle">Add your feed to a calendar app and forecasts will appear automatically.</p>
 
@@ -71,5 +70,4 @@
     <a href="/settings" class="btn btn-success">Connected &#128077;</a>
     <a href="/feedback" class="trouble-link">Having trouble?</a>
   </div>
-</body>
-</html>
+{% endblock %}

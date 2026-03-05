@@ -1,105 +1,106 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
-  <title>Settings — WeatherCal</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 0 auto; padding: 24px; color: #111; }
+{% extends "base.html" %}
 
-    nav { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #e5e7eb; margin-bottom: 32px; }
-    nav strong { font-size: 1.1rem; }
-    .logout-btn { background: none; border: none; color: #6b7280; cursor: pointer; font-size: 0.95rem; padding: 0; }
-    .logout-btn:hover { color: #111; }
+{% block title %}Settings — WeatherCal{% endblock %}
 
-    .settings-layout { display: flex; gap: 40px; align-items: flex-start; }
+{% block body_class %}layout-wide{% endblock %}
 
-    .sidebar { width: 180px; flex-shrink: 0; display: flex; flex-direction: column; }
-    .sidebar-link { display: block; padding: 10px 14px; color: #374151; text-decoration: none; border-radius: 6px; font-size: 0.95rem; margin-bottom: 2px; }
-    .sidebar-link:hover { background: #f3f4f6; }
-    .sidebar-link.active { background: #eff6ff; color: #2563eb; font-weight: 600; }
-    .sidebar-footer { margin-top: auto; padding-top: 24px; font-size: 0.78rem; color: #9ca3af; line-height: 1.4; padding-left: 4px; }
+{% block nav_right %}
+<form method="post" action="/logout" style="margin:0">
+  <button class="logout-btn" type="submit">Logout</button>
+</form>
+{% endblock %}
 
-    .content { flex: 1; min-width: 0; }
-    .panel { display: none; }
+{% block extra_style %}
+<style>
+  .settings-layout { display: flex; gap: 40px; align-items: flex-start; }
 
-    .section { margin-bottom: 32px; }
-    .section h2 { font-size: 1.05rem; color: #374151; margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6; }
+  .sidebar { width: 180px; flex-shrink: 0; display: flex; flex-direction: column; }
+  .sidebar-link { display: block; padding: 10px 14px; color: #374151; text-decoration: none; border-radius: 6px; font-size: 0.95rem; margin-bottom: 2px; }
+  .sidebar-link:hover { background: #f3f4f6; }
+  .sidebar-link.active { background: #eff6ff; color: #2563eb; font-weight: 600; }
+  .sidebar-footer { margin-top: auto; padding-top: 24px; font-size: 0.78rem; color: #9ca3af; line-height: 1.4; padding-left: 4px; }
 
-    .form-group { margin-bottom: 14px; }
-    .form-group label { display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 5px; }
-    .form-input { width: 100%; max-width: 380px; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem; }
-    .form-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
-    .form-input[readonly] { background: #f9fafb; color: #6b7280; cursor: default; }
+  .content { flex: 1; min-width: 0; }
+  .panel { display: none; }
 
-    .btn-primary { padding: 10px 22px; background: #2563eb; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; }
-    .btn-primary:hover { background: #1d4ed8; }
-    .btn-danger { padding: 10px 22px; background: #dc2626; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; }
-    .btn-danger:hover { background: #b91c1c; }
+  .section { margin-bottom: 32px; }
+  .section h2 { font-size: 1.05rem; color: #374151; margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6; }
 
-    .alert { padding: 12px 16px; border-radius: 6px; font-size: 0.9rem; margin-bottom: 20px; }
-    .alert-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-    .alert-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 5px; }
 
-    .location-tag { display: inline-block; padding: 6px 14px; background: #f3f4f6; border-radius: 20px; font-size: 0.95rem; }
-    .link-blue { color: #2563eb; text-decoration: none; font-size: 0.9rem; }
-    .link-blue:hover { text-decoration: underline; }
+  .location-tag { display: inline-block; padding: 6px 14px; background: #f3f4f6; border-radius: 20px; font-size: 0.95rem; }
+  .link-blue { color: #2563eb; text-decoration: none; font-size: 0.9rem; }
+  .link-blue:hover { text-decoration: underline; }
 
-    .danger-zone { border: 1px solid #fecaca; border-radius: 8px; padding: 20px; background: #fef2f2; }
-    .danger-zone h2 { color: #dc2626; border-bottom-color: #fecaca; }
-    .danger-hint { font-size: 0.875rem; color: #6b7280; margin: 0 0 14px; }
+  .danger-zone { border: 1px solid #fecaca; border-radius: 8px; padding: 20px; background: #fef2f2; }
+  .danger-zone h2 { color: #dc2626; border-bottom-color: #fecaca; }
+  .danger-hint { font-size: 0.875rem; color: #6b7280; margin: 0 0 14px; }
 
-    .pref-note { color: #6b7280; font-size: 0.85rem; }
+  .pref-note { color: #6b7280; font-size: 0.85rem; }
 
-    /* Preference cards */
-    .pref-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
-    .pref-card-title { font-size: 0.95rem; font-weight: 600; color: #374151; margin: 0 0 4px; }
-    .pref-card-desc { font-size: 0.85rem; color: #6b7280; margin: 0 0 16px; }
+  /* Preference cards */
+  .pref-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
+  .pref-card-title { font-size: 0.95rem; font-weight: 600; color: #374151; margin: 0 0 4px; }
+  .pref-card-desc { font-size: 0.85rem; color: #6b7280; margin: 0 0 16px; }
 
-    /* Custom checkboxes */
-    .check-label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; margin-bottom: 10px; font-size: 0.95rem; position: relative; }
-    .check-label input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
-    .checkmark { width: 20px; height: 20px; flex-shrink: 0; border: 2px solid #d1d5db; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; transition: background 0.15s, border-color 0.15s; }
-    .check-label input:checked ~ .checkmark { background: #16a34a; border-color: #16a34a; }
-    .check-label input:checked ~ .checkmark::after { content: '\2713'; color: #fff; font-size: 13px; font-weight: 700; }
+  /* Custom checkboxes */
+  .check-label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; margin-bottom: 10px; font-size: 0.95rem; position: relative; }
+  .check-label input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
+  .checkmark { width: 20px; height: 20px; flex-shrink: 0; border: 2px solid #d1d5db; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; transition: background 0.15s, border-color 0.15s; }
+  .check-label input:checked ~ .checkmark { background: #16a34a; border-color: #16a34a; }
+  .check-label input:checked ~ .checkmark::after { content: '\2713'; color: #fff; font-size: 13px; font-weight: 700; }
 
-    /* Nested indentation */
-    .nested-group { margin-left: 30px; margin-top: 4px; }
-    .nested-group .nested-group { margin-left: 30px; }
-    .nested-group.group-disabled { opacity: 0.4; pointer-events: none; }
+  /* Nested indentation */
+  .nested-group { margin-left: 30px; margin-top: 4px; }
+  .nested-group .nested-group { margin-left: 30px; }
+  .nested-group.group-disabled { opacity: 0.4; pointer-events: none; }
 
-    /* Threshold row */
-    .threshold-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; font-size: 0.95rem; }
-    .threshold-row input[type="number"] { width: 72px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem; text-align: center; }
+  /* Threshold row */
+  .threshold-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; font-size: 0.95rem; }
+  .threshold-row input[type="number"] { width: 72px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem; text-align: center; }
 
-    .feed-input-row { display: flex; gap: 8px; }
-    .feed-url { flex: 1; padding: 10px 12px; font-family: monospace; font-size: 0.82rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px; color: #374151; cursor: text; }
-    .copy-btn { padding: 10px 16px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
-    .copy-btn:hover { background: #e5e7eb; }
-    .copy-hint { font-size: 0.8rem; color: #6b7280; margin-top: 6px; }
+  .feed-input-row { display: flex; gap: 8px; }
+  .feed-url { flex: 1; padding: 10px 12px; font-family: monospace; font-size: 0.82rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px; color: #374151; cursor: text; }
+  .copy-btn { padding: 10px 16px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
+  .copy-btn:hover { background: #e5e7eb; }
+  .copy-hint { font-size: 0.8rem; color: #6b7280; margin-top: 6px; }
 
-    .connect-btn-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
-    .connect-btn-wrapper { display: flex; flex-direction: column; gap: 4px; }
-    .connect-btn-note { font-size: 0.8rem; color: #6b7280; padding-left: 4px; }
-    .btn-connect { display: inline-flex; align-items: center; gap: 8px; padding: 13px 20px; border-radius: 8px; font-size: 1rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; }
-    .btn-cal-blue { background: #0071e3; color: #fff; }
-    .btn-cal-blue:hover { background: #0060c0; }
-    .btn-cal-red { background: #ea4335; color: #fff; }
-    .btn-cal-red:hover { background: #c5392c; }
-    .btn-cal-slate { background: #0078d4; color: #fff; }
-    .btn-cal-slate:hover { background: #006ab8; }
-  </style>
-</head>
-<body>
-  <nav>
-    <strong>WeatherCal ☀️</strong>
-    <form method="post" action="/logout" style="margin:0">
-      <button class="logout-btn" type="submit">Logout</button>
-    </form>
-  </nav>
+  .connect-btn-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+  .connect-btn-wrapper { display: flex; flex-direction: column; gap: 4px; }
+  .connect-btn-note { font-size: 0.8rem; color: #6b7280; padding-left: 4px; }
+  .btn-connect { display: inline-flex; align-items: center; gap: 8px; padding: 13px 20px; border-radius: 8px; font-size: 1rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; }
+  .btn-cal-blue { background: #0071e3; color: #fff; }
+  .btn-cal-blue:hover { background: #0060c0; }
+  .btn-cal-red { background: #ea4335; color: #fff; }
+  .btn-cal-red:hover { background: #c5392c; }
+  .btn-cal-slate { background: #0078d4; color: #fff; }
+  .btn-cal-slate:hover { background: #006ab8; }
 
+  /* Mobile responsive */
+  @media (max-width: 640px) {
+    .settings-layout { flex-direction: column; gap: 0; }
+
+    .sidebar {
+      width: auto;
+      flex-direction: row;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      margin-bottom: 24px;
+      gap: 2px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .sidebar-link { display: inline-block; white-space: nowrap; margin-bottom: 0; }
+    .sidebar-footer { display: none; }
+
+    .feed-input-row { flex-direction: column; }
+    .feed-url { width: 100%; }
+    .copy-btn { width: 100%; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
   <div class="settings-layout">
     <aside class="sidebar">
       <a href="#preferences" class="sidebar-link">Preferences</a>
@@ -364,14 +365,6 @@
           </form>
         </div>
 
-        <script>
-          document.getElementById('f-user-agent').value = navigator.userAgent;
-          document.getElementById('f-platform').value = navigator.platform;
-          document.getElementById('f-screen-width').value = screen.width;
-          document.getElementById('f-screen-height').value = screen.height;
-          document.getElementById('f-timezone').value = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        </script>
-
       </div>
 
       <!-- Reconnect tab -->
@@ -414,102 +407,113 @@
 
     </main>
   </div>
+{% endblock %}
 
-  <script>
-    (function () {
-      var tabs = ['preferences', 'personal', 'reconnect', 'feedback'];
+{% block extra_script %}
+<script>
+  (function () {
+    var tabs = ['preferences', 'personal', 'reconnect', 'feedback'];
 
-      function showTab(name) {
-        tabs.forEach(function (t) {
-          document.getElementById('panel-' + t).style.display = (t === name) ? 'block' : 'none';
-          var link = document.querySelector('.sidebar-link[href="#' + t + '"]');
-          if (link) link.classList.toggle('active', t === name);
-        });
-      }
+    function showTab(name) {
+      tabs.forEach(function (t) {
+        document.getElementById('panel-' + t).style.display = (t === name) ? 'block' : 'none';
+        var link = document.querySelector('.sidebar-link[href="#' + t + '"]');
+        if (link) link.classList.toggle('active', t === name);
+      });
+    }
 
-      function getActiveTab() {
-        var hash = window.location.hash.replace('#', '');
-        if (tabs.indexOf(hash) !== -1) return hash;
-        var params = new URLSearchParams(window.location.search);
-        if (params.get('success') === 'prefs') return 'preferences';
-        if (params.get('success') === 'feedback') return 'feedback';
-        if (params.get('success') === 'email' || params.get('success') === 'password') return 'personal';
-        if (params.get('error')) return 'personal';
-        return 'preferences';
-      }
+    function getActiveTab() {
+      var hash = window.location.hash.replace('#', '');
+      if (tabs.indexOf(hash) !== -1) return hash;
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('success') === 'prefs') return 'preferences';
+      if (params.get('success') === 'feedback') return 'feedback';
+      if (params.get('success') === 'email' || params.get('success') === 'password') return 'personal';
+      if (params.get('error')) return 'personal';
+      return 'preferences';
+    }
 
+    showTab(getActiveTab());
+
+    window.addEventListener('hashchange', function () {
       showTab(getActiveTab());
+    });
 
-      window.addEventListener('hashchange', function () {
-        showTab(getActiveTab());
+    document.querySelectorAll('.sidebar-link').forEach(function (link) {
+      link.addEventListener('click', function (e) {
+        var href = this.getAttribute('href');
+        if (!href.startsWith('#')) return;
+        e.preventDefault();
+        var hash = href.replace('#', '');
+        history.pushState(null, '', '#' + hash);
+        showTab(hash);
       });
+    });
 
-      document.querySelectorAll('.sidebar-link').forEach(function (link) {
-        link.addEventListener('click', function (e) {
-          var href = this.getAttribute('href');
-          if (!href.startsWith('#')) return;
-          e.preventDefault();
-          var hash = href.replace('#', '');
-          history.pushState(null, '', '#' + hash);
-          showTab(hash);
-        });
-      });
+    // Temperature unit toggle
+    (function () {
+      var radios = document.querySelectorAll('input[name="temp_unit"]');
+      var fields = {
+        cold: document.querySelector('input[name="cold_threshold"]'),
+        warm: document.querySelector('input[name="warm_threshold"]'),
+        hot:  document.querySelector('input[name="hot_threshold"]'),
+      };
+      var labels = {
+        cold: document.getElementById('label-cold'),
+        warm: document.getElementById('label-warm'),
+        hot:  document.getElementById('label-hot'),
+      };
 
-      // Temperature unit toggle
-      (function () {
-        var radios = document.querySelectorAll('input[name="temp_unit"]');
-        var fields = {
-          cold: document.querySelector('input[name="cold_threshold"]'),
-          warm: document.querySelector('input[name="warm_threshold"]'),
-          hot:  document.querySelector('input[name="hot_threshold"]'),
-        };
-        var labels = {
-          cold: document.getElementById('label-cold'),
-          warm: document.getElementById('label-warm'),
-          hot:  document.getElementById('label-hot'),
-        };
+      function cToF(c) { return Math.round((c * 9 / 5 + 32) * 2) / 2; }
+      function fToC(f) { return Math.round(((f - 32) * 5 / 9) * 2) / 2; }
 
-        function cToF(c) { return Math.round((c * 9 / 5 + 32) * 2) / 2; }
-        function fToC(f) { return Math.round(((f - 32) * 5 / 9) * 2) / 2; }
+      var currentUnit = document.querySelector('input[name="temp_unit"]:checked').value;
 
-        var currentUnit = document.querySelector('input[name="temp_unit"]:checked').value;
+      if (currentUnit === 'F') {
+        for (var key in fields) {
+          fields[key].value = cToF(parseFloat(fields[key].value));
+        }
+      }
 
-        if (currentUnit === 'F') {
+      radios.forEach(function (r) {
+        r.addEventListener('change', function () {
+          var newUnit = this.value;
+          if (newUnit === currentUnit) return;
           for (var key in fields) {
-            fields[key].value = cToF(parseFloat(fields[key].value));
+            var val = parseFloat(fields[key].value);
+            fields[key].value = newUnit === 'F' ? cToF(val) : fToC(val);
+            labels[key].textContent = '°' + newUnit;
           }
-        }
-
-        radios.forEach(function (r) {
-          r.addEventListener('change', function () {
-            var newUnit = this.value;
-            if (newUnit === currentUnit) return;
-            for (var key in fields) {
-              var val = parseFloat(fields[key].value);
-              fields[key].value = newUnit === 'F' ? cToF(val) : fToC(val);
-              labels[key].textContent = '°' + newUnit;
-            }
-            currentUnit = newUnit;
-          });
+          currentUnit = newUnit;
         });
-      })();
-
-      // Disable nested groups when parent unchecked
-      document.querySelectorAll('[data-controls]').forEach(function (chk) {
-        var groupId = chk.getAttribute('data-controls');
-        var group = document.getElementById(groupId);
-        if (!group) return;
-        function update() {
-          if (chk.checked) {
-            group.classList.remove('group-disabled');
-          } else {
-            group.classList.add('group-disabled');
-          }
-        }
-        chk.addEventListener('change', update);
-        update();
       });
     })();
-  </script>
-</body>
-</html>
+
+    // Disable nested groups when parent unchecked
+    document.querySelectorAll('[data-controls]').forEach(function (chk) {
+      var groupId = chk.getAttribute('data-controls');
+      var group = document.getElementById(groupId);
+      if (!group) return;
+      function update() {
+        if (chk.checked) {
+          group.classList.remove('group-disabled');
+        } else {
+          group.classList.add('group-disabled');
+        }
+      }
+      chk.addEventListener('change', update);
+      update();
+    });
+
+    // Feedback form auto-fill
+    var fFeedback = document.getElementById('feedback-form');
+    if (fFeedback) {
+      document.getElementById('f-user-agent').value = navigator.userAgent;
+      document.getElementById('f-platform').value = navigator.platform;
+      document.getElementById('f-screen-width').value = screen.width;
+      document.getElementById('f-screen-height').value = screen.height;
+      document.getElementById('f-timezone').value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    }
+  })();
+</script>
+{% endblock %}

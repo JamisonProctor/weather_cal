@@ -1,26 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
-  <title>Log in — WeatherCal</title>
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 400px; margin: 60px auto; padding: 0 24px; color: #111; }
-    .site-header { font-size: 1.1rem; font-weight: 700; margin-bottom: 2rem; }
-    h1 { margin-bottom: 1.5rem; }
-    label { display: block; margin: 16px 0 4px; font-weight: 500; font-size: 0.95rem; }
-    input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; }
-    input:focus { outline: 2px solid #2563eb; border-color: transparent; }
-    button { margin-top: 24px; width: 100%; padding: 12px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
-    button:hover { background: #1d4ed8; }
-    .error { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 0.95rem; }
-    .footer { margin-top: 20px; font-size: 0.9rem; color: #333; }
-    a { color: #2563eb; }
-  </style>
-</head>
-<body>
-  <div class="site-header">WeatherCal ☀️</div>
+{% extends "base.html" %}
+
+{% block title %}Log in — WeatherCal{% endblock %}
+
+{% block body_class %}layout-narrow{% endblock %}
+
+{% block nav_right %}
+<a href="/signup" class="nav-link">Sign up</a>
+{% endblock %}
+
+{% block extra_style %}
+<style>
+  h1 { margin-bottom: 1.5rem; }
+  label { display: block; margin: 16px 0 4px; font-weight: 500; font-size: 0.95rem; }
+  input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; }
+  input:focus { outline: 2px solid #2563eb; border-color: transparent; }
+  button { margin-top: 24px; width: 100%; padding: 12px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+  button:hover { background: #1d4ed8; }
+  .footer { margin-top: 20px; font-size: 0.9rem; color: #333; }
+</style>
+{% endblock %}
+
+{% block content %}
   <h1>Log in</h1>
   {% if error %}
   <div class="error">{{ error }}</div>
@@ -36,5 +36,4 @@
   </form>
   <p class="footer">Don't have an account? <a href="/signup">Sign up</a></p>
   <p style="margin-top:16px;font-size:0.82rem;color:#9ca3af"><a href="/impressum" style="color:#9ca3af">Impressum</a></p>
-</body>
-</html>
+{% endblock %}

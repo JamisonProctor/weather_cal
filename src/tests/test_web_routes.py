@@ -315,3 +315,47 @@ def test_admin_route_accessible_for_admin(client, db_path, monkeypatch):
     resp = client.get("/admin", cookies=cookies)
     assert resp.status_code == 200
     assert b"Admin" in resp.content
+
+
+# --- Welcome email ---
+
+def test_setup_triggers_welcome_email_on_first_setup(client, db_path, monkeypatch):
+    """Welcome email is sent once on first location setup."""
+    calls = []
+    monkeypatch.setattr(web_app, "send_welcome_email", lambda *a, **kw: calls.append(a))
+
+    user_id, cookies = _auth_cookies(db_path, email="welcome@example.com")
+    create_feed_token(db_path, user_id)
+    client.post(
+        "/setup",
+        data={
+            "location": "Munich, Germany",
+            "lat": "48.137",
+            "lon": "11.576",
+            "timezone": "Europe/Berlin",
+        },
+        cookies=cookies,
+    )
+    assert len(calls) == 1
+    assert calls[0][0] == "welcome@example.com"
+
+
+def test_setup_does_not_trigger_welcome_email_on_location_change(client, db_path, monkeypatch):
+    """Welcome email is NOT sent when user already has a location."""
+    calls = []
+    monkeypatch.setattr(web_app, "send_welcome_email", lambda *a, **kw: calls.append(a))
+
+    user_id, cookies = _auth_cookies(db_path, email="existing@example.com")
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+
+    client.post(
+        "/setup",
+        data={
+            "location": "Berlin, Germany",
+            "lat": "52.520",
+            "lon": "13.405",
+            "timezone": "Europe/Berlin",
+        },
+        cookies=cookies,
+    )
+    assert len(calls) == 0

@@ -526,17 +526,3 @@ def get_admin_stats(db_path: str) -> dict:
         conn.close()
 
 
-def wipe_accounts(db_path: str) -> None:
-    """Delete all user accounts, locations, and feed tokens. Forecast cache is preserved.
-    Only call this when WIPE_ACCOUNTS_ON_START is set — debug/dev use only.
-    TODO: remove this call from app startup once onboarding is stable.
-    """
-    conn = _conn(db_path)
-    try:
-        conn.execute("DELETE FROM feed_tokens")
-        conn.execute("DELETE FROM user_locations")
-        conn.execute("DELETE FROM users")
-        conn.commit()
-        logger.warning("WIPE_ACCOUNTS_ON_START is set — all user accounts have been deleted.")
-    finally:
-        conn.close()

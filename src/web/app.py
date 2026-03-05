@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from fastapi.templating import Jinja2Templates
 
 from src.integrations.ics_service import generate_ics
+from src.services.email_service import send_welcome_email
 from src.services.forecast_store import ForecastStore
 from src.services.forecast_service import ForecastService
 from src.web.auth import create_session_token, decode_session_token
@@ -36,7 +37,6 @@ from src.web.db import (
     update_user_email,
     update_user_password,
     upsert_user_preferences,
-    wipe_accounts,
 )
 
 logger = logging.getLogger(__name__)
@@ -68,8 +68,6 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 ForecastStore(db_path=DB_PATH)  # ensures all tables exist before anything else runs
 create_feedback_table(DB_PATH)
 create_user_preferences_table(DB_PATH)
-if os.getenv("WIPE_ACCOUNTS_ON_START"):
-    wipe_accounts(DB_PATH)
 
 
 def _get_user_id(request: Request):
@@ -168,6 +166,12 @@ async def setup_post(
     existing_prefs = get_user_preferences(DB_PATH, user_id)
     if not existing_prefs and "united states" in country.lower():
         upsert_user_preferences(DB_PATH, user_id, **{**DEFAULT_PREFS, "temp_unit": "F"})
+    if not is_location_change:
+        user = get_user_by_id(DB_PATH, user_id)
+        feed_token = get_feed_token_by_user(DB_PATH, user_id)
+        if feed_token and user:
+            webcal_url, _ = _build_feed_urls(request, feed_token)
+            background_tasks.add_task(send_welcome_email, user["email"], webcal_url, location)
     background_tasks.add_task(_initial_forecast_fetch, location, DB_PATH, resolved_lat, resolved_lon, resolved_tz)
     redirect_url = "/settings" if is_location_change else "/connect"
     return RedirectResponse(url=redirect_url, status_code=303)

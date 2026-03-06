@@ -29,6 +29,7 @@
   .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
   .dot-yes { background: #2563eb; }
   .dot-no { background: #d1d5db; }
+  .dot-warn { background: #ef4444; }
 
   .empty { color: #9ca3af; font-style: italic; }
 </style>
@@ -51,8 +52,8 @@
       <div class="value">{{ stats.changed_prefs_count }}</div>
     </div>
     <div class="stat-card">
-      <div class="label">Total polls</div>
-      <div class="value">{{ stats.total_polls }}</div>
+      <div class="label">Avg polls/day</div>
+      <div class="value">{{ stats.avg_polls_per_day }}</div>
     </div>
     <div class="stat-card">
       <div class="label">Settings clicks</div>
@@ -71,7 +72,7 @@
           <th>Location</th>
           <th>Signed up</th>
           <th>Last poll</th>
-          <th>Polls</th>
+          <th>Polls/day</th>
           <th>Calendar app</th>
           <th>Prefs</th>
           <th>Clicks</th>
@@ -84,7 +85,7 @@
           <td>{{ u.location or '—' }}</td>
           <td>{{ u.created_at or '—' }}</td>
           <td>{{ u.last_polled_at or '—' }}</td>
-          <td>{{ u.poll_count }}</td>
+          <td>{{ u.polls_per_day }}{% if u.low_polls %} <span class="dot dot-warn" title="Low poll rate"></span>{% endif %}</td>
           <td>{{ u.calendar_app }}</td>
           <td>
             <span class="dot {% if u.changed_prefs %}dot-yes{% else %}dot-no{% endif %}"

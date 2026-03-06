@@ -553,7 +553,7 @@ async def feed(request: Request, token: str):
     return Response(
         content=ics_content,
         media_type="text/calendar; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="weather.ics"'},
+        headers={"Content-Disposition": 'inline; filename="weather.ics"'},
     )
 
 

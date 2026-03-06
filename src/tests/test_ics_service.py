@@ -177,6 +177,22 @@ def test_timed_event_description_contains_settings_url():
     assert settings_url in description
 
 
+def test_vtimezone_present_when_timed_events_exist():
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00"],
+        temps=[12, 12],
+        codes=[1, 1],
+        rain=[50, 60],
+        winds=[5, 5],
+    )
+    ics_bytes = generate_ics([forecast], "Munich, Germany")
+    cal = Calendar.from_ical(ics_bytes)
+    vtimezones = [c for c in cal.walk() if c.name == "VTIMEZONE"]
+    assert len(vtimezones) >= 1
+    tzids = {str(vtz["TZID"]) for vtz in vtimezones}
+    assert "Europe/Berlin" in tzids
+
+
 def test_generate_ics_summary_uses_prefs_cold_threshold():
     forecast = _make_forecast(
         times=["2026-03-10T06:00", "2026-03-10T09:00", "2026-03-10T12:00", "2026-03-10T15:00"],

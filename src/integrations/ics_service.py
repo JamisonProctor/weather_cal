@@ -105,4 +105,5 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, sett
                     w_event.add("description", f"⚙️ Change your settings: {settings_url}")
                 cal.add_component(w_event)
 
+    cal.add_missing_timezones()
     return cal.to_ical()

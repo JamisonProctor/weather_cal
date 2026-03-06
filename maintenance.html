@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
+  <title>WeatherCal — Back Soon</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; color: #111; margin: 0; padding: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #fafafa; }
+
+    .container { max-width: 520px; margin: 0 auto; padding: 24px; text-align: center; }
+
+    nav { display: flex; justify-content: center; padding-bottom: 20px; border-bottom: 1px solid #e5e7eb; margin-bottom: 48px; }
+    .brand { font-size: 1.1rem; font-weight: 700; color: #111; text-decoration: none; }
+
+    .sun { font-size: 4rem; margin-bottom: 24px; display: inline-block; animation: pulse 3s ease-in-out infinite; }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.85; }
+    }
+
+    h1 { font-size: 1.8rem; margin: 0 0 12px; }
+    p.lead { font-size: 1.1rem; color: #6b7280; margin: 0 0 32px; }
+    p.sub { font-size: 0.9rem; color: #9ca3af; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav>
+      <span class="brand">WeatherCal ☀️</span>
+    </nav>
+    <div class="sun">🌤️</div>
+    <h1>Warming up for the next sunny day</h1>
+    <p class="lead">We're doing a little maintenance — your forecasts will be back shortly.</p>
+    <p class="sub">Your calendar subscriptions will automatically update once we're back.</p>
+  </div>
+</body>
+</html>

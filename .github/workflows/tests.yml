@@ -24,28 +24,16 @@ jobs:
       - name: Run tests
         run: python -m pytest src/tests/ -q --tb=short
 
-  # Automatically redeploy on push to main once the server is ready.
-  #
-  # To activate:
-  #   1. Add these three secrets in GitHub → Settings → Secrets → Actions:
-  #        DEPLOY_HOST  — server IP or hostname
-  #        DEPLOY_USER  — SSH username (e.g. ubuntu, root, pi)
-  #        DEPLOY_KEY   — private SSH key whose public half is in ~/.ssh/authorized_keys on the server
-  #   2. Ensure deploy.sh is present on the server (git pull will handle this once it's cloned there)
-  #
-  # The job is skipped automatically when DEPLOY_HOST is not set, so it is safe to merge now.
+  # Runs on the self-hosted runner on the Mac Mini server.
+  # Only triggers on pushes to main (not PRs) after tests pass.
+  # Gated behind DEPLOY_ENABLED variable so it can be toggled off.
   deploy:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
 
     steps:
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_KEY }}
-          script: |
-            cd ~/weather_cal
-            bash deploy.sh
+      - name: Deploy
+        run: |
+          cd ~/weather_cal
+          bash deploy.sh

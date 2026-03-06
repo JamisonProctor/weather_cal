@@ -12,7 +12,7 @@ RAIN_WARNING_CODES = {
     51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99
 }
 SNOW_WARNING_CODES = {71, 73, 75, 77, 85, 86}
-SUNNY_CODES = {0, 1}
+SUNNY_CODES = {0, 1, 2}
 RAIN_PROB_THRESHOLD = 40
 WIND_SPEED_THRESHOLD = 30
 COLD_TEMP_THRESHOLD = 3
@@ -155,8 +155,11 @@ _WARNING_CHECKS = [
         lambda temp, code, rain, wind: code in SNOW_WARNING_CODES,
     ),
     (
-        "sunny", "☀️", "Warm and sunny — enjoy!",
-        lambda temp, code, rain, wind: code in SUNNY_CODES and (temp is not None) and temp >= WARM_TEMP_THRESHOLD,
+        "sunny", "☀️", "Nice weather — enjoy!",
+        lambda temp, code, rain, wind: code in SUNNY_CODES
+        and (temp is not None) and temp >= WARM_TEMP_THRESHOLD
+        and (rain or 0) < RAIN_PROB_THRESHOLD
+        and (wind or 0) < WIND_SPEED_THRESHOLD,
     ),
     (
         "hot", "🥵", "Heat Warning",
@@ -191,7 +194,12 @@ def get_warning_windows(forecast: Forecast, prefs=None) -> List[WarningWindow]:
             active_check = lambda temp, code, rain, wind, ht=ht: (temp is not None) and temp > ht
         elif wtype == "sunny" and prefs is not None:
             wt = prefs.get("warm_threshold", WARM_TEMP_THRESHOLD)
-            active_check = lambda temp, code, rain, wind, wt=wt: code in SUNNY_CODES and (temp is not None) and temp >= wt
+            active_check = lambda temp, code, rain, wind, wt=wt: (
+                code in SUNNY_CODES
+                and (temp is not None) and temp >= wt
+                and (rain or 0) < RAIN_PROB_THRESHOLD
+                and (wind or 0) < WIND_SPEED_THRESHOLD
+            )
         else:
             active_check = check
 

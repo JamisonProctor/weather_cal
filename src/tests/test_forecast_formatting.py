@@ -239,3 +239,70 @@ def test_get_warning_windows_snow_all_day():
     assert len(snow) == 1
     assert snow[0].start_time == "2025-01-01T06:00"
     assert snow[0].end_time == "2025-01-01T13:00"
+
+
+_SUNNY_PREFS = {"warn_sunny": 1, "warn_rain": 1, "warn_wind": 1, "warn_cold": 1, "warn_snow": 1}
+
+
+def test_sunny_window_includes_partly_cloudy():
+    """Partly cloudy (code 2) + warm + dry + calm → included in sunny window."""
+    forecast = _make_forecast(
+        times=["2025-08-01T10:00", "2025-08-01T11:00", "2025-08-01T12:00"],
+        temps=[20, 22, 21],
+        codes=[2, 2, 2],
+        rain=[0, 0, 0],
+        winds=[5, 5, 5],
+    )
+    windows = get_warning_windows(forecast, prefs=_SUNNY_PREFS)
+    sunny = [w for w in windows if w.warning_type == "sunny"]
+    assert len(sunny) == 1
+    assert sunny[0].start_time == "2025-08-01T10:00"
+    assert sunny[0].end_time == "2025-08-01T13:00"
+
+
+def test_sunny_window_excludes_partly_cloudy_with_rain():
+    """Partly cloudy (code 2) + warm + rainy → NOT a nice weather window."""
+    forecast = _make_forecast(
+        times=["2025-08-01T10:00", "2025-08-01T11:00", "2025-08-01T12:00"],
+        temps=[20, 22, 21],
+        codes=[2, 2, 2],
+        rain=[50, 55, 60],
+        winds=[5, 5, 5],
+    )
+    windows = get_warning_windows(forecast, prefs=_SUNNY_PREFS)
+    sunny = [w for w in windows if w.warning_type == "sunny"]
+    assert len(sunny) == 0
+
+
+def test_sunny_window_excludes_partly_cloudy_with_wind():
+    """Partly cloudy (code 2) + warm + windy → NOT a nice weather window."""
+    forecast = _make_forecast(
+        times=["2025-08-01T10:00", "2025-08-01T11:00", "2025-08-01T12:00"],
+        temps=[20, 22, 21],
+        codes=[2, 2, 2],
+        rain=[0, 0, 0],
+        winds=[35, 35, 35],
+    )
+    windows = get_warning_windows(forecast, prefs=_SUNNY_PREFS)
+    sunny = [w for w in windows if w.warning_type == "sunny"]
+    assert len(sunny) == 0
+
+
+def test_sunny_to_partly_cloudy_merges_into_one_window():
+    """Sunny → partly cloudy → sunny merges into one continuous nice weather window."""
+    forecast = _make_forecast(
+        times=[
+            "2025-08-01T10:00", "2025-08-01T11:00",
+            "2025-08-01T12:00", "2025-08-01T13:00",
+            "2025-08-01T14:00", "2025-08-01T15:00",
+        ],
+        temps=[20, 21, 22, 23, 22, 21],
+        codes=[0, 0, 2, 2, 1, 0],
+        rain=[0, 0, 0, 0, 0, 0],
+        winds=[5, 5, 8, 8, 5, 5],
+    )
+    windows = get_warning_windows(forecast, prefs=_SUNNY_PREFS)
+    sunny = [w for w in windows if w.warning_type == "sunny"]
+    assert len(sunny) == 1
+    assert sunny[0].start_time == "2025-08-01T10:00"
+    assert sunny[0].end_time == "2025-08-01T16:00"

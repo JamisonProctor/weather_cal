@@ -554,3 +554,21 @@ def test_setup_does_not_trigger_welcome_email_on_location_change(client, db_path
         cookies=cookies,
     )
     assert len(calls) == 0
+
+
+# --- Maintenance mode ---
+
+def test_maintenance_mode_returns_503(client, tmp_path, monkeypatch):
+    flag = tmp_path / "maintenance.flag"
+    flag.touch()
+    monkeypatch.setattr(web_app, "MAINTENANCE_FLAG", flag)
+    resp = client.get("/")
+    assert resp.status_code == 503
+    assert "Warming up" in resp.text
+
+
+def test_maintenance_mode_off_returns_200(client, tmp_path, monkeypatch):
+    flag = tmp_path / "maintenance.flag"
+    monkeypatch.setattr(web_app, "MAINTENANCE_FLAG", flag)
+    resp = client.get("/")
+    assert resp.status_code == 200

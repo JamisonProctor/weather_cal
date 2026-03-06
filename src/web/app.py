@@ -61,9 +61,23 @@ def _initial_forecast_fetch(location: str, db_path: str, lat: float = None, lon:
     except Exception:
         logger.exception("Initial forecast fetch failed for location=%s", location)
 
+MAINTENANCE_FLAG = Path(os.getenv("DB_PATH", "data/forecast.db")).parent / "maintenance.flag"
+MAINTENANCE_PAGE = Path(__file__).resolve().parent.parent.parent / "maintenance.html"
+
 app = FastAPI()
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+
+
+@app.middleware("http")
+async def maintenance_mode(request: Request, call_next):
+    if MAINTENANCE_FLAG.exists():
+        try:
+            content = MAINTENANCE_PAGE.read_text()
+        except FileNotFoundError:
+            content = "<h1>Under maintenance</h1><p>We'll be back shortly.</p>"
+        return HTMLResponse(content=content, status_code=503)
+    return await call_next(request)
 
 ForecastStore(db_path=DB_PATH)  # ensures all tables exist before anything else runs
 create_feedback_table(DB_PATH)

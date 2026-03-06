@@ -490,7 +490,7 @@ def get_admin_stats(db_path: str) -> dict:
         if ppd_rows:
             ppd_sum = 0.0
             for pr in ppd_rows:
-                days = max((now - datetime.fromisoformat(pr["created_at"])).days, 1)
+                days = max((now - datetime.fromisoformat(pr["created_at"])).total_seconds() / 86400, 1.0)
                 ppd_sum += (pr["poll_count"] or 0) / days
             avg_polls_per_day = round(ppd_sum / len(ppd_rows), 1)
         else:
@@ -523,9 +523,9 @@ def get_admin_stats(db_path: str) -> dict:
             last_poll = r["last_polled_at"] or ""
             token_created = r["token_created_at"]
             if token_created:
-                days_since = (now - datetime.fromisoformat(token_created)).days
-                polls_per_day = round(r["poll_count"] / max(days_since, 1), 1)
-                low_polls = polls_per_day < 1.0 and days_since > 1
+                days_since = (now - datetime.fromisoformat(token_created)).total_seconds() / 86400
+                polls_per_day = round(r["poll_count"] / max(days_since, 1.0), 1)
+                low_polls = polls_per_day < 1.0 and days_since > 1.0
             else:
                 polls_per_day = 0.0
                 low_polls = False

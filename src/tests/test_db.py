@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -159,6 +159,7 @@ def test_get_admin_stats_empty_db(db_path):
     assert stats["unique_locations"] == 0
     assert stats["changed_prefs_count"] == 0
     assert stats["total_polls"] == 0
+    assert stats["avg_polls_per_day"] == 0.0
     assert stats["total_settings_clicks"] == 0
     assert stats["users"] == []
 
@@ -179,6 +180,78 @@ def test_get_admin_stats_with_user(db_path):
     assert u["poll_count"] == 1
     assert u["calendar_app"] == "Apple Calendar"
     assert u["changed_prefs"] is False
+    # Same-day signup: polls_per_day = 1/1 = 1.0, not flagged
+    assert u["polls_per_day"] == 1.0
+    assert u["low_polls"] is False
+
+
+def _backdate_token(db_path, token, days_ago):
+    """Set a feed token's created_at to N days ago."""
+    old_date = (datetime.now() - timedelta(days=days_ago)).isoformat()
+    conn = sqlite3.connect(db_path)
+    conn.execute("UPDATE feed_tokens SET created_at = ? WHERE token = ?", (old_date, token))
+    conn.commit()
+    conn.close()
+
+
+def test_admin_stats_polls_per_day_old_account(db_path):
+    """Account 10 days old with 20 polls → 2.0 polls/day, not flagged."""
+    user_id = create_user(db_path, "old@example.com", "password123456")
+    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    token = create_feed_token(db_path, user_id)
+    _backdate_token(db_path, token, 10)
+    for _ in range(20):
+        update_feed_poll(db_path, token, "CFNetwork/1.0")
+    stats = get_admin_stats(db_path)
+    u = stats["users"][0]
+    assert u["polls_per_day"] == 2.0
+    assert u["low_polls"] is False
+
+
+def test_admin_stats_low_polls_flag(db_path):
+    """Account 5 days old with 2 polls → 0.4 polls/day, flagged."""
+    user_id = create_user(db_path, "low@example.com", "password123456")
+    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    token = create_feed_token(db_path, user_id)
+    _backdate_token(db_path, token, 5)
+    for _ in range(2):
+        update_feed_poll(db_path, token, "CFNetwork/1.0")
+    stats = get_admin_stats(db_path)
+    u = stats["users"][0]
+    assert u["polls_per_day"] == 0.4
+    assert u["low_polls"] is True
+
+
+def test_admin_stats_new_account_not_flagged(db_path):
+    """Account < 1 day old with 0 polls should NOT be flagged."""
+    user_id = create_user(db_path, "new@example.com", "password123456")
+    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    create_feed_token(db_path, user_id)
+    stats = get_admin_stats(db_path)
+    u = stats["users"][0]
+    assert u["polls_per_day"] == 0.0
+    assert u["low_polls"] is False
+
+
+def test_admin_stats_avg_polls_per_day(db_path):
+    """Avg polls/day across two users with different rates."""
+    uid1 = create_user(db_path, "u1@example.com", "password123456")
+    set_user_location(db_path, uid1, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    t1 = create_feed_token(db_path, uid1)
+    _backdate_token(db_path, t1, 10)
+    for _ in range(20):
+        update_feed_poll(db_path, t1, "CFNetwork/1.0")
+
+    uid2 = create_user(db_path, "u2@example.com", "password123456")
+    set_user_location(db_path, uid2, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    t2 = create_feed_token(db_path, uid2)
+    _backdate_token(db_path, t2, 10)
+    for _ in range(10):
+        update_feed_poll(db_path, t2, "CFNetwork/1.0")
+
+    stats = get_admin_stats(db_path)
+    # User1: 20/10=2.0, User2: 10/10=1.0, avg = (2.0+1.0)/2 = 1.5
+    assert stats["avg_polls_per_day"] == 1.5
 
 
 # --- Calendar app detection ---

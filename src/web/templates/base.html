@@ -9,8 +9,8 @@
     *, *::before, *::after { box-sizing: border-box; }
     body { font-family: system-ui, -apple-system, sans-serif; color: #111; margin: 0; padding: 0; }
 
-    .layout-narrow { max-width: 480px; margin: 0 auto; padding: 24px; }
-    .layout-medium { max-width: 660px; margin: 0 auto; padding: 24px; }
+    .layout-narrow { max-width: 520px; margin: 0 auto; padding: 24px; }
+    .layout-medium { max-width: 720px; margin: 0 auto; padding: 24px; }
     .layout-wide   { max-width: 960px; margin: 0 auto; padding: 24px; }
 
     nav { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #e5e7eb; margin-bottom: 32px; flex-wrap: wrap; gap: 8px; }
@@ -21,6 +21,9 @@
     .nav-link:hover { color: #111; }
     .logout-btn { background: none; border: none; color: #6b7280; cursor: pointer; font-size: 0.95rem; padding: 0; }
     .logout-btn:hover { color: #111; }
+    .logout-btn:focus { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 20px; border-radius: 8px; font-size: 1rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; }
 
     .btn-primary { padding: 10px 22px; background: #2563eb; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; }
     .btn-primary:hover { background: #1d4ed8; }

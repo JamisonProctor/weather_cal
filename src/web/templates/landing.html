@@ -6,14 +6,15 @@
 
 {% block nav_right %}
 <a href="/login" class="nav-link">Sign in</a>
+<a href="/signup" class="btn-primary" style="text-decoration:none">Sign up</a>
 {% endblock %}
 
 {% block extra_style %}
 <style>
   h1 { font-size: 2.4rem; margin-bottom: 0.5rem; }
-  p.lead { font-size: 1.15rem; color: #333; margin-bottom: 2rem; text-align: justify; }
+  p.lead { font-size: 1.15rem; color: #333; margin-bottom: 2rem; }
   ul.features { list-style: none; padding: 0; margin: 0; }
-  ul.features li { display: flex; gap: 12px; margin: 16px 0; font-size: 1.05rem; color: #333; text-align: justify; }
+  ul.features li { display: flex; gap: 12px; margin: 16px 0; font-size: 1.05rem; color: #333; }
   ul.features li .icon { flex-shrink: 0; width: 1.5em; }
   .cta { display: inline-block; margin-top: 36px; padding: 14px 32px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600; }
   .cta:hover { background: #1d4ed8; }
@@ -21,7 +22,7 @@
 {% endblock %}
 
 {% block content %}
-  <h1>WeatherCal ☀️</h1>
+  <h1>Weather in your calendar</h1>
   <p class="lead">It's a weather forecast in your calendar app. More useful than you'd think.</p>
   <ul class="features">
     <li><span class="icon">☀️</span><span><strong>Emoji-first forecasts</strong> — morning and afternoon conditions as all-day calendar events, readable at a glance</span></li>

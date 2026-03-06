@@ -11,7 +11,7 @@
   .btn-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }
   .btn-wrapper { display: flex; flex-direction: column; gap: 4px; }
   .btn-note { font-size: 0.8rem; color: #6b7280; padding-left: 4px; }
-  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 20px; border-radius: 8px; font-size: 1rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; width: 100%; }
+  .btn { width: 100%; }
   .btn-blue { background: #2563eb; color: #fff; }
   .btn-blue:hover { background: #1d4ed8; }
   .btn-red { background: #ea4335; color: #fff; }
@@ -25,8 +25,8 @@
   .copy-btn:hover { background: #e5e7eb; }
   .copy-hint { font-size: 0.8rem; color: #6b7280; margin-top: 6px; }
   .cta-section { margin-top: 28px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
-  .btn-success { background: #16a34a; color: #fff; }
-  .btn-success:hover { background: #15803d; }
+  .nav-done { font-weight: 600; font-size: 1rem; color: #2563eb; text-decoration: none; }
+  .nav-done:hover { text-decoration: underline; }
   .trouble-link { color: #6b7280; font-size: 0.9rem; text-decoration: none; }
   .trouble-link:hover { color: #111; text-decoration: underline; }
 </style>
@@ -61,13 +61,13 @@
   <div class="copy-section">
     <div class="feed-input-row">
       <input type="text" class="feed-url" id="feed-url" value="{{ webcal_url }}" readonly onclick="this.select()">
-      <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('feed-url').value); this.textContent='Copied!'">Copy</button>
+      <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('feed-url').value); var b=this; b.textContent='Copied!'; setTimeout(function(){b.textContent='Copy'},2000)">Copy</button>
     </div>
     <p class="copy-hint">Or paste this URL directly into any calendar app.</p>
   </div>
 
   <div class="cta-section">
-    <a href="/settings" class="btn btn-success">Connected &#128077;</a>
+    <a href="/settings" class="nav-done">Go to settings &rarr;</a>
     <a href="/feedback" class="trouble-link">Having trouble?</a>
   </div>
 {% endblock %}

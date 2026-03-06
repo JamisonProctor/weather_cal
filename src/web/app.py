@@ -220,7 +220,7 @@ async def login_post(
     if not user or not check_password(password, user["password_hash"]):
         return templates.TemplateResponse(
             "login.html",
-            {"request": request, "error": "Invalid email or password."},
+            {"request": request, "error": "Invalid email or password.", "email": email},
             status_code=401,
         )
 

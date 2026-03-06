@@ -203,3 +203,110 @@ def test_detect_calendar_app_empty():
 
 def test_detect_calendar_app_unknown():
     assert _detect_calendar_app("SomeOtherApp/2.0") == "Other"
+
+
+# --- Account management ---
+
+def test_update_user_email_success(db_path):
+    from src.web.db import update_user_email
+    user_id = create_user(db_path, "old@example.com", "password123456")
+    update_user_email(db_path, user_id, "new@example.com")
+    assert get_user_by_email(db_path, "old@example.com") is None
+    assert get_user_by_email(db_path, "new@example.com") is not None
+
+
+def test_update_user_email_duplicate_raises(db_path):
+    from src.web.db import update_user_email
+    create_user(db_path, "taken@example.com", "password123456")
+    user_id = create_user(db_path, "other@example.com", "password123456")
+    with pytest.raises(sqlite3.IntegrityError):
+        update_user_email(db_path, user_id, "taken@example.com")
+
+
+def test_update_user_password_success(db_path):
+    from src.web.db import update_user_password
+    user_id = create_user(db_path, "pwchange@example.com", "oldpassword12345")
+    update_user_password(db_path, user_id, "newpassword12345")
+    user = get_user_by_email(db_path, "pwchange@example.com")
+    assert check_password("newpassword12345", user["password_hash"])
+    assert not check_password("oldpassword12345", user["password_hash"])
+
+
+def test_delete_user_account_soft_deletes(db_path):
+    from src.web.db import delete_user_account
+    user_id = create_user(db_path, "del@example.com", "password123456")
+    delete_user_account(db_path, user_id)
+    assert get_user_by_email(db_path, "del@example.com") is None
+    # Verify is_active = 0 (not actually deleted)
+    conn = sqlite3.connect(db_path)
+    row = conn.execute("SELECT is_active FROM users WHERE id = ?", (user_id,)).fetchone()
+    conn.close()
+    assert row[0] == 0
+
+
+def test_delete_user_account_removes_feed_token(db_path):
+    from src.web.db import delete_user_account
+    user_id = create_user(db_path, "deltok@example.com", "password123456")
+    create_feed_token(db_path, user_id)
+    assert get_feed_token_by_user(db_path, user_id) is not None
+    delete_user_account(db_path, user_id)
+    assert get_feed_token_by_user(db_path, user_id) is None
+
+
+def test_get_user_by_id_active(db_path):
+    from src.web.db import get_user_by_id
+    user_id = create_user(db_path, "byid@example.com", "password123456")
+    user = get_user_by_id(db_path, user_id)
+    assert user is not None
+    assert user["email"] == "byid@example.com"
+
+
+def test_get_user_by_id_inactive_returns_none(db_path):
+    from src.web.db import get_user_by_id, delete_user_account
+    user_id = create_user(db_path, "inactive_id@example.com", "password123456")
+    delete_user_account(db_path, user_id)
+    assert get_user_by_id(db_path, user_id) is None
+
+
+def test_save_feedback_inserts_row(db_path):
+    from src.web.db import save_feedback
+    user_id = create_user(db_path, "fb@example.com", "password123456")
+    save_feedback(
+        db_path, user_id, "fb@example.com",
+        feed_url="webcal://example.com/feed/abc/weather.ics",
+        locations="Munich, Germany",
+        calendar_app="Apple Calendar",
+        description="Love it!",
+        user_agent="TestAgent/1.0",
+        platform="macOS",
+        screen_width="1920",
+        screen_height="1080",
+        timezone="Europe/Berlin",
+    )
+    conn = sqlite3.connect(db_path)
+    row = conn.execute("SELECT description FROM feedback WHERE user_id = ?", (user_id,)).fetchone()
+    conn.close()
+    assert row[0] == "Love it!"
+
+
+def test_get_last_forecast_update_empty_locations(db_path):
+    from src.web.db import get_last_forecast_update
+    assert get_last_forecast_update(db_path, []) is None
+
+
+def test_get_last_forecast_update_with_data(db_path):
+    from src.web.db import get_last_forecast_update
+    from src.models.forecast import Forecast
+    store = ForecastStore(db_path=db_path)
+    store.upsert_forecast(Forecast(
+        date="2099-01-01", location="Munich, Germany",
+        high=10, low=2, summary="Test", description="Test",
+        fetch_time="2099-01-01T12:00:00",
+    ))
+    store.upsert_forecast(Forecast(
+        date="2099-01-02", location="Munich, Germany",
+        high=12, low=3, summary="Test2", description="Test2",
+        fetch_time="2099-01-02T08:00:00",
+    ))
+    result = get_last_forecast_update(db_path, ["Munich, Germany"])
+    assert result == "2099-01-02T08:00:00"

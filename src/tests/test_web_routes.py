@@ -8,12 +8,15 @@ from src.models.forecast import Forecast
 from src.services.forecast_store import ForecastStore
 from src.web.auth import create_session_token
 from src.web.db import (
+    check_password,
     create_feed_token,
     create_feedback_table,
     create_user,
     set_user_location,
     create_user_preferences_table,
+    get_feed_token_by_user,
     get_user_by_email,
+    get_user_by_id,
     get_user_preferences,
 )
 
@@ -339,6 +342,196 @@ def test_setup_triggers_welcome_email_on_first_setup(client, db_path, monkeypatc
     )
     assert len(calls) == 1
     assert calls[0][0] == "welcome@example.com"
+
+
+# --- Account management routes ---
+
+def test_settings_email_change_success(client, db_path):
+    user_id, cookies = _auth_cookies(db_path, email="emailchange@example.com")
+    resp = client.post(
+        "/settings/email",
+        data={"new_email": "changed@example.com", "current_password": "supersecretpass1"},
+        cookies=cookies,
+    )
+    assert resp.status_code == 303
+    assert "success=email" in resp.headers["location"]
+    assert get_user_by_email(db_path, "changed@example.com") is not None
+
+
+def test_settings_email_change_wrong_password(client, db_path):
+    _, cookies = _auth_cookies(db_path, email="emailwrong@example.com")
+    resp = client.post(
+        "/settings/email",
+        data={"new_email": "new@example.com", "current_password": "wrongpassword123"},
+        cookies=cookies,
+    )
+    assert resp.status_code == 303
+    assert "error=wrong_password" in resp.headers["location"]
+
+
+def test_settings_email_change_duplicate_email(client, db_path):
+    create_user(db_path, "existing@example.com", "password123456")
+    _, cookies = _auth_cookies(db_path, email="emaildup@example.com")
+    resp = client.post(
+        "/settings/email",
+        data={"new_email": "existing@example.com", "current_password": "supersecretpass1"},
+        cookies=cookies,
+    )
+    assert resp.status_code == 303
+    assert "error=email_taken" in resp.headers["location"]
+
+
+def test_settings_email_change_requires_auth(client):
+    resp = client.post(
+        "/settings/email",
+        data={"new_email": "x@example.com", "current_password": "password123456"},
+    )
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/login"
+
+
+def test_settings_password_change_success(client, db_path):
+    user_id, cookies = _auth_cookies(db_path, email="pwchange@example.com")
+    resp = client.post(
+        "/settings/password",
+        data={"current_password": "supersecretpass1", "new_password": "newlongpassword1"},
+        cookies=cookies,
+    )
+    assert resp.status_code == 303
+    assert "success=password" in resp.headers["location"]
+    user = get_user_by_email(db_path, "pwchange@example.com")
+    assert check_password("newlongpassword1", user["password_hash"])
+
+
+def test_settings_password_change_wrong_current(client, db_path):
+    _, cookies = _auth_cookies(db_path, email="pwwrong@example.com")
+    resp = client.post(
+        "/settings/password",
+        data={"current_password": "wrongpassword123", "new_password": "newlongpassword1"},
+        cookies=cookies,
+    )
+    assert resp.status_code == 303
+    assert "error=wrong_password" in resp.headers["location"]
+
+
+def test_settings_password_change_too_short(client, db_path):
+    _, cookies = _auth_cookies(db_path, email="pwshort@example.com")
+    resp = client.post(
+        "/settings/password",
+        data={"current_password": "supersecretpass1", "new_password": "short"},
+        cookies=cookies,
+    )
+    assert resp.status_code == 303
+    assert "error=password_too_short" in resp.headers["location"]
+
+
+def test_settings_delete_account_success(client, db_path):
+    user_id, cookies = _auth_cookies(db_path, email="delete@example.com")
+    resp = client.post(
+        "/settings/delete",
+        data={"confirm_email": "delete@example.com"},
+        cookies=cookies,
+    )
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/"
+    assert get_user_by_email(db_path, "delete@example.com") is None
+
+
+def test_settings_delete_account_email_mismatch(client, db_path):
+    _, cookies = _auth_cookies(db_path, email="nodelete@example.com")
+    resp = client.post(
+        "/settings/delete",
+        data={"confirm_email": "wrong@example.com"},
+        cookies=cookies,
+    )
+    assert resp.status_code == 303
+    assert "error=email_mismatch" in resp.headers["location"]
+
+
+def test_settings_delete_invalidates_feed(client, db_path):
+    user_id, cookies = _auth_cookies(db_path, email="delfeed@example.com")
+    token = create_feed_token(db_path, user_id)
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    client.post("/settings/delete", data={"confirm_email": "delfeed@example.com"}, cookies=cookies)
+    resp = client.get(f"/feed/{token}/weather.ics")
+    assert resp.status_code == 404
+
+
+def test_dashboard_redirects_to_settings(client):
+    resp = client.get("/dashboard")
+    assert resp.status_code == 301
+    assert resp.headers["location"] == "/settings"
+
+
+def test_impressum_returns_200(client):
+    resp = client.get("/impressum")
+    assert resp.status_code == 200
+
+
+# --- Connect, feedback, geocode routes ---
+
+def test_connect_page_returns_200(client, db_path):
+    _, cookies = _auth_cookies(db_path, email="connect@example.com")
+    resp = client.get("/connect", cookies=cookies)
+    assert resp.status_code == 200
+
+
+def test_connect_page_requires_auth(client):
+    resp = client.get("/connect")
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/login"
+
+
+def test_feedback_get_returns_200(client, db_path):
+    _, cookies = _auth_cookies(db_path, email="fbget@example.com")
+    resp = client.get("/feedback", cookies=cookies)
+    assert resp.status_code == 200
+
+
+def test_feedback_post_saves_and_shows_sent(client, db_path):
+    user_id, cookies = _auth_cookies(db_path, email="fbpost@example.com")
+    create_feed_token(db_path, user_id)
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    resp = client.post(
+        "/feedback",
+        data={
+            "calendar_app": "Apple Calendar",
+            "description": "Great app!",
+            "user_agent": "TestAgent",
+            "platform": "macOS",
+            "screen_width": "1920",
+            "screen_height": "1080",
+            "timezone": "Europe/Berlin",
+            "feed_url": "",
+            "locations": "Munich, Germany",
+        },
+        cookies=cookies,
+    )
+    assert resp.status_code == 200
+    assert b"sent" in resp.content.lower() or resp.status_code == 200
+    conn = sqlite3.connect(db_path)
+    row = conn.execute("SELECT description FROM feedback WHERE user_id = ?", (user_id,)).fetchone()
+    conn.close()
+    assert row[0] == "Great app!"
+
+
+def test_settings_feedback_post_redirects(client, db_path):
+    user_id, cookies = _auth_cookies(db_path, email="sfb@example.com")
+    create_feed_token(db_path, user_id)
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    resp = client.post(
+        "/settings/feedback",
+        data={"topic": "Bug", "description": "Something broke"},
+        cookies=cookies,
+    )
+    assert resp.status_code == 303
+    assert "success=feedback" in resp.headers["location"]
+
+
+def test_geocode_short_query_returns_empty(client):
+    resp = client.get("/geocode?q=ab")
+    assert resp.status_code == 200
+    assert resp.json() == []
 
 
 def test_setup_does_not_trigger_welcome_email_on_location_change(client, db_path, monkeypatch):

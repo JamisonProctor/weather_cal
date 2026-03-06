@@ -92,14 +92,17 @@
       margin-bottom: 24px;
       gap: 2px;
       border-bottom: 1px solid #e5e7eb;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #fff;
     }
     .sidebar-link { display: inline-block; white-space: nowrap; margin-bottom: 0; }
     .sidebar-footer { display: none; }
 
     .panel-title { display: block; }
 
-    .threshold-row { flex-direction: column; align-items: flex-start; gap: 6px; }
-    .threshold-row input[type="number"] { width: 100%; max-width: 200px; }
+    .threshold-row { gap: 6px; }
     .pref-card { padding: 16px; }
 
     .feed-input-row { flex-direction: column; }
@@ -132,7 +135,12 @@
         <h1 class="panel-title">Preferences</h1>
 
         {% if success == 'prefs' %}
-        <div class="alert alert-success">Preferences saved.</div>
+        <div class="alert alert-success">
+          Preferences saved. Changes will appear in your calendar at the next sync — usually within a few hours.
+          <span style="display:block;margin-top:6px;font-size:0.82rem;color:#15803d">
+            Apple Calendar / Outlook: right-click WeatherCal &rarr; Get Info &rarr; set Auto-refresh to Every Hour for faster updates.
+          </span>
+        </div>
         {% endif %}
 
         <form method="post" action="/settings">
@@ -254,7 +262,7 @@
               <label class="check-label">
                 <input type="checkbox" name="warn_sunny" {% if prefs.warn_sunny %}checked{% endif %}>
                 <span class="checkmark"></span>
-                ☀️ Nice weather <span class="pref-note">(sunny or partly cloudy, warm &amp; calm)</span>
+                ☀️ Nice weather
               </label>
             </div>
           </div>

@@ -479,6 +479,23 @@ def get_admin_stats(db_path: str) -> dict:
         total_polls = row[0]
         total_settings_clicks = row[1]
 
+        now = datetime.now()
+        cur.execute(
+            """SELECT ft.poll_count, ft.created_at
+               FROM feed_tokens ft
+               JOIN users u ON ft.user_id = u.id
+               WHERE u.is_active = 1 AND ft.poll_count > 0"""
+        )
+        ppd_rows = cur.fetchall()
+        if ppd_rows:
+            ppd_sum = 0.0
+            for pr in ppd_rows:
+                days = max((now - datetime.fromisoformat(pr["created_at"])).days, 1)
+                ppd_sum += (pr["poll_count"] or 0) / days
+            avg_polls_per_day = round(ppd_sum / len(ppd_rows), 1)
+        else:
+            avg_polls_per_day = 0.0
+
         cur.execute(
             f"""SELECT
                     u.email,
@@ -486,6 +503,7 @@ def get_admin_stats(db_path: str) -> dict:
                     u.created_at,
                     ft.last_polled_at,
                     COALESCE(ft.poll_count, 0) AS poll_count,
+                    ft.created_at AS token_created_at,
                     ft.last_user_agent,
                     COALESCE(ft.settings_clicks, 0) AS settings_clicks,
                     (SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END
@@ -503,12 +521,22 @@ def get_admin_stats(db_path: str) -> dict:
         for r in rows:
             ua = r["last_user_agent"] or ""
             last_poll = r["last_polled_at"] or ""
+            token_created = r["token_created_at"]
+            if token_created:
+                days_since = (now - datetime.fromisoformat(token_created)).days
+                polls_per_day = round(r["poll_count"] / max(days_since, 1), 1)
+                low_polls = polls_per_day < 1.0 and days_since > 1
+            else:
+                polls_per_day = 0.0
+                low_polls = False
             users.append({
                 "email": r["email"],
                 "location": r["location"] or "",
                 "created_at": (r["created_at"] or "")[:10],
                 "last_polled_at": last_poll[:10] if last_poll else "",
                 "poll_count": r["poll_count"],
+                "polls_per_day": polls_per_day,
+                "low_polls": low_polls,
                 "calendar_app": _detect_calendar_app(ua),
                 "settings_clicks": r["settings_clicks"],
                 "changed_prefs": bool(r["changed_prefs"]),
@@ -519,6 +547,7 @@ def get_admin_stats(db_path: str) -> dict:
             "unique_locations": unique_locations,
             "changed_prefs_count": changed_prefs_count,
             "total_polls": total_polls,
+            "avg_polls_per_day": avg_polls_per_day,
             "total_settings_clicks": total_settings_clicks,
             "users": users,
         }

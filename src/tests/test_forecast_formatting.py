@@ -1,5 +1,11 @@
 from src.models.forecast import Forecast
-from src.services.forecast_formatting import format_detailed_forecast, format_summary, get_warning_windows
+from src.services.forecast_formatting import (
+    c_to_f,
+    format_detailed_forecast,
+    format_summary,
+    get_warning_windows,
+    map_code_to_emoji,
+)
 
 
 def test_format_summary_with_warnings():
@@ -286,6 +292,84 @@ def test_sunny_window_excludes_partly_cloudy_with_wind():
     windows = get_warning_windows(forecast, prefs=_SUNNY_PREFS)
     sunny = [w for w in windows if w.warning_type == "sunny"]
     assert len(sunny) == 0
+
+
+def test_map_code_to_emoji_unknown_code():
+    assert map_code_to_emoji(9999) == "❓"
+
+
+def test_c_to_f_basic_conversions():
+    assert c_to_f(0) == 32
+    assert c_to_f(100) == 212
+
+
+def test_collect_warnings_allday_hot_enabled():
+    forecast = _make_forecast(
+        times=["2025-08-01T12:00", "2025-08-01T13:00"],
+        temps=[30, 32],
+        codes=[0, 0],
+        rain=[0, 0],
+        winds=[5, 5],
+    )
+    prefs = {"allday_hot": 1, "allday_rain": 1, "allday_wind": 1, "allday_cold": 1,
+             "allday_snow": 1, "allday_sunny": 0, "warn_in_allday": 1, "hot_threshold": 28.0}
+    summary = format_summary(forecast, prefs)
+    assert "🥵" in summary
+
+
+def test_collect_warnings_allday_hot_disabled():
+    forecast = _make_forecast(
+        times=["2025-08-01T12:00", "2025-08-01T13:00"],
+        temps=[30, 32],
+        codes=[0, 0],
+        rain=[0, 0],
+        winds=[5, 5],
+    )
+    prefs = {"allday_hot": 0, "allday_rain": 1, "allday_wind": 1, "allday_cold": 1,
+             "allday_snow": 1, "allday_sunny": 0, "warn_in_allday": 1, "hot_threshold": 28.0}
+    summary = format_summary(forecast, prefs)
+    assert "🥵" not in summary
+
+
+def test_collect_warnings_allday_sunny_enabled():
+    forecast = _make_forecast(
+        times=["2025-08-01T10:00", "2025-08-01T11:00", "2025-08-01T12:00"],
+        temps=[20, 22, 21],
+        codes=[0, 1, 0],
+        rain=[0, 0, 0],
+        winds=[5, 5, 5],
+    )
+    prefs = {"allday_sunny": 1, "allday_rain": 1, "allday_wind": 1, "allday_cold": 1,
+             "allday_snow": 1, "allday_hot": 0, "warn_in_allday": 1}
+    summary = format_summary(forecast, prefs)
+    assert "☀️" in summary
+
+
+def test_format_summary_with_prefs_none_uses_defaults():
+    forecast = _make_forecast(
+        times=["2025-08-01T06:00", "2025-08-01T12:00"],
+        temps=[15, 20],
+        codes=[1, 2],
+        rain=[0, 0],
+        winds=[5, 5],
+    )
+    summary = format_summary(forecast, None)
+    assert "°" in summary
+
+
+def test_get_warning_windows_hot_custom_threshold():
+    forecast = _make_forecast(
+        times=["2025-08-01T12:00", "2025-08-01T13:00"],
+        temps=[25, 26],
+        codes=[0, 0],
+        rain=[0, 0],
+        winds=[5, 5],
+    )
+    prefs = {"warn_hot": 1, "warn_rain": 1, "warn_wind": 1, "warn_cold": 1, "warn_snow": 1,
+             "hot_threshold": 24.0}
+    windows = get_warning_windows(forecast, prefs)
+    hot = [w for w in windows if w.warning_type == "hot"]
+    assert len(hot) == 1
 
 
 def test_sunny_to_partly_cloudy_merges_into_one_window():

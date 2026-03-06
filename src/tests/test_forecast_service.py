@@ -257,6 +257,75 @@ def test_request_json_retries_timeout_then_succeeds(monkeypatch):
     assert sleep_calls == [1, 2]
 
 
+def test_request_json_retries_connection_error(monkeypatch):
+    calls = {"count": 0}
+
+    def mock_get(*args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] < 3:
+            raise requests.exceptions.ConnectionError("refused")
+        return MockResponse({"ok": True})
+
+    sleep_calls = []
+    monkeypatch.setattr("requests.get", mock_get)
+    monkeypatch.setattr("src.services.forecast_service.time.sleep", lambda s: sleep_calls.append(s))
+    monkeypatch.setattr(ForecastService, "MAX_ATTEMPTS", 3)
+    monkeypatch.setattr(ForecastService, "RETRY_BACKOFF_SECONDS", (1, 2))
+
+    data = ForecastService._request_json_with_retry(
+        "https://example.com", params={}, context="conn test",
+    )
+    assert data == {"ok": True}
+    assert calls["count"] == 3
+    assert len(sleep_calls) == 2
+
+
+def test_request_json_retries_server_error_502(monkeypatch):
+    calls = {"count": 0}
+
+    def mock_get(*args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] < 2:
+            error = requests.exceptions.HTTPError("502")
+            resp = type("R", (), {"status_code": 502})()
+            error.response = resp
+            raise error
+        return MockResponse({"ok": True})
+
+    sleep_calls = []
+    monkeypatch.setattr("requests.get", mock_get)
+    monkeypatch.setattr("src.services.forecast_service.time.sleep", lambda s: sleep_calls.append(s))
+    monkeypatch.setattr(ForecastService, "MAX_ATTEMPTS", 3)
+    monkeypatch.setattr(ForecastService, "RETRY_BACKOFF_SECONDS", (1, 2))
+
+    data = ForecastService._request_json_with_retry(
+        "https://example.com", params={}, context="502 test",
+    )
+    assert data == {"ok": True}
+    assert calls["count"] == 2
+
+
+def test_is_retryable_http_error_missing_response():
+    error = requests.exceptions.HTTPError("no response")
+    error.response = None
+    assert ForecastService._is_retryable_http_error(error) is False
+
+
+def test_get_coordinates_missing_timezone_defaults(monkeypatch):
+    fake_geo = {
+        "results": [{
+            "latitude": 48.13,
+            "longitude": 11.58,
+            # no "timezone" key
+        }]
+    }
+    monkeypatch.setattr("requests.get", lambda *a, **k: MockResponse(fake_geo))
+    lat, lon, tz = ForecastService.get_coordinates_with_timezone("Munich")
+    assert lat == 48.13
+    assert lon == 11.58
+    assert tz == "Europe/Berlin"  # default fallback
+
+
 def test_request_json_does_not_retry_client_error(monkeypatch):
     class ErrorResponse:
         status_code = 400

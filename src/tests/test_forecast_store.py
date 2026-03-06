@@ -83,6 +83,60 @@ def test_get_forecasts_for_locations(store):
     assert len(forecasts) == 2
 
 
+def test_get_forecasts_for_locations_empty_list(store):
+    assert store.get_forecasts_for_locations([]) == []
+
+
+def test_upsert_and_retrieve_preserves_hourly_data(store):
+    forecast = Forecast(
+        date="2099-06-01",
+        location="Munich, Germany",
+        high=25,
+        low=15,
+        summary="Sunny",
+        description="Clear",
+        times=["2099-06-01T06:00", "2099-06-01T12:00"],
+        temps=[15.5, 25.3],
+        codes=[0, 1],
+        rain=[0, 10],
+        winds=[5, 8],
+        timezone="Europe/Berlin",
+    )
+    store.upsert_forecast(forecast)
+    results = store.get_forecasts_for_locations(["Munich, Germany"])
+    assert len(results) == 1
+    r = results[0]
+    assert r.times == ["2099-06-01T06:00", "2099-06-01T12:00"]
+    assert r.temps == [15.5, 25.3]
+    assert r.codes == [0, 1]
+    assert r.rain == [0, 10]
+    assert r.winds == [5, 8]
+    assert r.timezone == "Europe/Berlin"
+
+
+def test_get_forecasts_future_deserializes_hourly_json(store):
+    forecast = Forecast(
+        date="2099-07-01",
+        location="Berlin, Germany",
+        high=30,
+        low=20,
+        summary="Hot",
+        description="Very hot",
+        times=["2099-07-01T10:00"],
+        temps=[30],
+        codes=[0],
+        rain=[0],
+        winds=[3],
+        timezone="Europe/Berlin",
+    )
+    store.upsert_forecast(forecast)
+    results = store.get_forecasts_future(days=100)
+    berlin = [f for f in results if f.location == "Berlin, Germany"]
+    assert len(berlin) >= 1
+    assert berlin[0].times == ["2099-07-01T10:00"]
+    assert berlin[0].temps == [30]
+
+
 def test_upsert_forecast_updates_existing_row(store):
     original = Forecast(
         date="2099-02-01",

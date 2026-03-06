@@ -193,6 +193,97 @@ def test_vtimezone_present_when_timed_events_exist():
     assert "Europe/Berlin" in tzids
 
 
+def test_generate_ics_skips_invalid_date():
+    forecast = _make_forecast(date="not-a-date")
+    ics_bytes = generate_ics([forecast], "Munich, Germany")
+    events = _parse_events(ics_bytes)
+    assert len(events) == 0
+
+
+def test_generate_ics_both_allday_and_timed_disabled():
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00"],
+        temps=[12, 12],
+        codes=[61, 61],
+        rain=[70, 70],
+        winds=[5, 5],
+    )
+    prefs = {
+        "show_allday_events": 0, "timed_events_enabled": 0,
+        "warn_in_allday": 1, "warn_rain": 1, "warn_wind": 1,
+        "warn_cold": 1, "warn_snow": 1, "warn_sunny": 0, "cold_threshold": 3.0,
+        "allday_rain": 1, "allday_wind": 1, "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0,
+    }
+    ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
+    events = _parse_events(ics_bytes)
+    assert len(events) == 0
+
+
+def test_generate_ics_unknown_timezone_falls_back_to_utc():
+    forecast = _make_forecast(
+        timezone="Fake/NoSuchZone",
+        times=["2026-03-10T10:00", "2026-03-10T11:00"],
+        temps=[12, 12],
+        codes=[61, 61],
+        rain=[70, 70],
+        winds=[5, 5],
+    )
+    ics_bytes = generate_ics([forecast], "Munich, Germany")
+    events = _parse_events(ics_bytes)
+    timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
+    assert len(timed) >= 1
+    # The fallback is timezone.utc, but icalendar may represent it as ZoneInfo('UTC')
+    # Either way, the offset should be zero
+    assert timed[0]["DTSTART"].dt.utcoffset().total_seconds() == 0
+
+
+def test_sunny_summary_fahrenheit():
+    from src.integrations.ics_service import _sunny_summary
+    from src.services.forecast_formatting import WarningWindow
+    window = WarningWindow(
+        warning_type="sunny", emoji="☀️", label="Nice weather — enjoy!",
+        start_time="2026-03-10T10:00", end_time="2026-03-10T13:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00", "2026-03-10T12:00"],
+        temps=[20, 22, 24],
+        codes=[0, 0, 1],
+        rain=[0, 0, 0],
+        winds=[5, 5, 5],
+    )
+    result = _sunny_summary(window, forecast, warm_threshold=14.0, temp_unit="F")
+    assert "°F" in result
+    assert "☀️" in result
+
+
+def test_sunny_summary_below_warm_threshold_fallback():
+    from src.integrations.ics_service import _sunny_summary
+    from src.services.forecast_formatting import WarningWindow
+    window = WarningWindow(
+        warning_type="sunny", emoji="☀️", label="Nice weather — enjoy!",
+        start_time="2026-03-10T10:00", end_time="2026-03-10T12:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00"],
+        temps=[5, 6],
+        codes=[0, 0],
+        rain=[0, 0],
+        winds=[5, 5],
+    )
+    result = _sunny_summary(window, forecast, warm_threshold=14.0)
+    assert result == "☀️ Nice weather — enjoy!"
+
+
+def test_stable_uid_determinism():
+    from src.integrations.ics_service import _stable_uid
+    uid1 = _stable_uid("2026-03-10", "Munich, Germany")
+    uid2 = _stable_uid("2026-03-10", "Munich, Germany")
+    uid3 = _stable_uid("2026-03-11", "Munich, Germany")
+    assert uid1 == uid2
+    assert uid1 != uid3
+    assert uid1.endswith("@weathercal.app")
+
+
 def test_generate_ics_summary_uses_prefs_cold_threshold():
     forecast = _make_forecast(
         times=["2026-03-10T06:00", "2026-03-10T09:00", "2026-03-10T12:00", "2026-03-10T15:00"],

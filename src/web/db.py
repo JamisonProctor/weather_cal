@@ -506,48 +506,15 @@ def get_admin_stats(db_path: str) -> dict:
         total_settings_clicks = row[1]
 
         now = datetime.now()
-        today = now.strftime("%Y-%m-%d")
-        yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+        twenty_four_hours_ago = (now - timedelta(hours=24)).isoformat()
 
-        # Poll log aggregate stats
-        cur.execute("SELECT COUNT(*) FROM poll_log WHERE polled_at >= ?", (today,))
-        polls_today = cur.fetchone()[0]
-        cur.execute(
-            "SELECT COUNT(*) FROM poll_log WHERE polled_at >= ? AND polled_at < ?",
-            (yesterday, today),
-        )
-        polls_yesterday = cur.fetchone()[0]
-
-        # Per-token poll counts from poll_log for today/yesterday
+        # Per-token poll counts from poll_log for last 24h
         cur.execute(
             """SELECT token, COUNT(*) AS cnt FROM poll_log
                WHERE polled_at >= ? GROUP BY token""",
-            (today,),
+            (twenty_four_hours_ago,),
         )
-        token_polls_today = {row["token"]: row["cnt"] for row in cur.fetchall()}
-        cur.execute(
-            """SELECT token, COUNT(*) AS cnt FROM poll_log
-               WHERE polled_at >= ? AND polled_at < ? GROUP BY token""",
-            (yesterday, today),
-        )
-        token_polls_yesterday = {row["token"]: row["cnt"] for row in cur.fetchall()}
-
-        # Legacy avg polls/day from counter
-        cur.execute(
-            """SELECT ft.poll_count, ft.created_at
-               FROM feed_tokens ft
-               JOIN users u ON ft.user_id = u.id
-               WHERE u.is_active = 1 AND ft.poll_count > 0"""
-        )
-        ppd_rows = cur.fetchall()
-        if ppd_rows:
-            ppd_sum = 0.0
-            for pr in ppd_rows:
-                days = max((now - datetime.fromisoformat(pr["created_at"])).total_seconds() / 86400, 1.0)
-                ppd_sum += (pr["poll_count"] or 0) / days
-            avg_polls_per_day = round(ppd_sum / len(ppd_rows), 1)
-        else:
-            avg_polls_per_day = 0.0
+        token_polls_24h = {row["token"]: row["cnt"] for row in cur.fetchall()}
 
         cur.execute(
             f"""SELECT
@@ -577,12 +544,11 @@ def get_admin_stats(db_path: str) -> dict:
             last_poll = r["last_polled_at"] or ""
             token = r["token"] or ""
             token_created = r["token_created_at"]
+            polls_last_24h = token_polls_24h.get(token, 0)
             if token_created:
                 days_since = (now - datetime.fromisoformat(token_created)).total_seconds() / 86400
-                polls_per_day = round(r["poll_count"] / max(days_since, 1.0), 1)
-                low_polls = polls_per_day < 1.0 and days_since > 1.0
+                low_polls = polls_last_24h < 1 and days_since > 1.0
             else:
-                polls_per_day = 0.0
                 low_polls = False
             users.append({
                 "email": r["email"],
@@ -590,9 +556,7 @@ def get_admin_stats(db_path: str) -> dict:
                 "created_at": (r["created_at"] or "")[:10],
                 "last_polled_at": last_poll[:10] if last_poll else "",
                 "poll_count": r["poll_count"],
-                "polls_per_day": polls_per_day,
-                "polls_today": token_polls_today.get(token, 0),
-                "polls_yesterday": token_polls_yesterday.get(token, 0),
+                "polls_last_24h": polls_last_24h,
                 "low_polls": low_polls,
                 "calendar_app": _detect_calendar_app(ua),
                 "settings_clicks": r["settings_clicks"],
@@ -604,9 +568,6 @@ def get_admin_stats(db_path: str) -> dict:
             "unique_locations": unique_locations,
             "changed_prefs_count": changed_prefs_count,
             "total_polls": total_polls,
-            "polls_today": polls_today,
-            "polls_yesterday": polls_yesterday,
-            "avg_polls_per_day": avg_polls_per_day,
             "total_settings_clicks": total_settings_clicks,
             "users": users,
         }

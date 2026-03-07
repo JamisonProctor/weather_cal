@@ -460,7 +460,6 @@ async def settings_delete_post(
 async def settings_feedback_post(
     request: Request,
     topic: str = Form(default=""),
-    calendar_app: str = Form(default=""),
     description: str = Form(default=""),
     user_agent: str = Form(default=""),
     platform: str = Form(default=""),
@@ -485,7 +484,7 @@ async def settings_feedback_post(
         DB_PATH, user_id, email,
         feed_url=webcal_url or "",
         locations=locations_str,
-        calendar_app=calendar_app,
+        calendar_app=topic,
         description=full_description,
         user_agent=user_agent,
         platform=platform,

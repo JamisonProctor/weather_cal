@@ -542,7 +542,7 @@ def test_settings_feedback_post_redirects(client, db_path):
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
     resp = client.post(
         "/settings/feedback",
-        data={"topic": "Bug report", "calendar_app": "Apple Calendar", "description": "Something broke"},
+        data={"topic": "Bug report", "description": "Something broke"},
         cookies=cookies,
     )
     assert resp.status_code == 303
@@ -552,7 +552,7 @@ def test_settings_feedback_post_redirects(client, db_path):
         "SELECT calendar_app, description FROM feedback WHERE user_id = ?", (user_id,)
     ).fetchone()
     conn.close()
-    assert row[0] == "Apple Calendar"
+    assert row[0] == "Bug report"
     assert row[1] == "[Bug report] Something broke"
 
 

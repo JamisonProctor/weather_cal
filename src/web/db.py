@@ -187,10 +187,18 @@ def get_feedback(db_path: str) -> list:
     conn = _conn(db_path)
     try:
         rows = conn.execute(
-            """SELECT email, description, calendar_app, locations, created_at
-               FROM feedback ORDER BY created_at DESC"""
+            """SELECT f.email, f.description, f.locations, f.created_at,
+                      COALESCE(ft.last_user_agent, '') AS last_user_agent
+               FROM feedback f
+               LEFT JOIN feed_tokens ft ON f.user_id = ft.user_id
+               ORDER BY f.created_at DESC"""
         ).fetchall()
-        return [dict(r) for r in rows]
+        result = []
+        for r in rows:
+            d = dict(r)
+            d["calendar_app"] = _detect_calendar_app(d.pop("last_user_agent"))
+            result.append(d)
+        return result
     finally:
         conn.close()
 

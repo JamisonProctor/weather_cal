@@ -6,7 +6,10 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from icalendar import Calendar, Event
 
 from src.models.forecast import Forecast
-from src.services.forecast_formatting import c_to_f, format_detailed_forecast, format_summary, get_warning_windows
+from src.services.forecast_formatting import (
+    c_to_f, format_detailed_forecast, format_summary, get_warning_windows,
+    map_code_to_emoji, _fmt_temp,
+)
 
 
 def _stable_uid(date_str: str, location: str) -> str:
@@ -38,6 +41,36 @@ def _sunny_summary(window, forecast, warm_threshold: float = 14.0, temp_unit: st
     except Exception:
         pass
     return f"{window.emoji} {window.label}"
+
+
+def _format_window_description(forecast: Forecast, window, prefs=None) -> str:
+    """Format an hourly weather summary for a timed warning event's time range."""
+    unit = prefs.get("temp_unit", "C") if prefs else "C"
+    start = datetime.fromisoformat(window.start_time)
+    end = datetime.fromisoformat(window.end_time)
+    lines = []
+    for t, temp, code, rain, wind in zip(forecast.times, forecast.temps, forecast.codes, forecast.rain, forecast.winds):
+        dt = datetime.fromisoformat(t)
+        if dt < start or dt >= end:
+            continue
+        emoji = map_code_to_emoji(code)
+        t_val = _fmt_temp(temp, unit)
+        parts = [f"{dt.hour:02d}:00 {emoji} {t_val}°{unit}"]
+        if rain and rain >= 40:
+            parts.append(f"💧{round(rain)}%")
+        if wind and wind >= 30:
+            parts.append(f"💨{round(wind)}km/h")
+        lines.append("  ".join(parts))
+
+    temps_in_range = [
+        temp for t, temp in zip(forecast.times, forecast.temps)
+        if start <= datetime.fromisoformat(t) < end
+    ]
+    if temps_in_range:
+        hi = _fmt_temp(max(temps_in_range), unit)
+        lo = _fmt_temp(min(temps_in_range), unit)
+        lines.append(f"\nHigh: {hi}°{unit} | Low: {lo}°{unit}")
+    return "\n".join(lines)
 
 
 def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, settings_url: str = None) -> bytes:
@@ -101,8 +134,10 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, sett
                 w_event.add("dtend", datetime.fromisoformat(window.end_time).replace(tzinfo=tz))
                 w_event.add("transp", "TRANSPARENT")
                 w_event.add("dtstamp", now)
+                description = _format_window_description(forecast, window, prefs)
                 if settings_url:
-                    w_event.add("description", f"⚙️ Change your settings: {settings_url}")
+                    description += f"\n\n⚙️ Change your settings: {settings_url}"
+                w_event.add("description", description)
                 cal.add_component(w_event)
 
     cal.add_missing_timezones()

@@ -1,7 +1,7 @@
 import secrets
 import sqlite3
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import bcrypt
 
@@ -411,6 +411,20 @@ def update_feed_poll(db_path: str, token: str, user_agent: str) -> None:
         conn.close()
 
 
+def log_feed_poll(db_path: str, token: str, user_agent: str, ip_address: str) -> None:
+    """Insert a row into poll_log for granular tracking."""
+    now = datetime.now().isoformat()
+    conn = _conn(db_path)
+    try:
+        conn.execute(
+            "INSERT INTO poll_log (token, polled_at, user_agent, ip_address) VALUES (?, ?, ?, ?)",
+            (token, now, user_agent, ip_address),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def increment_settings_clicks(db_path: str, user_id: int) -> None:
     """Increment the settings link click counter for a user's feed token."""
     conn = _conn(db_path)
@@ -480,6 +494,33 @@ def get_admin_stats(db_path: str) -> dict:
         total_settings_clicks = row[1]
 
         now = datetime.now()
+        today = now.strftime("%Y-%m-%d")
+        yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+
+        # Poll log aggregate stats
+        cur.execute("SELECT COUNT(*) FROM poll_log WHERE polled_at >= ?", (today,))
+        polls_today = cur.fetchone()[0]
+        cur.execute(
+            "SELECT COUNT(*) FROM poll_log WHERE polled_at >= ? AND polled_at < ?",
+            (yesterday, today),
+        )
+        polls_yesterday = cur.fetchone()[0]
+
+        # Per-token poll counts from poll_log for today/yesterday
+        cur.execute(
+            """SELECT token, COUNT(*) AS cnt FROM poll_log
+               WHERE polled_at >= ? GROUP BY token""",
+            (today,),
+        )
+        token_polls_today = {row["token"]: row["cnt"] for row in cur.fetchall()}
+        cur.execute(
+            """SELECT token, COUNT(*) AS cnt FROM poll_log
+               WHERE polled_at >= ? AND polled_at < ? GROUP BY token""",
+            (yesterday, today),
+        )
+        token_polls_yesterday = {row["token"]: row["cnt"] for row in cur.fetchall()}
+
+        # Legacy avg polls/day from counter
         cur.execute(
             """SELECT ft.poll_count, ft.created_at
                FROM feed_tokens ft
@@ -503,6 +544,7 @@ def get_admin_stats(db_path: str) -> dict:
                     u.created_at,
                     ft.last_polled_at,
                     COALESCE(ft.poll_count, 0) AS poll_count,
+                    ft.token,
                     ft.created_at AS token_created_at,
                     ft.last_user_agent,
                     COALESCE(ft.settings_clicks, 0) AS settings_clicks,
@@ -521,6 +563,7 @@ def get_admin_stats(db_path: str) -> dict:
         for r in rows:
             ua = r["last_user_agent"] or ""
             last_poll = r["last_polled_at"] or ""
+            token = r["token"] or ""
             token_created = r["token_created_at"]
             if token_created:
                 days_since = (now - datetime.fromisoformat(token_created)).total_seconds() / 86400
@@ -536,6 +579,8 @@ def get_admin_stats(db_path: str) -> dict:
                 "last_polled_at": last_poll[:10] if last_poll else "",
                 "poll_count": r["poll_count"],
                 "polls_per_day": polls_per_day,
+                "polls_today": token_polls_today.get(token, 0),
+                "polls_yesterday": token_polls_yesterday.get(token, 0),
                 "low_polls": low_polls,
                 "calendar_app": _detect_calendar_app(ua),
                 "settings_clicks": r["settings_clicks"],
@@ -547,6 +592,8 @@ def get_admin_stats(db_path: str) -> dict:
             "unique_locations": unique_locations,
             "changed_prefs_count": changed_prefs_count,
             "total_polls": total_polls,
+            "polls_today": polls_today,
+            "polls_yesterday": polls_yesterday,
             "avg_polls_per_day": avg_polls_per_day,
             "total_settings_clicks": total_settings_clicks,
             "users": users,

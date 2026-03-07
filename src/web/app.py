@@ -32,6 +32,7 @@ from src.web.db import (
     get_user_locations,
     get_user_preferences,
     increment_settings_clicks,
+    log_feed_poll,
     save_feedback,
     update_feed_poll,
     update_user_email,
@@ -547,7 +548,9 @@ async def feed(request: Request, token: str):
     if not rows:
         return Response(content="Invalid or expired token.", status_code=404)
 
-    update_feed_poll(DB_PATH, token, request.headers.get("user-agent", ""))
+    ua = request.headers.get("user-agent", "")
+    update_feed_poll(DB_PATH, token, ua)
+    log_feed_poll(DB_PATH, token, ua, request.client.host if request.client else "")
 
     user_id = rows[0]["id"]
     locations = list({row["location"] for row in rows})

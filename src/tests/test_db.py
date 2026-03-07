@@ -19,6 +19,7 @@ from src.web.db import (
     get_user_locations,
     get_user_preferences,
     increment_settings_clicks,
+    log_feed_poll,
     update_feed_poll,
     upsert_user_preferences,
 )
@@ -142,6 +143,31 @@ def test_update_feed_poll_unknown_token_is_noop(db_path):
     update_feed_poll(db_path, "nonexistent-token", "agent")
 
 
+def test_log_feed_poll_inserts_rows(db_path):
+    user_id = create_user(db_path, "logpoll@example.com", "password123456")
+    token = create_feed_token(db_path, user_id)
+    log_feed_poll(db_path, token, "TestAgent/1.0", "127.0.0.1")
+    log_feed_poll(db_path, token, "TestAgent/1.0", "127.0.0.1")
+    conn = sqlite3.connect(db_path)
+    rows = conn.execute("SELECT * FROM poll_log WHERE token = ?", (token,)).fetchall()
+    conn.close()
+    assert len(rows) == 2
+
+
+def test_admin_stats_include_poll_log_fields(db_path):
+    user_id = create_user(db_path, "logstats@example.com", "password123456")
+    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    token = create_feed_token(db_path, user_id)
+    log_feed_poll(db_path, token, "Agent", "127.0.0.1")
+    log_feed_poll(db_path, token, "Agent", "127.0.0.1")
+    stats = get_admin_stats(db_path)
+    assert stats["polls_today"] == 2
+    assert stats["polls_yesterday"] == 0
+    u = stats["users"][0]
+    assert u["polls_today"] == 2
+    assert u["polls_yesterday"] == 0
+
+
 def test_increment_settings_clicks(db_path):
     user_id = create_user(db_path, "clicks@example.com", "password123456")
     create_feed_token(db_path, user_id)
@@ -159,6 +185,8 @@ def test_get_admin_stats_empty_db(db_path):
     assert stats["unique_locations"] == 0
     assert stats["changed_prefs_count"] == 0
     assert stats["total_polls"] == 0
+    assert stats["polls_today"] == 0
+    assert stats["polls_yesterday"] == 0
     assert stats["avg_polls_per_day"] == 0.0
     assert stats["total_settings_clicks"] == 0
     assert stats["users"] == []

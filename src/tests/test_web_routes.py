@@ -542,11 +542,18 @@ def test_settings_feedback_post_redirects(client, db_path):
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
     resp = client.post(
         "/settings/feedback",
-        data={"topic": "Bug", "description": "Something broke"},
+        data={"topic": "Bug report", "calendar_app": "Apple Calendar", "description": "Something broke"},
         cookies=cookies,
     )
     assert resp.status_code == 303
     assert "success=feedback" in resp.headers["location"]
+    conn = sqlite3.connect(db_path)
+    row = conn.execute(
+        "SELECT calendar_app, description FROM feedback WHERE user_id = ?", (user_id,)
+    ).fetchone()
+    conn.close()
+    assert row[0] == "Apple Calendar"
+    assert row[1] == "[Bug report] Something broke"
 
 
 def test_geocode_short_query_returns_empty(client):

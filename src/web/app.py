@@ -460,6 +460,7 @@ async def settings_delete_post(
 async def settings_feedback_post(
     request: Request,
     topic: str = Form(default=""),
+    calendar_app: str = Form(default=""),
     description: str = Form(default=""),
     user_agent: str = Form(default=""),
     platform: str = Form(default=""),
@@ -478,12 +479,14 @@ async def settings_feedback_post(
     locations = get_user_locations(DB_PATH, user_id)
     locations_str = ", ".join(loc["location"] for loc in locations)
 
+    full_description = f"[{topic}] {description}" if topic else description
+
     save_feedback(
         DB_PATH, user_id, email,
         feed_url=webcal_url or "",
         locations=locations_str,
-        calendar_app=topic,
-        description=description,
+        calendar_app=calendar_app,
+        description=full_description,
         user_agent=user_agent,
         platform=platform,
         screen_width=screen_width,

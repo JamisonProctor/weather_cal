@@ -50,9 +50,11 @@
       <div class="nav-right">{% block nav_right %}{% if is_authenticated %}<form method="post" action="/logout" style="margin:0"><button class="logout-btn" type="submit">Logout</button></form>{% else %}<a href="/login" class="nav-link">Sign in</a>{% endif %}{% endblock %}</div>
     </nav>
     {% block content %}{% endblock %}
-    <footer style="margin-top:40px;padding-top:12px;font-size:0.78rem;text-align:left">
+    {% block footer %}
+    <footer style="margin-top:48px;padding-top:16px;border-top:1px solid #f3f4f6;font-size:0.78rem;text-align:left">
       <a href="/impressum" style="color:#9ca3af;text-decoration:none">Impressum</a>
     </footer>
+    {% endblock %}
   </div>
   {% block extra_script %}{% endblock %}
 </body>

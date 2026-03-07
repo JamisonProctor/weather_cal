@@ -5,7 +5,10 @@
 {% block body_class %}layout-wide{% endblock %}
 
 {% block nav_right %}
-<a href="/settings" class="nav-link">← Settings</a>
+<a href="/settings" class="nav-link">&larr; Settings</a>
+<form method="post" action="/logout" style="margin:0">
+  <button class="logout-btn" type="submit">Logout</button>
+</form>
 {% endblock %}
 
 {% block extra_style %}
@@ -52,6 +55,14 @@
       <div class="value">{{ stats.changed_prefs_count }}</div>
     </div>
     <div class="stat-card">
+      <div class="label">Polls today</div>
+      <div class="value">{{ stats.polls_today }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Polls yesterday</div>
+      <div class="value">{{ stats.polls_yesterday }}</div>
+    </div>
+    <div class="stat-card">
       <div class="label">Avg polls/day</div>
       <div class="value">{{ stats.avg_polls_per_day }}</div>
     </div>
@@ -76,7 +87,9 @@
           <th>Location</th>
           <th>Signed up</th>
           <th>Last poll</th>
-          <th>Polls/day</th>
+          <th>Today</th>
+          <th>Yesterday</th>
+          <th>Avg/day</th>
           <th>Calendar app</th>
           <th>Prefs</th>
           <th>Clicks</th>
@@ -89,6 +102,8 @@
           <td>{{ u.location or '—' }}</td>
           <td>{{ u.created_at or '—' }}</td>
           <td>{{ u.last_polled_at or '—' }}</td>
+          <td>{{ u.polls_today }}</td>
+          <td>{{ u.polls_yesterday }}</td>
           <td>{{ u.polls_per_day }}{% if u.low_polls %} <span class="dot dot-warn" title="Low poll rate"></span>{% endif %}</td>
           <td>{{ u.calendar_app }}</td>
           <td>

@@ -210,8 +210,10 @@ def test_feed_records_poll(client, db_path):
 
     conn = sqlite3.connect(db_path)
     row = conn.execute("SELECT poll_count FROM feed_tokens WHERE token = ?", (token,)).fetchone()
-    conn.close()
     assert row[0] == 2
+    poll_log_rows = conn.execute("SELECT * FROM poll_log WHERE token = ?", (token,)).fetchall()
+    conn.close()
+    assert len(poll_log_rows) == 2
 
 
 def test_settings_ref_cal_increments_clicks(client, db_path):

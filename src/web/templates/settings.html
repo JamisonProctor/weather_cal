@@ -4,12 +4,6 @@
 
 {% block body_class %}layout-wide{% endblock %}
 
-{% block nav_right %}
-<form method="post" action="/logout" style="margin:0">
-  <button class="logout-btn" type="submit">Logout</button>
-</form>
-{% endblock %}
-
 {% block extra_style %}
 <style>
   .settings-layout { display: flex; gap: 40px; align-items: flex-start; }
@@ -125,7 +119,6 @@
       {% if last_updated %}
       <div class="sidebar-footer">Last updated<br>{{ last_updated }}</div>
       {% endif %}
-      <div class="sidebar-footer"><a href="/impressum" style="color:#9ca3af;text-decoration:none">Impressum</a></div>
     </aside>
 
     <main class="content">

@@ -284,6 +284,61 @@ def test_stable_uid_determinism():
     assert uid1.endswith("@weathercal.app")
 
 
+def test_timed_event_description_contains_hourly_weather():
+    forecast = _make_forecast(
+        times=[
+            "2026-03-10T10:00",
+            "2026-03-10T11:00",
+            "2026-03-10T12:00",
+            "2026-03-10T13:00",
+        ],
+        temps=[12, 13, 14, 13],
+        codes=[61, 61, 63, 61],
+        rain=[50, 60, 70, 55],
+        winds=[5, 5, 5, 5],
+    )
+    ics_bytes = generate_ics([forecast], "Munich, Germany")
+    events = _parse_events(ics_bytes)
+    timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
+    assert timed, "Expected at least one timed event"
+    desc = str(timed[0].get("DESCRIPTION", ""))
+    # Should contain hourly lines
+    assert "10:00" in desc
+    assert "11:00" in desc
+    assert "12:00" in desc
+    assert "13:00" in desc
+    # Should contain temp values
+    assert "°C" in desc
+    # Should contain rain indicator for high rain
+    assert "💧" in desc
+    # Should contain high/low summary
+    assert "High:" in desc
+    assert "Low:" in desc
+
+
+def test_timed_event_description_fahrenheit():
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00"],
+        temps=[12, 14],
+        codes=[61, 61],
+        rain=[50, 60],
+        winds=[5, 5],
+    )
+    prefs = {
+        "warn_in_allday": 1, "warn_rain": 1, "warn_wind": 1,
+        "warn_cold": 1, "warn_snow": 1, "warn_sunny": 0, "cold_threshold": 3.0,
+        "show_allday_events": 1, "timed_events_enabled": 1,
+        "allday_rain": 1, "allday_wind": 1, "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0,
+        "temp_unit": "F",
+    }
+    ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
+    events = _parse_events(ics_bytes)
+    timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
+    assert timed
+    desc = str(timed[0].get("DESCRIPTION", ""))
+    assert "°F" in desc
+
+
 def test_generate_ics_summary_uses_prefs_cold_threshold():
     forecast = _make_forecast(
         times=["2026-03-10T06:00", "2026-03-10T09:00", "2026-03-10T12:00", "2026-03-10T15:00"],

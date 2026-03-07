@@ -59,6 +59,10 @@
       <div class="label">Settings clicks</div>
       <div class="value">{{ stats.total_settings_clicks }}</div>
     </div>
+    <div class="stat-card">
+      <div class="label">Feedback</div>
+      <div class="value">{{ feedback|length }}</div>
+    </div>
   </div>
 
   <h2>Users</h2>
@@ -99,5 +103,36 @@
   </div>
   {% else %}
   <p class="empty">No users yet.</p>
+  {% endif %}
+
+  <h2>Feedback</h2>
+
+  {% if feedback %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Email</th>
+          <th>Message</th>
+          <th>Location</th>
+          <th>Calendar app</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in feedback %}
+        <tr>
+          <td style="white-space:nowrap">{{ (f.created_at or '')[:10] }}</td>
+          <td>{{ f.email }}</td>
+          <td>{{ f.description }}</td>
+          <td>{{ f.locations or '—' }}</td>
+          <td>{{ f.calendar_app or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty">No feedback yet.</p>
   {% endif %}
 {% endblock %}

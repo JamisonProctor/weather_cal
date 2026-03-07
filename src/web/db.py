@@ -183,6 +183,18 @@ def save_feedback(
         conn.close()
 
 
+def get_feedback(db_path: str) -> list:
+    conn = _conn(db_path)
+    try:
+        rows = conn.execute(
+            """SELECT email, description, calendar_app, locations, created_at
+               FROM feedback ORDER BY created_at DESC"""
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
 DEFAULT_PREFS = {
     "cold_threshold": 3.0,
     "warn_in_allday": 1,

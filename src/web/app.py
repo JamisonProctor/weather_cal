@@ -98,15 +98,21 @@ def _is_admin(user_id: int) -> bool:
     return bool(user and user["email"] == ADMIN_EMAIL)
 
 
+def _template(name: str, request: Request, ctx: dict | None = None, **kwargs):
+    base = {"request": request, "is_authenticated": bool(_get_user_id(request))}
+    if ctx:
+        base.update(ctx)
+    return templates.TemplateResponse(name, base, **kwargs)
+
 
 @app.get("/", response_class=HTMLResponse)
 async def landing(request: Request):
-    return templates.TemplateResponse("landing.html", {"request": request})
+    return _template("landing.html", request)
 
 
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_get(request: Request):
-    return templates.TemplateResponse("signup.html", {"request": request, "error": None})
+    return _template("signup.html", request, {"error": None})
 
 
 @app.post("/signup")
@@ -116,18 +122,18 @@ async def signup_post(
     password: str = Form(...),
 ):
     if len(password) < 12:
-        return templates.TemplateResponse(
-            "signup.html",
-            {"request": request, "error": "Password must be at least 12 characters."},
+        return _template(
+            "signup.html", request,
+            {"error": "Password must be at least 12 characters."},
             status_code=422,
         )
 
     try:
         user_id = create_user(DB_PATH, email, password)
     except sqlite3.IntegrityError:
-        return templates.TemplateResponse(
-            "signup.html",
-            {"request": request, "error": "An account with that email already exists."},
+        return _template(
+            "signup.html", request,
+            {"error": "An account with that email already exists."},
             status_code=422,
         )
 
@@ -144,7 +150,7 @@ async def setup_get(request: Request):
     user_id = _get_user_id(request)
     if not user_id:
         return RedirectResponse(url="/login", status_code=303)
-    return templates.TemplateResponse("setup.html", {"request": request, "error": None})
+    return _template("setup.html", request, {"error": None})
 
 
 @app.post("/setup")
@@ -170,9 +176,9 @@ async def setup_post(
         try:
             resolved_lat, resolved_lon, resolved_tz = ForecastService.get_coordinates_with_timezone(location)
         except Exception:
-            return templates.TemplateResponse(
-                "setup.html",
-                {"request": request, "error": "We couldn't find that location. Please try a different city name."},
+            return _template(
+                "setup.html", request,
+                {"error": "We couldn't find that location. Please try a different city name."},
                 status_code=422,
             )
 
@@ -221,7 +227,7 @@ async def geocode(q: str = Query(default="", min_length=0)):
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_get(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+    return _template("login.html", request, {"error": None})
 
 
 @app.post("/login")
@@ -232,9 +238,9 @@ async def login_post(
 ):
     user = get_user_by_email(DB_PATH, email)
     if not user or not check_password(password, user["password_hash"]):
-        return templates.TemplateResponse(
-            "login.html",
-            {"request": request, "error": "Invalid email or password.", "email": email},
+        return _template(
+            "login.html", request,
+            {"error": "Invalid email or password.", "email": email},
             status_code=401,
         )
 
@@ -273,14 +279,10 @@ async def connect(request: Request):
     feed_token = get_feed_token_by_user(DB_PATH, user_id)
     webcal_url, google_cal_url = _build_feed_urls(request, feed_token) if feed_token else (None, None)
 
-    return templates.TemplateResponse(
-        "connect.html",
-        {
-            "request": request,
-            "webcal_url": webcal_url,
-            "google_cal_url": google_cal_url,
-        },
-    )
+    return _template("connect.html", request, {
+        "webcal_url": webcal_url,
+        "google_cal_url": google_cal_url,
+    })
 
 
 @app.get("/settings", response_class=HTMLResponse)
@@ -318,22 +320,18 @@ async def settings(
     else:
         last_updated = None
 
-    return templates.TemplateResponse(
-        "settings.html",
-        {
-            "request": request,
-            "user": user,
-            "feed_token": feed_token,
-            "webcal_url": webcal_url,
-            "google_cal_url": google_cal_url,
-            "locations": locations,
-            "prefs": prefs,
-            "success": success,
-            "error": error,
-            "last_updated": last_updated,
-            "is_admin": _is_admin(user_id),
-        },
-    )
+    return _template("settings.html", request, {
+        "user": user,
+        "feed_token": feed_token,
+        "webcal_url": webcal_url,
+        "google_cal_url": google_cal_url,
+        "locations": locations,
+        "prefs": prefs,
+        "success": success,
+        "error": error,
+        "last_updated": last_updated,
+        "is_admin": _is_admin(user_id),
+    })
 
 
 @app.post("/settings")
@@ -503,10 +501,9 @@ async def feedback_get(request: Request):
     locations = get_user_locations(DB_PATH, user_id)
     webcal_url, _ = _build_feed_urls(request, feed_token) if feed_token else (None, None)
 
-    return templates.TemplateResponse(
-        "feedback.html",
-        {"request": request, "webcal_url": webcal_url, "locations": locations, "sent": False},
-    )
+    return _template("feedback.html", request, {
+        "webcal_url": webcal_url, "locations": locations, "sent": False,
+    })
 
 
 @app.post("/feedback", response_class=HTMLResponse)
@@ -539,10 +536,9 @@ async def feedback_post(
     feed_token = get_feed_token_by_user(DB_PATH, user_id)
     webcal_url, _ = _build_feed_urls(request, feed_token) if feed_token else (None, None)
 
-    return templates.TemplateResponse(
-        "feedback.html",
-        {"request": request, "webcal_url": webcal_url, "locations": user_locations, "sent": True},
-    )
+    return _template("feedback.html", request, {
+        "webcal_url": webcal_url, "locations": user_locations, "sent": True,
+    })
 
 
 @app.get("/feed/{token}/weather.ics")
@@ -579,9 +575,9 @@ async def admin(request: Request):
     if not _is_admin(user_id):
         return Response(content="Forbidden", status_code=403)
     stats = get_admin_stats(DB_PATH)
-    return templates.TemplateResponse("admin.html", {"request": request, "stats": stats})
+    return _template("admin.html", request, {"stats": stats})
 
 
 @app.get("/impressum", response_class=HTMLResponse)
 async def impressum(request: Request):
-    return templates.TemplateResponse("impressum.html", {"request": request})
+    return _template("impressum.html", request)

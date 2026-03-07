@@ -320,6 +320,25 @@ def test_admin_route_accessible_for_admin(client, db_path, monkeypatch):
     assert b"Admin" in resp.content
 
 
+def test_admin_shows_feedback(client, db_path, monkeypatch):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    _, cookies = _auth_cookies(db_path, email="admin@example.com")
+    from src.web.db import save_feedback
+    save_feedback(db_path, 1, "sender@example.com", "", "Berlin", "Apple Calendar", "Love this app!", "", "", "", "", "")
+    resp = client.get("/admin", cookies=cookies)
+    assert resp.status_code == 200
+    assert b"sender@example.com" in resp.content
+    assert b"Love this app!" in resp.content
+
+
+def test_admin_shows_no_feedback_message(client, db_path, monkeypatch):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    _, cookies = _auth_cookies(db_path, email="admin@example.com")
+    resp = client.get("/admin", cookies=cookies)
+    assert resp.status_code == 200
+    assert b"No feedback yet." in resp.content
+
+
 # --- Welcome email ---
 
 def test_setup_triggers_welcome_email_on_first_setup(client, db_path, monkeypatch):

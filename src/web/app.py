@@ -24,6 +24,7 @@ from src.web.db import (
     create_user_preferences_table,
     delete_user_account,
     get_admin_stats,
+    get_feedback,
     get_feed_token_by_user,
     get_last_forecast_update,
     get_rows_by_token,
@@ -579,7 +580,8 @@ async def admin(request: Request):
     if not _is_admin(user_id):
         return Response(content="Forbidden", status_code=403)
     stats = get_admin_stats(DB_PATH)
-    return templates.TemplateResponse("admin.html", {"request": request, "stats": stats})
+    feedback = get_feedback(DB_PATH)
+    return templates.TemplateResponse("admin.html", {"request": request, "stats": stats, "feedback": feedback})
 
 
 @app.get("/impressum", response_class=HTMLResponse)

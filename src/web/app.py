@@ -14,6 +14,7 @@ from src.services.email_service import send_welcome_email
 from src.services.forecast_store import ForecastStore
 from src.services.forecast_service import ForecastService
 from src.web.auth import create_session_token, decode_session_token
+from src.events.db import create_event_tables
 from src.web.db import (
     DEFAULT_PREFS,
     check_password,
@@ -84,6 +85,7 @@ async def maintenance_mode(request: Request, call_next):
 ForecastStore(db_path=DB_PATH)  # ensures all tables exist before anything else runs
 create_feedback_table(DB_PATH)
 create_user_preferences_table(DB_PATH)
+create_event_tables(DB_PATH)
 
 
 def _get_user_id(request: Request):

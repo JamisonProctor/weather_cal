@@ -14,7 +14,8 @@ from src.services.email_service import send_welcome_email
 from src.services.forecast_store import ForecastStore
 from src.services.forecast_service import ForecastService
 from src.web.auth import create_session_token, decode_session_token
-from src.events.db import create_event_tables
+from src.events.db import create_event_tables, get_future_events, get_user_id_by_feed_token
+from src.events.ics_events import build_event_ics
 from src.web.db import (
     DEFAULT_PREFS,
     check_password,
@@ -572,6 +573,45 @@ async def feed(request: Request, token: str):
         content=ics_content,
         media_type="text/calendar; charset=utf-8",
         headers={"Content-Disposition": 'inline; filename="weather.ics"'},
+    )
+
+
+# --- Event ICS Feed Routes ---
+
+
+@app.get("/events.ics")
+async def events_ics():
+    events = get_future_events(DB_PATH)
+    ics_content = build_event_ics(events)
+    return Response(
+        content=ics_content,
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": 'inline; filename="events.ics"'},
+    )
+
+
+@app.get("/events/free.ics")
+async def events_free_ics():
+    events = get_future_events(DB_PATH, free_only=True)
+    ics_content = build_event_ics(events)
+    return Response(
+        content=ics_content,
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": 'inline; filename="events.ics"'},
+    )
+
+
+@app.get("/feed/{token}/events.ics")
+async def feed_events(token: str):
+    user_id = get_user_id_by_feed_token(DB_PATH, token)
+    if not user_id:
+        return Response(content="Invalid or expired token.", status_code=404)
+    events = get_future_events(DB_PATH)
+    ics_content = build_event_ics(events)
+    return Response(
+        content=ics_content,
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": 'inline; filename="events.ics"'},
     )
 
 

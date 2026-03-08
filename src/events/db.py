@@ -1,4 +1,6 @@
 import sqlite3
+from datetime import datetime
+from types import SimpleNamespace
 
 
 def create_event_tables(db_path: str) -> None:
@@ -41,5 +43,39 @@ def create_event_tables(db_path: str) -> None:
             )
         """)
         conn.commit()
+    finally:
+        conn.close()
+
+
+def get_user_id_by_feed_token(db_path: str, token: str) -> int | None:
+    """Return user_id for a valid feed token, or None."""
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        row = conn.execute(
+            """SELECT u.id FROM feed_tokens ft
+               JOIN users u ON ft.user_id = u.id
+               WHERE ft.token = ? AND u.is_active = 1""",
+            (token,),
+        ).fetchone()
+        return row["id"] if row else None
+    finally:
+        conn.close()
+
+
+def get_future_events(db_path: str, free_only: bool = False) -> list:
+    """Return future events as SimpleNamespace objects for ICS generation."""
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        now = datetime.now().isoformat()
+        sql = """SELECT * FROM events
+                 WHERE is_calendar_candidate = 1 AND end_time > ?"""
+        params = [now]
+        if free_only:
+            sql += " AND is_paid = 0"
+        sql += " ORDER BY start_time"
+        rows = conn.execute(sql, params).fetchall()
+        return [SimpleNamespace(**dict(row)) for row in rows]
     finally:
         conn.close()

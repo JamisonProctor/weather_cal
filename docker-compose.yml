@@ -26,6 +26,20 @@ services:
       - ${DATA_PATH:-./data}:/app/data
     restart: unless-stopped
 
+  event-worker:
+    build: .
+    container_name: event-worker
+    command: python -m src.events.discovery.agent
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app/src:/app
+    volumes:
+      - ${DATA_PATH:-./data}:/app/data
+    profiles:
+      - event-worker
+    restart: "no"
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     command: tunnel --no-autoupdate run

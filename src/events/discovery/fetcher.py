@@ -1,38 +1,30 @@
-import asyncio
 import logging
 
-from crawl4ai import AsyncWebCrawler
+import httpx
+from markdownify import markdownify
 
 logger = logging.getLogger(__name__)
 
-
-async def _fetch(url: str) -> str | None:
-    """Async fetch a URL and convert to Markdown via Crawl4AI."""
-    try:
-        async with AsyncWebCrawler() as crawler:
-            result = await crawler.arun(url=url)
-            if result.success and result.markdown:
-                return result.markdown
-            return None
-    except Exception:
-        logger.warning("Failed to fetch %s", url, exc_info=True)
-        return None
+TIMEOUT = 15.0
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (compatible; PlanzBot/1.0; +https://getpla.nz)",
+}
 
 
 def fetch_page_as_markdown(url: str) -> str | None:
     """Fetch a URL and convert HTML to clean Markdown text.
 
-    Uses Crawl4AI's AsyncWebCrawler for fetching and HTML->Markdown conversion.
-    This does NOT require an LLM - it's pure HTML processing.
+    Uses httpx for fetching and markdownify for HTML-to-Markdown conversion.
     Returns Markdown text, or None on failure.
+    Timeout: 15 seconds.
     """
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                return pool.submit(lambda: asyncio.run(_fetch(url))).result(timeout=15)
-        return loop.run_until_complete(_fetch(url))
+        resp = httpx.get(url, headers=HEADERS, timeout=TIMEOUT, follow_redirects=True)
+        resp.raise_for_status()
+        markdown = markdownify(resp.text, strip=["img", "script", "style"])
+        if not markdown or not markdown.strip():
+            return None
+        return markdown.strip()
     except Exception:
         logger.warning("Failed to fetch %s", url, exc_info=True)
         return None

@@ -20,8 +20,8 @@ services:
       - .env
     environment:
       - PYTHONPATH=/app/src:/app
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     volumes:
       - ${DATA_PATH:-./data}:/app/data
     restart: unless-stopped

@@ -2,7 +2,12 @@
 
 from unittest.mock import MagicMock, patch
 
-from src.events.discovery.search import execute_queries, search_free_events
+from src.events.discovery.search import (
+    BLOCKED_DOMAINS,
+    _is_relevant_url,
+    execute_queries,
+    search_free_events,
+)
 
 
 @patch("src.events.discovery.search.DDGS")
@@ -88,3 +93,37 @@ def test_execute_queries_skips_empty_hrefs(mock_ddgs_class):
     ]
     urls = execute_queries(["query"])
     assert urls == ["https://example.com/valid"]
+
+
+def test_is_relevant_url_blocks_known_domains():
+    assert not _is_relevant_url("https://www.zhihu.com/question/123")
+    assert not _is_relevant_url("https://support.google.com/mail/answer/1")
+    assert not _is_relevant_url("https://www.instagram.com/explore/")
+    assert not _is_relevant_url("https://de.wikipedia.org/wiki/Munich")
+    assert not _is_relevant_url("https://www.youtube.com/watch?v=abc")
+
+
+def test_is_relevant_url_allows_event_sites():
+    assert _is_relevant_url("https://www.muenchen.de/veranstaltungen")
+    assert _is_relevant_url("https://rausgegangen.de/events")
+    assert _is_relevant_url("https://www.eventfinder.de/muenchen")
+
+
+@patch("src.events.discovery.search.DDGS")
+def test_execute_queries_filters_blocked_domains(mock_ddgs_class):
+    mock_instance = MagicMock()
+    mock_ddgs_class.return_value.__enter__ = MagicMock(return_value=mock_instance)
+    mock_ddgs_class.return_value.__exit__ = MagicMock(return_value=False)
+    mock_instance.text.return_value = [
+        {"href": "https://www.zhihu.com/question/123"},
+        {"href": "https://support.google.com/mail/answer/1"},
+        {"href": "https://www.muenchen.de/veranstaltungen"},
+    ]
+    urls = execute_queries(["free events Munich"])
+    assert urls == ["https://www.muenchen.de/veranstaltungen"]
+
+
+def test_blocked_domains_has_key_entries():
+    assert "www.zhihu.com" in BLOCKED_DOMAINS
+    assert "support.google.com" in BLOCKED_DOMAINS
+    assert "www.instagram.com" in BLOCKED_DOMAINS

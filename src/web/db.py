@@ -442,14 +442,14 @@ def update_feed_poll(db_path: str, token: str, user_agent: str) -> None:
         conn.close()
 
 
-def log_feed_poll(db_path: str, token: str, user_agent: str, ip_address: str) -> None:
+def log_feed_poll(db_path: str, token: str, user_agent: str) -> None:
     """Insert a row into poll_log for granular tracking."""
     now = datetime.now().isoformat()
     conn = _conn(db_path)
     try:
         conn.execute(
-            "INSERT INTO poll_log (token, polled_at, user_agent, ip_address) VALUES (?, ?, ?, ?)",
-            (token, now, user_agent, ip_address),
+            "INSERT INTO poll_log (token, polled_at, user_agent) VALUES (?, ?, ?)",
+            (token, now, user_agent),
         )
         conn.commit()
     finally:
@@ -503,7 +503,7 @@ def export_user_data(db_path: str, user_id: int) -> dict:
         if tokens:
             placeholders = ",".join("?" * len(tokens))
             cur.execute(
-                f"SELECT polled_at, user_agent, ip_address FROM poll_log WHERE token IN ({placeholders}) ORDER BY polled_at DESC",
+                f"SELECT polled_at, user_agent FROM poll_log WHERE token IN ({placeholders}) ORDER BY polled_at DESC",
                 tokens,
             )
             poll_logs = [dict(r) for r in cur.fetchall()]

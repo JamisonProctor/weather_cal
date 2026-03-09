@@ -80,10 +80,14 @@ class ForecastStore:
                 id         INTEGER PRIMARY KEY AUTOINCREMENT,
                 token      TEXT NOT NULL,
                 polled_at  TEXT NOT NULL,
-                user_agent TEXT,
-                ip_address TEXT
+                user_agent TEXT
             )
         """)
+        # GDPR data minimization: clear any existing IP data from legacy column
+        try:
+            cur.execute("UPDATE poll_log SET ip_address = NULL WHERE ip_address IS NOT NULL")
+        except sqlite3.OperationalError:
+            pass  # column doesn't exist on fresh databases
         cur.execute("""
             CREATE INDEX IF NOT EXISTS idx_poll_log_token_polled
             ON poll_log (token, polled_at)

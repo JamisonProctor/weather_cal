@@ -146,8 +146,8 @@ def test_update_feed_poll_unknown_token_is_noop(db_path):
 def test_log_feed_poll_inserts_rows(db_path):
     user_id = create_user(db_path, "logpoll@example.com", "password123456")
     token = create_feed_token(db_path, user_id)
-    log_feed_poll(db_path, token, "TestAgent/1.0", "127.0.0.1")
-    log_feed_poll(db_path, token, "TestAgent/1.0", "127.0.0.1")
+    log_feed_poll(db_path, token, "TestAgent/1.0")
+    log_feed_poll(db_path, token, "TestAgent/1.0")
     conn = sqlite3.connect(db_path)
     rows = conn.execute("SELECT * FROM poll_log WHERE token = ?", (token,)).fetchall()
     conn.close()
@@ -158,8 +158,8 @@ def test_admin_stats_include_poll_log_fields(db_path):
     user_id = create_user(db_path, "logstats@example.com", "password123456")
     set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
     token = create_feed_token(db_path, user_id)
-    log_feed_poll(db_path, token, "Agent", "127.0.0.1")
-    log_feed_poll(db_path, token, "Agent", "127.0.0.1")
+    log_feed_poll(db_path, token, "Agent")
+    log_feed_poll(db_path, token, "Agent")
     stats = get_admin_stats(db_path)
     u = stats["users"][0]
     assert u["polls_last_24h"] == 2
@@ -220,8 +220,8 @@ def test_admin_stats_polls_last_24h_with_recent_polls(db_path):
     set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
     token = create_feed_token(db_path, user_id)
     _backdate_token(db_path, token, 10)
-    log_feed_poll(db_path, token, "CFNetwork/1.0", "127.0.0.1")
-    log_feed_poll(db_path, token, "CFNetwork/1.0", "127.0.0.1")
+    log_feed_poll(db_path, token, "CFNetwork/1.0")
+    log_feed_poll(db_path, token, "CFNetwork/1.0")
     stats = get_admin_stats(db_path)
     u = stats["users"][0]
     assert u["polls_last_24h"] == 2

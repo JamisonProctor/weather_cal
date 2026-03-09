@@ -13,12 +13,18 @@ from src.web.db import (
     create_feed_token,
     create_feedback_table,
     create_user,
+    delete_user_account,
+    export_user_data,
     set_user_location,
     create_user_preferences_table,
     get_feed_token_by_user,
     get_user_by_email,
     get_user_by_id,
     get_user_preferences,
+    log_feed_poll,
+    save_feedback,
+    upsert_user_preferences,
+    DEFAULT_PREFS,
 )
 
 
@@ -608,3 +614,72 @@ def test_maintenance_mode_off_returns_200(client, tmp_path, monkeypatch):
     monkeypatch.setattr(web_app, "MAINTENANCE_FLAG", flag)
     resp = client.get("/")
     assert resp.status_code == 200
+
+
+# --- Account deletion cleans up all related data ---
+
+def test_delete_account_removes_all_related_data(db_path):
+    user_id = create_user(db_path, "cleanup@example.com", "supersecretpass1")
+    token = create_feed_token(db_path, user_id)
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    upsert_user_preferences(db_path, user_id, **DEFAULT_PREFS)
+    save_feedback(db_path, user_id, "cleanup@example.com", "", "Munich", "", "Nice!", "", "", "", "", "")
+    log_feed_poll(db_path, token, "TestAgent/1.0", "127.0.0.1")
+
+    delete_user_account(db_path, user_id)
+
+    conn = sqlite3.connect(db_path)
+    assert conn.execute("SELECT COUNT(*) FROM user_locations WHERE user_id = ?", (user_id,)).fetchone()[0] == 0
+    assert conn.execute("SELECT COUNT(*) FROM user_preferences WHERE user_id = ?", (user_id,)).fetchone()[0] == 0
+    assert conn.execute("SELECT COUNT(*) FROM feedback WHERE user_id = ?", (user_id,)).fetchone()[0] == 0
+    assert conn.execute("SELECT COUNT(*) FROM feed_tokens WHERE user_id = ?", (user_id,)).fetchone()[0] == 0
+    assert conn.execute("SELECT COUNT(*) FROM poll_log WHERE token = ?", (token,)).fetchone()[0] == 0
+    # User row still exists but is_active = 0
+    user = conn.execute("SELECT is_active FROM users WHERE id = ?", (user_id,)).fetchone()
+    assert user[0] == 0
+    conn.close()
+
+
+# --- Data export ---
+
+def test_export_user_data_returns_all_sections(db_path):
+    user_id = create_user(db_path, "export@example.com", "supersecretpass1")
+    token = create_feed_token(db_path, user_id)
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    upsert_user_preferences(db_path, user_id, **DEFAULT_PREFS)
+    save_feedback(db_path, user_id, "export@example.com", "", "Munich", "", "Great!", "", "", "", "", "")
+    log_feed_poll(db_path, token, "TestAgent/1.0", "127.0.0.1")
+
+    data = export_user_data(db_path, user_id)
+
+    assert data["account"]["email"] == "export@example.com"
+    assert len(data["locations"]) == 1
+    assert data["locations"][0]["location"] == "Munich, Germany"
+    assert data["preferences"]["cold_threshold"] == 3.0
+    assert len(data["feed_tokens"]) == 1
+    assert len(data["poll_logs"]) == 1
+    assert data["poll_logs"][0]["ip_address"] == "127.0.0.1"
+    assert len(data["feedback"]) == 1
+    assert data["feedback"][0]["description"] == "Great!"
+
+
+def test_export_endpoint_returns_json_download(client, db_path):
+    user_id, cookies = _auth_cookies(db_path, email="exportroute@example.com")
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+
+    resp = client.get("/settings/export", cookies=cookies)
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/json"
+    assert "attachment" in resp.headers["content-disposition"]
+    assert "weathercal-data.json" in resp.headers["content-disposition"]
+    body = resp.json()
+    assert "account" in body
+    assert "locations" in body
+    assert body["account"]["email"] == "exportroute@example.com"
+
+
+def test_export_endpoint_requires_auth(client):
+    resp = client.get("/settings/export")
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/login"

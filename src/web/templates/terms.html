@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Terms of Service — WeatherCal{% endblock %}
+
+{% block body_class %}layout-medium{% endblock %}
+
+{% block extra_style %}
+<style>
+  h1 { font-size: 1.5rem; margin: 0 0 8px; }
+  .updated { font-size: 0.82rem; color: #9ca3af; margin-bottom: 28px; }
+  .intro { margin-bottom: 24px; font-size: 0.95rem; line-height: 1.6; color: #374151; }
+  h2 { font-size: 1.1rem; margin: 28px 0 10px; color: #111; }
+  h3 { font-size: 0.95rem; margin: 18px 0 6px; color: #111; }
+  p, li { font-size: 0.95rem; line-height: 1.6; color: #374151; }
+  p { margin: 0 0 10px; }
+  ul { margin: 0 0 10px; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+  <h1>Terms of Service</h1>
+  <p class="updated">Last updated: March 9, 2026</p>
+
+  <p class="intro">These Terms of Service ("Terms") govern your use of WeatherCal ("the Service"), operated by Jamison Proctor. By creating an account or using the Service, you agree to these Terms.</p>
+
+  <h2>The Service</h2>
+
+  <p>WeatherCal generates personalized weather calendar feeds based on your location. You can subscribe to these feeds using any calendar application that supports the ICS format, or optionally connect your Google account to have events pushed directly to Google Calendar.</p>
+
+  <h2>Prototype Status</h2>
+
+  <p>WeatherCal is a prototype product under active development. The Service is provided on an "as is" and "as available" basis. Features may be added, changed, or removed at any time without prior notice. We do not guarantee uninterrupted availability or accuracy of the Service.</p>
+
+  <h2>Your Account</h2>
+
+  <p>You must provide a valid email address to create an account. You are responsible for keeping your login credentials secure. You may only create one account per person. If you suspect unauthorized access to your account, contact us immediately.</p>
+
+  <h2>Acceptable Use</h2>
+
+  <p>The Service is intended for personal, non-commercial use. You agree not to:</p>
+  <ul>
+    <li>Share your feed token or account credentials with others</li>
+    <li>Attempt to access other users' data or accounts</li>
+    <li>Use automated tools to excessively poll the feed beyond normal calendar app behavior</li>
+    <li>Reverse-engineer, scrape, or redistribute the Service or its data</li>
+  </ul>
+
+  <h2>Weather Data</h2>
+
+  <p>Weather forecasts are provided for informational purposes only. Forecast data is sourced from third-party providers (Open-Meteo) and we do not guarantee its accuracy, completeness, or timeliness. Do not rely on WeatherCal as your sole source of weather information for safety-critical decisions.</p>
+
+  <h2>Google Calendar Integration</h2>
+
+  <p>If you choose to connect your Google account, WeatherCal will create a dedicated calendar in your Google account and push weather events to it. We only access calendars that WeatherCal itself created — we cannot read, modify, or delete your existing calendars. You can disconnect your Google account at any time through Settings.</p>
+
+  <h2>Communications</h2>
+
+  <p>By creating an account, you agree to receive service-related communications at the email address you provided. These may include notices about outages, significant changes to the Service, security issues affecting your account, or requests for feedback. We will not send marketing or promotional emails.</p>
+
+  <h2>Intellectual Property</h2>
+
+  <p>The WeatherCal service, including its design, code, and branding, is the property of Jamison Proctor. Weather data is provided by third-party sources under their respective licenses. Your calendar feed content (the weather events generated for you) is yours to use freely.</p>
+
+  <h2>Limitation of Liability</h2>
+
+  <p>To the maximum extent permitted by law, WeatherCal and its operator shall not be liable for any indirect, incidental, special, or consequential damages arising from your use of the Service. This includes, but is not limited to, damages resulting from inaccurate weather data, service interruptions, or data loss.</p>
+
+  <h2>Account Termination</h2>
+
+  <p>You may delete your account at any time through the Settings page. Upon deletion, your data is removed as described in our <a href="/privacy">Privacy Policy</a>.</p>
+
+  <p>We reserve the right to suspend or terminate accounts that violate these Terms or abuse the Service, with or without notice.</p>
+
+  <h2>Changes to These Terms</h2>
+
+  <p>We may update these Terms as the Service evolves. Significant changes will be communicated via the email address associated with your account. Continued use of the Service after changes take effect constitutes acceptance of the updated Terms.</p>
+
+  <h2>Governing Law</h2>
+
+  <p>These Terms are governed by the laws of the Federal Republic of Germany. Any disputes arising from these Terms or your use of the Service shall be subject to the jurisdiction of the courts in Germany.</p>
+
+  <h2>Contact</h2>
+
+  <p>For questions about these Terms, contact:</p>
+  <p>Jamison Proctor<br>
+  <a href="mailto:jamison.proctor@gmail.com">jamison.proctor@gmail.com</a></p>
+{% endblock %}
+
+{% block footer %}
+<footer style="margin-top:48px;padding-top:16px;border-top:1px solid #f3f4f6;font-size:0.78rem;text-align:left">
+  <a href="javascript:history.back()" style="color:#9ca3af;text-decoration:none">← Back</a>
+</footer>
+{% endblock %}

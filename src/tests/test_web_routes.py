@@ -501,6 +501,12 @@ def test_privacy_returns_200(client):
     assert "Privacy Policy" in resp.text
 
 
+def test_terms_returns_200(client):
+    resp = client.get("/terms")
+    assert resp.status_code == 200
+    assert "Terms of Service" in resp.text
+
+
 # --- Connect, feedback, geocode routes ---
 
 def test_connect_page_returns_200(client, db_path):

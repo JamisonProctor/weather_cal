@@ -29,7 +29,7 @@ QUERY_GENERATION_PROMPT = """You are generating search queries to find FREE loca
 {previous_feedback}
 
 ## Instructions
-Generate 15-25 search queries across these strategies:
+Generate 8-12 search queries across these strategies:
 1. DATE-SPECIFIC: Search for events on specific dates (especially weekends) in local language(s). Example: "München Veranstaltungen 15 März 2026"
 2. VENUE-SPECIFIC: Search for events at known venues. Example: "Olympiapark events March 2026"
 3. EVENT-TYPE: Search for specific event types from cultural patterns. Example: "Flohmarkt München März 2026"

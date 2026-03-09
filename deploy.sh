@@ -9,8 +9,11 @@ cd "$(dirname "$0")"
 echo "Pulling latest code..."
 git pull
 
-echo "Rebuilding and restarting containers..."
-docker compose up --build -d
+echo "Rebuilding all images (including profiled services)..."
+docker compose --profile event-worker build
+
+echo "Restarting containers..."
+docker compose up -d
 
 echo "Done. Running containers:"
 docker compose ps

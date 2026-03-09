@@ -2,9 +2,11 @@ import sqlite3
 from datetime import datetime
 from types import SimpleNamespace
 
+from src.events.sources import create_source_tables
+
 
 def create_event_tables(db_path: str) -> None:
-    """Create events and event_series tables if they don't exist."""
+    """Create events, event_series, and source tracking tables if they don't exist."""
     conn = sqlite3.connect(db_path)
     try:
         conn.execute("""
@@ -45,6 +47,9 @@ def create_event_tables(db_path: str) -> None:
         conn.commit()
     finally:
         conn.close()
+
+    # Create source tracking tables (city_profiles, event_sources, discovery_runs)
+    create_source_tables(db_path)
 
 
 def get_user_id_by_feed_token(db_path: str, token: str) -> int | None:

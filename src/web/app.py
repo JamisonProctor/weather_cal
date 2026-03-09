@@ -23,6 +23,7 @@ from src.web.db import (
     set_user_location,
     create_user_preferences_table,
     delete_user_account,
+    export_user_data,
     get_admin_stats,
     get_feedback,
     get_feed_token_by_user,
@@ -435,6 +436,19 @@ async def settings_password_post(
 
     update_user_password(DB_PATH, user_id, new_password)
     return RedirectResponse(url="/settings?success=password", status_code=303)
+
+
+@app.get("/settings/export")
+async def settings_export(request: Request):
+    user_id = _get_user_id(request)
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    data = export_user_data(DB_PATH, user_id)
+    return JSONResponse(
+        content=data,
+        headers={"Content-Disposition": 'attachment; filename="weathercal-data.json"'},
+    )
 
 
 @app.post("/settings/delete")

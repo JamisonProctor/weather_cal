@@ -383,11 +383,22 @@ def update_user_password(db_path: str, user_id: int, new_password: str) -> None:
 
 
 def delete_user_account(db_path: str, user_id: int) -> None:
-    """Soft-delete a user account and remove their feed token (stops feed immediately)."""
+    """Soft-delete a user account and clean up all related personal data."""
     conn = _conn(db_path)
     try:
-        conn.execute("UPDATE users SET is_active = 0 WHERE id = ?", (user_id,))
+        # Get user's feed tokens to clean up poll_log
+        cur = conn.execute("SELECT token FROM feed_tokens WHERE user_id = ?", (user_id,))
+        tokens = [row["token"] for row in cur.fetchall()]
+        if tokens:
+            placeholders = ",".join("?" * len(tokens))
+            conn.execute(f"DELETE FROM poll_log WHERE token IN ({placeholders})", tokens)
+        # Delete user-linked data
+        conn.execute("DELETE FROM user_preferences WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM user_locations WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM feedback WHERE user_id = ?", (user_id,))
         conn.execute("DELETE FROM feed_tokens WHERE user_id = ?", (user_id,))
+        # Soft-delete user record (preserves email uniqueness constraint)
+        conn.execute("UPDATE users SET is_active = 0 WHERE id = ?", (user_id,))
         conn.commit()
     finally:
         conn.close()
@@ -454,6 +465,64 @@ def increment_settings_clicks(db_path: str, user_id: int) -> None:
             (user_id,),
         )
         conn.commit()
+    finally:
+        conn.close()
+
+
+def export_user_data(db_path: str, user_id: int) -> dict:
+    """Return all personal data for a user as a dictionary (GDPR data export)."""
+    conn = _conn(db_path)
+    try:
+        cur = conn.cursor()
+
+        # Account info
+        cur.execute("SELECT id, email, created_at FROM users WHERE id = ?", (user_id,))
+        user_row = cur.fetchone()
+        account = dict(user_row) if user_row else {}
+
+        # Locations
+        cur.execute("SELECT location, lat, lon, timezone, created_at FROM user_locations WHERE user_id = ?", (user_id,))
+        locations = [dict(r) for r in cur.fetchall()]
+
+        # Preferences
+        cur.execute("SELECT * FROM user_preferences WHERE user_id = ?", (user_id,))
+        prefs_row = cur.fetchone()
+        preferences = dict(prefs_row) if prefs_row else {}
+
+        # Feed tokens (metadata only, not the token itself)
+        cur.execute(
+            "SELECT created_at, last_polled_at, poll_count FROM feed_tokens WHERE user_id = ?",
+            (user_id,),
+        )
+        feed_tokens = [dict(r) for r in cur.fetchall()]
+
+        # Poll log entries
+        cur.execute("SELECT token FROM feed_tokens WHERE user_id = ?", (user_id,))
+        tokens = [row["token"] for row in cur.fetchall()]
+        poll_logs = []
+        if tokens:
+            placeholders = ",".join("?" * len(tokens))
+            cur.execute(
+                f"SELECT polled_at, user_agent, ip_address FROM poll_log WHERE token IN ({placeholders}) ORDER BY polled_at DESC",
+                tokens,
+            )
+            poll_logs = [dict(r) for r in cur.fetchall()]
+
+        # Feedback
+        cur.execute(
+            "SELECT description, calendar_app, locations, created_at FROM feedback WHERE user_id = ?",
+            (user_id,),
+        )
+        feedback = [dict(r) for r in cur.fetchall()]
+
+        return {
+            "account": account,
+            "locations": locations,
+            "preferences": preferences,
+            "feed_tokens": feed_tokens,
+            "poll_logs": poll_logs,
+            "feedback": feedback,
+        }
     finally:
         conn.close()
 

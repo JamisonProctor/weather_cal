@@ -78,11 +78,22 @@ def discover_events(
     # Start tracking this run
     run_id = start_discovery_run(db_path, location)
 
-    # Step 3: Collect URLs — known good sources + search results
+    # Step 3: Collect URLs — profile aggregators + known good sources + search results
     all_urls = []
+
+    # Add profile's known aggregator sites as seed URLs
+    if profile and profile.known_aggregators:
+        for agg in profile.known_aggregators:
+            url = agg if agg.startswith("http") else f"https://{agg}"
+            if url not in all_urls:
+                all_urls.append(url)
+        logger.info("Added %d profile aggregator URLs", len(all_urls))
+
     known_sources = get_active_sources(db_path, location)
     known_urls = [s.url for s in known_sources]
-    all_urls.extend(known_urls)
+    for url in known_urls:
+        if url not in all_urls:
+            all_urls.append(url)
     logger.info("Added %d known good source URLs", len(known_urls))
 
     search_urls = execute_queries(queries)

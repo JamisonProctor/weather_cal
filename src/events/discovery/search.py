@@ -37,6 +37,20 @@ BLOCKED_DOMAINS = {
     "www.linkedin.com",
     "spotify.com",
     "open.spotify.com",
+    # Gaming sites
+    "www.1001spiele.de",
+    "poki.com",
+    "www.crazygames.com",
+    "spiele.rtl.de",
+    "www.spielaffe.de",
+    # Chinese Q&A / content farms
+    "zhidao.baidu.com",
+    "baidu.com",
+    "www.baidu.com",
+    # Generic content
+    "www.quarks.de",
+    "www.kunstplaza.de",
+    "kunst-sciodoo.de",
 }
 
 

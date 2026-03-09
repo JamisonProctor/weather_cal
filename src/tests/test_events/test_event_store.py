@@ -112,3 +112,18 @@ def test_store_events_no_update_when_unchanged(db_path):
 def test_store_events_empty_list(db_path):
     result = store_events(db_path, [], datetime.now())
     assert result == {"created": 0, "updated": 0, "discarded_past": 0}
+
+
+def test_external_key_formula(db_path):
+    """Stored external_key matches sha256(source_url|start_time)."""
+    import hashlib
+    source_url = "https://example.com/test-key"
+    start_time = _future(3)
+    events = [_make_event_dict(source_url=source_url, start_time=start_time)]
+    store_events(db_path, events, datetime.now())
+
+    expected = hashlib.sha256(f"{source_url}|{start_time}".encode()).hexdigest()
+    conn = sqlite3.connect(db_path)
+    row = conn.execute("SELECT external_key FROM events").fetchone()
+    conn.close()
+    assert row[0] == expected

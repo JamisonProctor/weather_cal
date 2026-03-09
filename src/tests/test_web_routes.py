@@ -7,6 +7,7 @@ import src.web.app as web_app
 from src.models.forecast import Forecast
 from src.services.forecast_store import ForecastStore
 from src.web.auth import create_session_token
+from src.events.db import create_event_tables
 from src.web.db import (
     check_password,
     create_feed_token,
@@ -27,6 +28,7 @@ def db_path(tmp_path):
     ForecastStore(db_path=path)
     create_feedback_table(path)
     create_user_preferences_table(path)
+    create_event_tables(path)
     return path
 
 

@@ -110,6 +110,11 @@ def _template(name: str, request: Request, ctx: dict | None = None, **kwargs):
     return templates.TemplateResponse(name, base, **kwargs)
 
 
+@app.get("/health")
+async def health():
+    return JSONResponse({"status": "ok"})
+
+
 @app.get("/", response_class=HTMLResponse)
 async def landing(request: Request):
     return _template("landing.html", request)

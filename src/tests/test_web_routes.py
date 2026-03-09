@@ -624,7 +624,7 @@ def test_delete_account_removes_all_related_data(db_path):
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
     upsert_user_preferences(db_path, user_id, **DEFAULT_PREFS)
     save_feedback(db_path, user_id, "cleanup@example.com", "", "Munich", "", "Nice!", "", "", "", "", "")
-    log_feed_poll(db_path, token, "TestAgent/1.0", "127.0.0.1")
+    log_feed_poll(db_path, token, "TestAgent/1.0")
 
     delete_user_account(db_path, user_id)
 
@@ -648,7 +648,7 @@ def test_export_user_data_returns_all_sections(db_path):
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
     upsert_user_preferences(db_path, user_id, **DEFAULT_PREFS)
     save_feedback(db_path, user_id, "export@example.com", "", "Munich", "", "Great!", "", "", "", "", "")
-    log_feed_poll(db_path, token, "TestAgent/1.0", "127.0.0.1")
+    log_feed_poll(db_path, token, "TestAgent/1.0")
 
     data = export_user_data(db_path, user_id)
 
@@ -658,7 +658,7 @@ def test_export_user_data_returns_all_sections(db_path):
     assert data["preferences"]["cold_threshold"] == 3.0
     assert len(data["feed_tokens"]) == 1
     assert len(data["poll_logs"]) == 1
-    assert data["poll_logs"][0]["ip_address"] == "127.0.0.1"
+    assert "ip_address" not in data["poll_logs"][0]
     assert len(data["feedback"]) == 1
     assert data["feedback"][0]["description"] == "Great!"
 

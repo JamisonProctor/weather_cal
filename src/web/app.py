@@ -575,7 +575,7 @@ async def feed(request: Request, token: str):
 
     ua = request.headers.get("user-agent", "")
     update_feed_poll(DB_PATH, token, ua)
-    log_feed_poll(DB_PATH, token, ua, request.client.host if request.client else "")
+    log_feed_poll(DB_PATH, token, ua)
 
     user_id = rows[0]["id"]
     locations = list({row["location"] for row in rows})

@@ -67,8 +67,9 @@ def test_warning_produces_timed_event():
     assert len(events) == 2
 
     timed = next(e for e in events if hasattr(e["DTSTART"].dt, "hour"))
-    assert "Rain Warning" in str(timed["SUMMARY"])
-    assert "☂️" in str(timed["SUMMARY"])
+    summary = str(timed["SUMMARY"])
+    assert "☂️" in summary
+    assert "%" in summary  # contextual rain probability
 
     # dtstart should be timezone-aware
     assert timed["DTSTART"].dt.tzinfo is not None
@@ -237,11 +238,11 @@ def test_generate_ics_unknown_timezone_falls_back_to_utc():
     assert timed[0]["DTSTART"].dt.utcoffset().total_seconds() == 0
 
 
-def test_sunny_summary_fahrenheit():
-    from src.integrations.ics_service import _sunny_summary
-    from src.services.forecast_formatting import WarningWindow
-    window = WarningWindow(
-        warning_type="sunny", emoji="☀️", label="Nice weather — enjoy!",
+def test_merged_window_summary_sunny_fahrenheit():
+    from src.integrations.ics_service import _merged_window_summary
+    from src.services.forecast_formatting import MergedWarningWindow
+    merged = MergedWarningWindow(
+        warning_types=["sunny"], emojis=["☀️"],
         start_time="2026-03-10T10:00", end_time="2026-03-10T13:00",
     )
     forecast = _make_forecast(
@@ -251,27 +252,68 @@ def test_sunny_summary_fahrenheit():
         rain=[0, 0, 0],
         winds=[5, 5, 5],
     )
-    result = _sunny_summary(window, forecast, warm_threshold=14.0, temp_unit="F")
+    result = _merged_window_summary(merged, forecast, prefs={"temp_unit": "F"})
     assert "°F" in result
     assert "☀️" in result
 
 
-def test_sunny_summary_below_warm_threshold_fallback():
-    from src.integrations.ics_service import _sunny_summary
-    from src.services.forecast_formatting import WarningWindow
-    window = WarningWindow(
-        warning_type="sunny", emoji="☀️", label="Nice weather — enjoy!",
+def test_merged_window_summary_rain_shows_probability():
+    from src.integrations.ics_service import _merged_window_summary
+    from src.services.forecast_formatting import MergedWarningWindow
+    merged = MergedWarningWindow(
+        warning_types=["rain"], emojis=["☂️"],
+        start_time="2026-03-10T10:00", end_time="2026-03-10T13:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00", "2026-03-10T12:00"],
+        temps=[12, 13, 14],
+        codes=[61, 61, 63],
+        rain=[50, 70, 60],
+        winds=[5, 5, 5],
+    )
+    result = _merged_window_summary(merged, forecast)
+    assert "☂️" in result
+    assert "50–70%" in result
+
+
+def test_merged_window_summary_wind_shows_speed():
+    from src.integrations.ics_service import _merged_window_summary
+    from src.services.forecast_formatting import MergedWarningWindow
+    merged = MergedWarningWindow(
+        warning_types=["wind"], emojis=["🌬️"],
         start_time="2026-03-10T10:00", end_time="2026-03-10T12:00",
     )
     forecast = _make_forecast(
         times=["2026-03-10T10:00", "2026-03-10T11:00"],
-        temps=[5, 6],
-        codes=[0, 0],
+        temps=[15, 16],
+        codes=[1, 1],
         rain=[0, 0],
-        winds=[5, 5],
+        winds=[35, 45],
     )
-    result = _sunny_summary(window, forecast, warm_threshold=14.0)
-    assert result == "☀️ Nice weather — enjoy!"
+    result = _merged_window_summary(merged, forecast)
+    assert "🌬️" in result
+    assert "35–45 km/h" in result
+
+
+def test_merged_window_summary_combined_shows_temp():
+    from src.integrations.ics_service import _merged_window_summary
+    from src.services.forecast_formatting import MergedWarningWindow
+    merged = MergedWarningWindow(
+        warning_types=["rain", "cold"], emojis=["☂️", "🥶"],
+        start_time="2026-03-10T10:00", end_time="2026-03-10T13:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00", "2026-03-10T12:00"],
+        temps=[1, 2, 0],
+        codes=[61, 61, 63],
+        rain=[50, 70, 60],
+        winds=[5, 5, 5],
+    )
+    result = _merged_window_summary(merged, forecast)
+    assert "☂️" in result
+    assert "🥶" in result
+    assert " ~ " in result
+    assert "°C" in result
 
 
 def test_stable_uid_determinism():
@@ -337,6 +379,34 @@ def test_timed_event_description_fahrenheit():
     assert timed
     desc = str(timed[0].get("DESCRIPTION", ""))
     assert "°F" in desc
+
+
+def test_overlapping_rain_and_cold_produces_single_timed_event():
+    """Overlapping rain and cold windows merge into one calendar event."""
+    forecast = _make_forecast(
+        times=[
+            "2026-03-10T17:00", "2026-03-10T18:00", "2026-03-10T19:00",
+            "2026-03-10T20:00", "2026-03-10T21:00", "2026-03-10T22:00",
+        ],
+        temps=[2, 1, 0, -1, -1, -2],
+        codes=[61, 61, 63, 63, 61, 61],
+        rain=[50, 60, 70, 65, 55, 50],
+        winds=[5, 5, 5, 5, 5, 5],
+    )
+    prefs = {
+        "warn_in_allday": 1, "warn_rain": 1, "warn_wind": 1,
+        "warn_cold": 1, "warn_snow": 1, "warn_sunny": 0, "cold_threshold": 3.0,
+        "show_allday_events": 1, "timed_events_enabled": 1,
+        "allday_rain": 1, "allday_wind": 1, "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0,
+    }
+    ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
+    events = _parse_events(ics_bytes)
+    timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
+    # Rain 17-23 and cold 17-23 overlap → single merged event
+    assert len(timed) == 1
+    summary = str(timed[0]["SUMMARY"])
+    assert "☂️" in summary
+    assert "🥶" in summary
 
 
 def test_generate_ics_summary_uses_prefs_cold_threshold():

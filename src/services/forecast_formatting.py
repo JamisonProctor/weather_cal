@@ -137,6 +137,15 @@ class WarningWindow:
     end_time: str       # ISO datetime e.g. "2025-08-01T14:00" (exclusive — last active hour + 1h)
 
 
+@dataclass
+class MergedWarningWindow:
+    """One or more overlapping WarningWindows merged into a single calendar event."""
+    warning_types: List[str]    # e.g. ["rain", "cold"] — ordered by _WARNING_CHECKS
+    emojis: List[str]           # e.g. ["☂️", "🥶"]
+    start_time: str             # min of all overlapping starts
+    end_time: str               # max of all overlapping ends
+
+
 _WARNING_CHECKS = [
     (
         "rain", "☂️", "Rain Warning",
@@ -235,6 +244,52 @@ def get_warning_windows(forecast: Forecast, prefs=None) -> List[WarningWindow]:
             ))
 
     return windows
+
+
+_TYPE_ORDER = {wtype: i for i, (wtype, *_) in enumerate(_WARNING_CHECKS)}
+
+
+def merge_overlapping_windows(windows: List[WarningWindow]) -> List[MergedWarningWindow]:
+    """Merge overlapping WarningWindows into combined MergedWarningWindows."""
+    if not windows:
+        return []
+
+    intervals = []
+    for w in windows:
+        start_dt = datetime.fromisoformat(w.start_time)
+        end_dt = datetime.fromisoformat(w.end_time)
+        intervals.append((start_dt, end_dt, w))
+
+    intervals.sort(key=lambda x: x[0])
+
+    merged: List[MergedWarningWindow] = []
+    cur_start, cur_end = intervals[0][0], intervals[0][1]
+    cur_types = {intervals[0][2].warning_type: intervals[0][2].emoji}
+
+    for start_dt, end_dt, w in intervals[1:]:
+        if start_dt < cur_end:  # strict overlap
+            cur_end = max(cur_end, end_dt)
+            cur_types[w.warning_type] = w.emoji
+        else:
+            ordered = sorted(cur_types.items(), key=lambda x: _TYPE_ORDER.get(x[0], 99))
+            merged.append(MergedWarningWindow(
+                warning_types=[t for t, _ in ordered],
+                emojis=[e for _, e in ordered],
+                start_time=cur_start.strftime("%Y-%m-%dT%H:%M"),
+                end_time=cur_end.strftime("%Y-%m-%dT%H:%M"),
+            ))
+            cur_start, cur_end = start_dt, end_dt
+            cur_types = {w.warning_type: w.emoji}
+
+    ordered = sorted(cur_types.items(), key=lambda x: _TYPE_ORDER.get(x[0], 99))
+    merged.append(MergedWarningWindow(
+        warning_types=[t for t, _ in ordered],
+        emojis=[e for _, e in ordered],
+        start_time=cur_start.strftime("%Y-%m-%dT%H:%M"),
+        end_time=cur_end.strftime("%Y-%m-%dT%H:%M"),
+    ))
+
+    return merged
 
 
 def format_detailed_forecast(forecast: Forecast, prefs=None) -> str:

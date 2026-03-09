@@ -14,6 +14,7 @@ def _mock_openai_response(content: str):
     return mock_response
 
 
+@patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
 @patch("src.events.discovery.extractor.OpenAI")
 def test_extract_events_returns_list(mock_openai_class):
     events_json = json.dumps({"events": [
@@ -38,6 +39,7 @@ def test_extract_events_returns_list(mock_openai_class):
     assert result[0]["category"] == "concert"
 
 
+@patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
 @patch("src.events.discovery.extractor.OpenAI")
 def test_extract_events_filters_non_free(mock_openai_class):
     events_json = json.dumps({"events": [
@@ -60,6 +62,7 @@ def test_extract_events_filters_non_free(mock_openai_class):
     assert len(result) == 0
 
 
+@patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
 @patch("src.events.discovery.extractor.OpenAI")
 def test_extract_events_handles_invalid_json(mock_openai_class):
     mock_client = MagicMock()
@@ -70,6 +73,7 @@ def test_extract_events_handles_invalid_json(mock_openai_class):
     assert result == []
 
 
+@patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
 @patch("src.events.discovery.extractor.OpenAI")
 def test_extract_events_handles_api_error(mock_openai_class):
     mock_client = MagicMock()
@@ -80,6 +84,7 @@ def test_extract_events_handles_api_error(mock_openai_class):
     assert result == []
 
 
+@patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
 @patch("src.events.discovery.extractor.OpenAI")
 def test_extract_events_missing_key(mock_openai_class):
     mock_client = MagicMock()
@@ -96,6 +101,7 @@ def test_extract_events_no_api_key():
     assert result == []
 
 
+@patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
 @patch("src.events.discovery.extractor.OpenAI")
 def test_assess_event_quality_yes(mock_openai_class):
     mock_client = MagicMock()
@@ -106,6 +112,7 @@ def test_assess_event_quality_yes(mock_openai_class):
     assert assess_event_quality(event) is True
 
 
+@patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
 @patch("src.events.discovery.extractor.OpenAI")
 def test_assess_event_quality_no(mock_openai_class):
     mock_client = MagicMock()
@@ -116,6 +123,7 @@ def test_assess_event_quality_no(mock_openai_class):
     assert assess_event_quality(event) is False
 
 
+@patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"})
 @patch("src.events.discovery.extractor.OpenAI")
 def test_assess_event_quality_handles_error(mock_openai_class):
     mock_client = MagicMock()

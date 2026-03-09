@@ -1,10 +1,13 @@
 from src.models.forecast import Forecast
 from src.services.forecast_formatting import (
+    MergedWarningWindow,
+    WarningWindow,
     c_to_f,
     format_detailed_forecast,
     format_summary,
     get_warning_windows,
     map_code_to_emoji,
+    merge_overlapping_windows,
 )
 
 
@@ -390,3 +393,72 @@ def test_sunny_to_partly_cloudy_merges_into_one_window():
     assert len(sunny) == 1
     assert sunny[0].start_time == "2025-08-01T10:00"
     assert sunny[0].end_time == "2025-08-01T16:00"
+
+
+# --- merge_overlapping_windows tests ---
+
+
+def test_merge_overlapping_windows_two_overlap():
+    """Two overlapping windows merge into one with combined types."""
+    windows = [
+        WarningWindow("rain", "☂️", "Rain Warning", "2025-08-01T17:00", "2025-08-01T23:00"),
+        WarningWindow("cold", "🥶", "Cold Warning", "2025-08-01T18:00", "2025-08-01T23:00"),
+    ]
+    merged = merge_overlapping_windows(windows)
+    assert len(merged) == 1
+    assert merged[0].warning_types == ["rain", "cold"]
+    assert merged[0].emojis == ["☂️", "🥶"]
+    assert merged[0].start_time == "2025-08-01T17:00"
+    assert merged[0].end_time == "2025-08-01T23:00"
+
+
+def test_merge_overlapping_windows_non_overlapping_stay_separate():
+    """Non-overlapping windows remain as separate merged windows."""
+    windows = [
+        WarningWindow("rain", "☂️", "Rain Warning", "2025-08-01T06:00", "2025-08-01T08:00"),
+        WarningWindow("wind", "🌬️", "Wind Warning", "2025-08-01T14:00", "2025-08-01T16:00"),
+    ]
+    merged = merge_overlapping_windows(windows)
+    assert len(merged) == 2
+    assert merged[0].warning_types == ["rain"]
+    assert merged[1].warning_types == ["wind"]
+
+
+def test_merge_overlapping_windows_single_passthrough():
+    """A single window passes through as a single MergedWarningWindow."""
+    windows = [
+        WarningWindow("rain", "☂️", "Rain Warning", "2025-08-01T10:00", "2025-08-01T14:00"),
+    ]
+    merged = merge_overlapping_windows(windows)
+    assert len(merged) == 1
+    assert merged[0].warning_types == ["rain"]
+    assert merged[0].start_time == "2025-08-01T10:00"
+    assert merged[0].end_time == "2025-08-01T14:00"
+
+
+def test_merge_overlapping_windows_empty():
+    """Empty input returns empty output."""
+    assert merge_overlapping_windows([]) == []
+
+
+def test_merge_overlapping_windows_emoji_ordering():
+    """Types/emojis are ordered by _WARNING_CHECKS order, not input order."""
+    windows = [
+        WarningWindow("cold", "🥶", "Cold Warning", "2025-08-01T10:00", "2025-08-01T14:00"),
+        WarningWindow("rain", "☂️", "Rain Warning", "2025-08-01T11:00", "2025-08-01T15:00"),
+    ]
+    merged = merge_overlapping_windows(windows)
+    assert len(merged) == 1
+    # rain comes before cold in _WARNING_CHECKS
+    assert merged[0].warning_types == ["rain", "cold"]
+    assert merged[0].emojis == ["☂️", "🥶"]
+
+
+def test_merge_overlapping_windows_adjacent_not_merged():
+    """Adjacent windows (end == start) are NOT merged — only strict overlap."""
+    windows = [
+        WarningWindow("rain", "☂️", "Rain Warning", "2025-08-01T10:00", "2025-08-01T12:00"),
+        WarningWindow("wind", "🌬️", "Wind Warning", "2025-08-01T12:00", "2025-08-01T14:00"),
+    ]
+    merged = merge_overlapping_windows(windows)
+    assert len(merged) == 2

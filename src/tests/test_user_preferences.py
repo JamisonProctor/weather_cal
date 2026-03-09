@@ -293,4 +293,4 @@ def test_allday_rain_false_hides_rain_icon_but_timed_event_remains():
     allday = next(e for e in events if not hasattr(e["DTSTART"].dt, "hour"))
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
     assert "☂️" not in str(allday["SUMMARY"])
-    assert any("Rain Warning" in str(e["SUMMARY"]) for e in timed)
+    assert any("☂️" in str(e["SUMMARY"]) and "%" in str(e["SUMMARY"]) for e in timed)

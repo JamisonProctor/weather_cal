@@ -7,8 +7,8 @@ from icalendar import Calendar, Event
 
 from src.models.forecast import Forecast
 from src.services.forecast_formatting import (
-    c_to_f, format_detailed_forecast, format_summary, get_warning_windows,
-    map_code_to_emoji, _fmt_temp,
+    MergedWarningWindow, c_to_f, format_detailed_forecast, format_summary,
+    get_warning_windows, map_code_to_emoji, merge_overlapping_windows, _fmt_temp,
 )
 
 
@@ -22,25 +22,54 @@ def _warning_uid(start_time: str, location: str, warning_type: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()[:16] + "@weathercal.app"
 
 
-def _sunny_summary(window, forecast, warm_threshold: float = 14.0, temp_unit: str = "C") -> str:
-    try:
-        start = datetime.fromisoformat(window.start_time)
-        end = datetime.fromisoformat(window.end_time)
-        temps_in_window = [
-            t for slot, t in zip(forecast.times, forecast.temps)
-            if start <= datetime.fromisoformat(slot) <= end and t >= warm_threshold
-        ]
-        if temps_in_window:
-            if temp_unit == "F":
-                lo = round(c_to_f(min(temps_in_window)))
-                hi = round(c_to_f(max(temps_in_window)))
-            else:
-                lo = round(min(temps_in_window))
-                hi = round(max(temps_in_window))
-            return f"☀️ {lo} ~ {hi}°{temp_unit}"
-    except Exception:
-        pass
-    return f"{window.emoji} {window.label}"
+def _merged_warning_uid(start_time: str, location: str, warning_types: List[str]) -> str:
+    types_key = "+".join(sorted(warning_types))
+    raw = f"{start_time}:{location}:{types_key}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:16] + "@weathercal.app"
+
+
+def _merged_window_summary(merged: MergedWarningWindow, forecast: Forecast, prefs=None) -> str:
+    """Build a contextual summary for a merged warning window."""
+    unit = prefs.get("temp_unit", "C") if prefs else "C"
+    start = datetime.fromisoformat(merged.start_time)
+    end = datetime.fromisoformat(merged.end_time)
+
+    temps_in_window = [
+        t for slot, t in zip(forecast.times, forecast.temps)
+        if start <= datetime.fromisoformat(slot) < end and t is not None
+    ]
+    rain_in_window = [
+        r for slot, r in zip(forecast.times, forecast.rain)
+        if start <= datetime.fromisoformat(slot) < end and r is not None
+    ]
+    wind_in_window = [
+        w for slot, w in zip(forecast.times, forecast.winds)
+        if start <= datetime.fromisoformat(slot) < end and w is not None
+    ]
+
+    emoji_str = "".join(merged.emojis)
+
+    # Single type: show type-specific data
+    if len(merged.warning_types) == 1:
+        wtype = merged.warning_types[0]
+        if wtype == "rain" and rain_in_window:
+            lo, hi = round(min(rain_in_window)), round(max(rain_in_window))
+            return f"☂️ {lo}–{hi}%"
+        if wtype == "wind" and wind_in_window:
+            lo, hi = round(min(wind_in_window)), round(max(wind_in_window))
+            return f"🌬️ {lo}–{hi} km/h"
+        if wtype in ("cold", "snow", "hot", "sunny") and temps_in_window:
+            lo = _fmt_temp(min(temps_in_window), unit)
+            hi = _fmt_temp(max(temps_in_window), unit)
+            return f"{emoji_str} {lo} ~ {hi}°{unit}"
+
+    # Combined types: always show temp range
+    if temps_in_window:
+        lo = _fmt_temp(min(temps_in_window), unit)
+        hi = _fmt_temp(max(temps_in_window), unit)
+        return f"{emoji_str} {lo} ~ {hi}°{unit}"
+
+    return emoji_str
 
 
 def _format_window_description(forecast: Forecast, window, prefs=None) -> str:
@@ -120,21 +149,18 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, sett
 
         timed_enabled = prefs.get("timed_events_enabled", 1) if prefs else 1
         if timed_enabled:
-            for window in get_warning_windows(forecast, prefs):
+            windows = get_warning_windows(forecast, prefs)
+            merged_windows = merge_overlapping_windows(windows)
+            for merged in merged_windows:
                 w_event = Event()
-                w_event.add("uid", _warning_uid(window.start_time, forecast.location, window.warning_type))
-                if window.warning_type == "sunny":
-                    warm_threshold = prefs.get("warm_threshold", 14.0) if prefs else 14.0
-                    temp_unit = prefs.get("temp_unit", "C") if prefs else "C"
-                    summary = _sunny_summary(window, forecast, warm_threshold, temp_unit)
-                else:
-                    summary = f"{window.emoji} {window.label}"
+                w_event.add("uid", _merged_warning_uid(merged.start_time, forecast.location, merged.warning_types))
+                summary = _merged_window_summary(merged, forecast, prefs)
                 w_event.add("summary", summary)
-                w_event.add("dtstart", datetime.fromisoformat(window.start_time).replace(tzinfo=tz))
-                w_event.add("dtend", datetime.fromisoformat(window.end_time).replace(tzinfo=tz))
+                w_event.add("dtstart", datetime.fromisoformat(merged.start_time).replace(tzinfo=tz))
+                w_event.add("dtend", datetime.fromisoformat(merged.end_time).replace(tzinfo=tz))
                 w_event.add("transp", "TRANSPARENT")
                 w_event.add("dtstamp", now)
-                description = _format_window_description(forecast, window, prefs)
+                description = _format_window_description(forecast, merged, prefs)
                 if settings_url:
                     description += f"\n\n⚙️ Change your settings: {settings_url}"
                 w_event.add("description", description)

@@ -489,6 +489,12 @@ def test_impressum_returns_200(client):
     assert resp.status_code == 200
 
 
+def test_privacy_returns_200(client):
+    resp = client.get("/privacy")
+    assert resp.status_code == 200
+    assert "Privacy Policy" in resp.text
+
+
 # --- Connect, feedback, geocode routes ---
 
 def test_connect_page_returns_200(client, db_path):

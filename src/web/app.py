@@ -654,3 +654,8 @@ async def impressum(request: Request):
 @app.get("/privacy", response_class=HTMLResponse)
 async def privacy(request: Request):
     return _template("privacy.html", request)
+
+
+@app.get("/terms", response_class=HTMLResponse)
+async def terms(request: Request):
+    return _template("terms.html", request)

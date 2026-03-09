@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Privacy Policy — WeatherCal{% endblock %}
+
+{% block body_class %}layout-medium{% endblock %}
+
+{% block extra_style %}
+<style>
+  h1 { font-size: 1.5rem; margin: 0 0 8px; }
+  .updated { font-size: 0.82rem; color: #9ca3af; margin-bottom: 28px; }
+  .intro { margin-bottom: 24px; font-size: 0.95rem; line-height: 1.6; color: #374151; }
+  h2 { font-size: 1.1rem; margin: 28px 0 10px; color: #111; }
+  h3 { font-size: 0.95rem; margin: 18px 0 6px; color: #111; }
+  p, li { font-size: 0.95rem; line-height: 1.6; color: #374151; }
+  p { margin: 0 0 10px; }
+  ul { margin: 0 0 10px; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: March 9, 2026</p>
+
+  <p class="intro">WeatherCal ("we", "us", "the Service") is a personal weather calendar service operated by Jamison Proctor. This privacy policy explains what data we collect, how we use it, and your rights regarding that data.</p>
+
+  <p class="intro">WeatherCal is currently a prototype product under active development. By using the Service, you acknowledge that features may change, and we may contact you at the email address you provided regarding service updates, changes, or issues that affect your account.</p>
+
+  <h2>What Data We Collect</h2>
+
+  <h3>Account Data</h3>
+  <p>When you sign up, we collect your <strong>email address</strong> and store a <strong>hashed version of your password</strong> (we never store your password in plain text). We also record when your account was created.</p>
+
+  <h3>Location Data</h3>
+  <p>To generate your weather calendar, we store the <strong>city or location name</strong> you provide, along with its <strong>latitude, longitude, and timezone</strong>. This is necessary to fetch accurate weather forecasts for your area.</p>
+
+  <h3>Calendar Feed Data</h3>
+  <p>We generate a unique, random <strong>feed token</strong> for your calendar subscription. We log when your calendar app polls the feed, including the <strong>timestamp, user agent string</strong> (which identifies your calendar app), and <strong>IP address</strong>. This helps us monitor service health and diagnose issues.</p>
+
+  <h3>Weather Preferences</h3>
+  <p>We store your <strong>weather display preferences</strong>, including temperature thresholds, warning types, temperature unit, and event display settings. These are used solely to customize your calendar feed.</p>
+
+  <h3>Feedback Data</h3>
+  <p>If you submit feedback through the app, we collect the <strong>content of your feedback</strong> along with basic technical context (browser user agent, platform, screen size, timezone) to help us understand and reproduce any issues you report.</p>
+
+  <h3>Google Calendar Data (Optional)</h3>
+  <p>If you choose to connect your Google account, we request access using the <code>calendar.app.created</code> scope. This scope <strong>only</strong> allows us to create and manage a calendar that WeatherCal itself created in your Google account. We <strong>cannot</strong> read, modify, or delete any of your existing calendars or events.</p>
+  <p>When you connect Google, we store your <strong>OAuth access token, refresh token, token expiry</strong>, and the <strong>calendar ID</strong> of the WeatherCal calendar we create. These are used solely to push weather events to your Google Calendar.</p>
+
+  <h2>How We Use Your Data</h2>
+
+  <p>We use your data exclusively to provide and maintain the WeatherCal service:</p>
+  <ul>
+    <li>Your <strong>email</strong> identifies your account and allows us to contact you about service-related matters</li>
+    <li>Your <strong>location</strong> is sent to weather data providers to fetch forecasts (as coordinates only, not linked to your identity)</li>
+    <li>Your <strong>preferences</strong> customize which weather events and warnings appear in your calendar</li>
+    <li>Your <strong>feed token</strong> authenticates your calendar app when it requests your ICS feed</li>
+    <li>Your <strong>Google tokens</strong> (if connected) push weather events to a dedicated WeatherCal calendar in your Google account</li>
+    <li><strong>Poll logs</strong> help us monitor whether calendar subscriptions are working correctly</li>
+  </ul>
+
+  <h2>How We Store Your Data</h2>
+
+  <p>All data is stored in a SQLite database on our server. Passwords are hashed using bcrypt. Google OAuth tokens are stored server-side and are never exposed to the browser. The service runs on a single server and data is not replicated to other locations.</p>
+
+  <h2>What We Share</h2>
+
+  <p>We do <strong>not</strong> sell, rent, or share your personal data with third parties.</p>
+  <p>Your location coordinates (latitude and longitude) are sent to third-party weather APIs to retrieve forecast data. These requests do not include your email, name, or any other identifying information.</p>
+  <p>Google OAuth tokens are used exclusively to communicate with Google's Calendar API on your behalf.</p>
+
+  <h2>Your Rights and Controls</h2>
+
+  <h3>Access and Update</h3>
+  <p>You can view and update your email address, password, location, and weather preferences at any time through your account settings.</p>
+
+  <h3>Delete Your Account</h3>
+  <p>You can delete your account through the settings page. When you delete your account, we immediately revoke your feed token (stopping calendar updates), and your account is deactivated. If you have connected Google Calendar, disconnecting will revoke the OAuth tokens and remove our access to the calendar we created.</p>
+
+  <h3>Disconnect Google Calendar</h3>
+  <p>You can disconnect your Google account at any time through the settings page. This revokes our access tokens and stops event updates to your Google Calendar. The WeatherCal calendar created in your Google account will remain (since you own it), but we will no longer be able to update it.</p>
+
+  <h3>Data Portability</h3>
+  <p>Your weather calendar is available as a standard ICS feed that any calendar application can subscribe to. You can export this data at any time simply by accessing your feed URL.</p>
+
+  <h3>GDPR Rights (EU Users)</h3>
+  <p>If you are located in the European Union, you have the right to access, correct, delete, or port your personal data. You also have the right to object to or restrict processing. To exercise these rights, contact us at the email address listed below.</p>
+
+  <h2>Cookies and Tracking</h2>
+
+  <p>WeatherCal uses a <strong>session cookie</strong> to keep you logged in. We do not use analytics cookies, advertising trackers, or any third-party tracking scripts.</p>
+
+  <h2>Prototype Disclaimer</h2>
+
+  <p>WeatherCal is a prototype product under active development. The Service is provided "as is" without warranty. Features may change, be added, or be removed. We may contact you at the email address associated with your account regarding updates, changes, outages, or feedback requests related to the Service.</p>
+
+  <h2>Changes to This Policy</h2>
+
+  <p>We may update this privacy policy as the service evolves. Significant changes will be communicated via the email address associated with your account.</p>
+
+  <h2>Contact</h2>
+
+  <p>For any questions about this privacy policy or your data, contact:</p>
+  <p>Jamison Proctor<br>
+  <a href="mailto:jamison.proctor@gmail.com">jamison.proctor@gmail.com</a></p>
+{% endblock %}
+
+{% block footer %}
+<footer style="margin-top:48px;padding-top:16px;border-top:1px solid #f3f4f6;font-size:0.78rem;text-align:left">
+  <a href="javascript:history.back()" style="color:#9ca3af;text-decoration:none">← Back</a>
+</footer>
+{% endblock %}

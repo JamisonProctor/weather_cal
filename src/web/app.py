@@ -635,3 +635,8 @@ async def admin(request: Request):
 @app.get("/impressum", response_class=HTMLResponse)
 async def impressum(request: Request):
     return _template("impressum.html", request)
+
+
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy(request: Request):
+    return _template("privacy.html", request)

@@ -250,6 +250,28 @@ def push_events_for_user(db_path, user_id, forecasts, prefs, location, tz_name):
             return
 
 
+def _upsert_event(service, calendar_id, event_body):
+    """Insert an event, or patch it if it already exists (by iCalUID)."""
+    try:
+        service.events().import_(calendarId=calendar_id, body=event_body).execute()
+    except HttpError as e:
+        if e.resp.status == 409:
+            # Event already exists — find it by iCalUID and patch
+            ical_uid = event_body["iCalUID"]
+            existing = service.events().list(
+                calendarId=calendar_id, iCalUID=ical_uid, maxResults=1
+            ).execute()
+            items = existing.get("items", [])
+            if items:
+                event_id = items[0]["id"]
+                patch_body = {k: v for k, v in event_body.items() if k != "iCalUID"}
+                service.events().patch(
+                    calendarId=calendar_id, eventId=event_id, body=patch_body
+                ).execute()
+        else:
+            raise
+
+
 def _push_forecast_events(service, calendar_id, forecast, prefs, tz, tz_name):
     from datetime import date as date_type
 
@@ -267,7 +289,7 @@ def _push_forecast_events(service, calendar_id, forecast, prefs, tz, tz_name):
             "end": {"date": (date_type.fromisoformat(forecast.date) + timedelta(days=1)).isoformat()},
             "transparency": "transparent",
         }
-        service.events().import_(calendarId=calendar_id, body=event_body).execute()
+        _upsert_event(service, calendar_id, event_body)
 
     timed_enabled = prefs.get("timed_events_enabled", 1) if prefs else 1
     if timed_enabled:
@@ -293,7 +315,7 @@ def _push_forecast_events(service, calendar_id, forecast, prefs, tz, tz_name):
                 },
                 "transparency": "transparent",
             }
-            service.events().import_(calendarId=calendar_id, body=event_body).execute()
+            _upsert_event(service, calendar_id, event_body)
 
 
 def _clear_calendar_id(db_path: str, user_id: int) -> None:

@@ -158,6 +158,41 @@ def _mark_revoked(db_path: str, user_id: int) -> None:
         conn.close()
 
 
+def delete_google_calendar(db_path: str, user_id: int) -> None:
+    """Delete the WeatherCal calendar from the user's Google account."""
+    credentials = get_google_credentials(db_path, user_id)
+    if not credentials:
+        return
+
+    conn = _conn(db_path)
+    try:
+        row = conn.execute(
+            "SELECT google_calendar_id FROM google_tokens WHERE user_id = ?", (user_id,)
+        ).fetchone()
+    finally:
+        conn.close()
+
+    calendar_id = row["google_calendar_id"] if row else None
+    if not calendar_id:
+        return
+
+    credentials = refresh_and_persist(db_path, user_id, credentials)
+    if not credentials:
+        return
+
+    try:
+        service = build_google_service(credentials)
+        service.calendars().delete(calendarId=calendar_id).execute()
+        logger.info("Deleted Google calendar %s for user_id=%s", calendar_id, user_id)
+    except HttpError as e:
+        if e.resp.status == 404:
+            logger.info("Google calendar %s already deleted for user_id=%s", calendar_id, user_id)
+        else:
+            logger.warning("Failed to delete Google calendar for user_id=%s: %s", user_id, e)
+    except Exception:
+        logger.warning("Failed to delete Google calendar for user_id=%s", user_id, exc_info=True)
+
+
 def delete_google_tokens(db_path: str, user_id: int) -> None:
     conn = _conn(db_path)
     try:

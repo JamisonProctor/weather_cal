@@ -9,6 +9,7 @@ from src.web.db import create_feedback_table, create_user_preferences_table
 from src.events.db import create_event_tables
 from src.integrations.google_push import (
     create_google_tokens_table,
+    delete_google_calendar,
     delete_google_tokens,
     get_google_connected_users,
     get_google_credentials,
@@ -149,3 +150,37 @@ def test_create_weathercal_calendar():
     mock_service.calendars().insert().execute.return_value = {"id": "new_cal_id"}
     result = create_weathercal_calendar(mock_service)
     assert result == "new_cal_id"
+
+
+def test_delete_google_calendar_calls_api(db_path, monkeypatch):
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-secret")
+    user_id = create_user(db_path, "delcal@example.com", "supersecretpass1")
+    cred = _make_credentials()
+    store_google_tokens(db_path, user_id, cred, "cal_to_delete@group.calendar.google.com")
+
+    mock_service = MagicMock()
+    with patch("src.integrations.google_push.refresh_and_persist", return_value=cred), \
+         patch("src.integrations.google_push.build_google_service", return_value=mock_service):
+        delete_google_calendar(db_path, user_id)
+
+    mock_service.calendars().delete.assert_called_with(calendarId="cal_to_delete@group.calendar.google.com")
+
+
+def test_delete_google_calendar_handles_404(db_path, monkeypatch):
+    """If the calendar was already deleted by the user, don't raise."""
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-secret")
+    user_id = create_user(db_path, "delcal404@example.com", "supersecretpass1")
+    cred = _make_credentials()
+    store_google_tokens(db_path, user_id, cred, "gone_cal@group.calendar.google.com")
+
+    mock_service = MagicMock()
+    mock_resp = MagicMock()
+    mock_resp.status = 404
+    from googleapiclient.errors import HttpError
+    mock_service.calendars().delete().execute.side_effect = HttpError(mock_resp, b"Not Found")
+
+    with patch("src.integrations.google_push.refresh_and_persist", return_value=cred), \
+         patch("src.integrations.google_push.build_google_service", return_value=mock_service):
+        delete_google_calendar(db_path, user_id)  # should not raise

@@ -242,6 +242,29 @@ def create_weathercal_calendar(service, location: str = "") -> str:
     return created["id"]
 
 
+def _expected_calendar_summary(location: str) -> str:
+    city = location.split(",")[0].strip() if "," in location else location
+    return f"WeatherCal \u2014 {city}" if city else "WeatherCal"
+
+
+def _sync_calendar_name(service, calendar_id: str, location: str):
+    """Rename the Google Calendar if the user's location has changed."""
+    expected = _expected_calendar_summary(location)
+    try:
+        cal = service.calendars().get(calendarId=calendar_id).execute()
+        if cal.get("summary") != expected:
+            city = location.split(",")[0].strip() if "," in location else location
+            cal["summary"] = expected
+            cal["description"] = f"Weather forecasts for {city} from WeatherCal" if city else "Weather forecasts from WeatherCal"
+            service.calendars().patch(calendarId=calendar_id, body={
+                "summary": cal["summary"],
+                "description": cal["description"],
+            }).execute()
+            logger.info("Renamed Google calendar %s to '%s'", calendar_id, expected)
+    except HttpError:
+        logger.warning("Failed to sync calendar name for %s", calendar_id, exc_info=True)
+
+
 def push_events_for_user(db_path, user_id, forecasts, prefs, location, tz_name):
     credentials = get_google_credentials(db_path, user_id)
     if not credentials:
@@ -268,6 +291,9 @@ def push_events_for_user(db_path, user_id, forecasts, prefs, location, tz_name):
     except Exception:
         logger.exception("Failed to build Google service for user_id=%s", user_id)
         return
+
+    # Update calendar name if location changed
+    _sync_calendar_name(service, calendar_id, location)
 
     try:
         tz = ZoneInfo(tz_name) if tz_name else timezone.utc

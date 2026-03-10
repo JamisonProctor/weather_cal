@@ -676,7 +676,11 @@ async def google_auth_disconnect(request: Request):
     if not user_id:
         return RedirectResponse(url="/login", status_code=303)
 
-    from src.integrations.google_push import get_google_credentials
+    from src.integrations.google_push import get_google_credentials, delete_google_calendar
+    # Delete the WeatherCal calendar from user's Google account first
+    delete_google_calendar(DB_PATH, user_id)
+
+    # Revoke the OAuth token with Google
     credentials = get_google_credentials(DB_PATH, user_id)
     if credentials and credentials.token:
         try:

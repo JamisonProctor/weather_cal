@@ -54,10 +54,10 @@ def _merged_window_summary(merged: MergedWarningWindow, forecast: Forecast, pref
         wtype = merged.warning_types[0]
         if wtype == "rain" and rain_in_window:
             lo, hi = round(min(rain_in_window)), round(max(rain_in_window))
-            return f"☂️ {lo}–{hi}%"
+            return f"☂️ {lo} ~ {hi}%"
         if wtype == "wind" and wind_in_window:
             lo, hi = round(min(wind_in_window)), round(max(wind_in_window))
-            return f"🌬️ {lo}–{hi} km/h"
+            return f"🌬️ {lo} ~ {hi} km/h"
         if wtype in ("cold", "snow", "hot", "sunny") and temps_in_window:
             lo = _fmt_temp(min(temps_in_window), unit)
             hi = _fmt_temp(max(temps_in_window), unit)

@@ -210,7 +210,7 @@ DEFAULT_PREFS = {
     "warn_wind": 1,
     "warn_cold": 1,
     "warn_snow": 1,
-    "warn_sunny": 0,
+    "warn_sunny": 1,
     "warn_hot": 1,
     "show_allday_events": 1,
     "timed_events_enabled": 1,
@@ -238,7 +238,7 @@ def create_user_preferences_table(db_path: str) -> None:
                 warn_wind       INTEGER DEFAULT 1,
                 warn_cold       INTEGER DEFAULT 1,
                 warn_snow       INTEGER DEFAULT 1,
-                warn_sunny      INTEGER DEFAULT 0,
+                warn_sunny      INTEGER DEFAULT 1,
                 updated_at      TEXT
             )
         """)

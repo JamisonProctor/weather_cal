@@ -396,6 +396,10 @@ def delete_user_account(db_path: str, user_id: int) -> None:
         conn.execute("DELETE FROM user_preferences WHERE user_id = ?", (user_id,))
         conn.execute("DELETE FROM user_locations WHERE user_id = ?", (user_id,))
         conn.execute("DELETE FROM feedback WHERE user_id = ?", (user_id,))
+        try:
+            conn.execute("DELETE FROM google_tokens WHERE user_id = ?", (user_id,))
+        except sqlite3.OperationalError:
+            pass  # table may not exist yet
         conn.execute("DELETE FROM feed_tokens WHERE user_id = ?", (user_id,))
         # Soft-delete user record (preserves email uniqueness constraint)
         conn.execute("UPDATE users SET is_active = 0 WHERE id = ?", (user_id,))
@@ -515,6 +519,17 @@ def export_user_data(db_path: str, user_id: int) -> dict:
         )
         feedback = [dict(r) for r in cur.fetchall()]
 
+        # Google Calendar connection
+        try:
+            cur.execute(
+                "SELECT connected_at, status FROM google_tokens WHERE user_id = ?",
+                (user_id,),
+            )
+            google_row = cur.fetchone()
+            google_connection = dict(google_row) if google_row else None
+        except sqlite3.OperationalError:
+            google_connection = None
+
         return {
             "account": account,
             "locations": locations,
@@ -522,6 +537,7 @@ def export_user_data(db_path: str, user_id: int) -> dict:
             "feed_tokens": feed_tokens,
             "poll_logs": poll_logs,
             "feedback": feedback,
+            "google_calendar": google_connection,
         }
     finally:
         conn.close()

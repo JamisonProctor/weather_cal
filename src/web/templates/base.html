@@ -59,5 +59,14 @@
     {% endblock %}
   </div>
   {% block extra_script %}{% endblock %}
+  <script>
+    document.querySelectorAll('.alert-success').forEach(function(el) {
+      setTimeout(function() {
+        el.style.transition = 'opacity 0.5s';
+        el.style.opacity = '0';
+        setTimeout(function() { el.remove(); }, 500);
+      }, 5000);
+    });
+  </script>
 </body>
 </html>

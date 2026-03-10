@@ -204,7 +204,15 @@ def create_weathercal_calendar(service, location: str = "") -> str:
         "timeZone": "UTC",
     }
     created = service.calendars().insert(body=calendar_body).execute()
-    return created["id"]
+    calendar_id = created["id"]
+
+    # Explicitly add to user's calendar list so it's visible and selected in mobile apps
+    service.calendarList().insert(body={
+        "id": calendar_id,
+        "selected": True,
+    }).execute()
+
+    return calendar_id
 
 
 def push_events_for_user(db_path, user_id, forecasts, prefs, location, tz_name):

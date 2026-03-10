@@ -194,10 +194,13 @@ def build_google_service(credentials: Credentials):
     return build("calendar", "v3", credentials=credentials)
 
 
-def create_weathercal_calendar(service) -> str:
+def create_weathercal_calendar(service, location: str = "") -> str:
+    city = location.split(",")[0].strip() if "," in location else location
+    summary = f"WeatherCal \u2014 {city}" if city else "WeatherCal"
+    description = f"Weather forecasts for {city} from WeatherCal" if city else "Weather forecasts from WeatherCal"
     calendar_body = {
-        "summary": "WeatherCal",
-        "description": "Weather forecasts from WeatherCal",
+        "summary": summary,
+        "description": description,
         "timeZone": "UTC",
     }
     created = service.calendars().insert(body=calendar_body).execute()

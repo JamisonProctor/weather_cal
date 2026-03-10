@@ -476,6 +476,15 @@
 
     showTab(getActiveTab());
 
+    // Strip success/error params so alerts don't reappear on refresh
+    var cleanParams = new URLSearchParams(window.location.search);
+    if (cleanParams.has('success') || cleanParams.has('error')) {
+      cleanParams.delete('success');
+      cleanParams.delete('error');
+      var cleanUrl = window.location.pathname + (cleanParams.toString() ? '?' + cleanParams.toString() : '') + window.location.hash;
+      history.replaceState(null, '', cleanUrl);
+    }
+
     window.addEventListener('hashchange', function () {
       showTab(getActiveTab());
     });

@@ -817,7 +817,7 @@ def test_settings_shows_connected_status(client, db_path, monkeypatch):
 
     resp = client.get("/settings", cookies=cookies)
     assert resp.status_code == 200
-    assert b"Connected to Google Calendar" in resp.content
+    assert b"Disconnect Google Calendar" in resp.content
 
 
 def test_settings_hides_google_when_not_configured(client, db_path, monkeypatch):

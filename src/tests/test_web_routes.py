@@ -8,6 +8,7 @@ from src.models.forecast import Forecast
 from src.services.forecast_store import ForecastStore
 from src.web.auth import create_session_token
 from src.events.db import create_event_tables
+from src.integrations.google_push import create_google_tokens_table, store_google_tokens
 from src.web.db import (
     check_password,
     create_feed_token,
@@ -35,6 +36,7 @@ def db_path(tmp_path):
     create_feedback_table(path)
     create_user_preferences_table(path)
     create_event_tables(path)
+    create_google_tokens_table(path)
     return path
 
 
@@ -689,3 +691,161 @@ def test_export_endpoint_requires_auth(client):
     resp = client.get("/settings/export")
     assert resp.status_code == 303
     assert resp.headers["location"] == "/login"
+
+
+# --- Google OAuth routes ---
+
+def test_google_auth_start_requires_login(client):
+    resp = client.get("/auth/google")
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/login"
+
+
+def test_google_auth_start_redirects_to_google(client, db_path, monkeypatch):
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-client-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-client-secret")
+    _, cookies = _auth_cookies(db_path, email="gauth@example.com")
+
+    from unittest.mock import MagicMock, patch
+    mock_flow = MagicMock()
+    mock_flow.authorization_url.return_value = ("https://accounts.google.com/o/oauth2/auth?test=1", "state")
+
+    with patch("src.web.app.get_oauth_flow", return_value=mock_flow):
+        with patch("src.web.app.google_oauth_enabled", return_value=True):
+            resp = client.get("/auth/google", cookies=cookies)
+
+    assert resp.status_code == 303
+    assert "accounts.google.com" in resp.headers["location"]
+
+
+def test_google_auth_callback_stores_tokens(client, db_path, monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from datetime import datetime, timedelta, timezone
+    from jose import jwt as _jwt
+
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-client-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-client-secret")
+
+    user_id, cookies = _auth_cookies(db_path, email="gcallback@example.com")
+
+    state = _jwt.encode(
+        {"user_id": user_id, "purpose": "google_oauth"},
+        "change-me-in-production",
+        algorithm="HS256",
+    )
+
+    mock_flow = MagicMock()
+    mock_creds = MagicMock()
+    mock_creds.token = "access_token_123"
+    mock_creds.refresh_token = "refresh_token_123"
+    mock_creds.expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+    mock_flow.credentials = mock_creds
+
+    mock_service = MagicMock()
+    mock_service.calendars().insert().execute.return_value = {"id": "new_cal@group.calendar.google.com"}
+
+    with patch("src.web.app.get_oauth_flow", return_value=mock_flow), \
+         patch("src.web.app.build_google_service", return_value=mock_service), \
+         patch("src.web.app.create_weathercal_calendar", return_value="new_cal@group.calendar.google.com"), \
+         patch("src.web.app._google_push_initial"):
+        resp = client.get(f"/auth/google/callback?code=test_code&state={state}", cookies=cookies)
+
+    assert resp.status_code == 303
+    assert "success=google_connected" in resp.headers["location"]
+
+    conn = sqlite3.connect(db_path)
+    row = conn.execute("SELECT * FROM google_tokens WHERE user_id = ?", (user_id,)).fetchone()
+    conn.close()
+    assert row is not None
+
+
+def test_google_auth_disconnect_requires_login(client):
+    resp = client.post("/auth/google/disconnect")
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/login"
+
+
+def test_google_auth_disconnect_deletes_tokens(client, db_path, monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from datetime import datetime, timedelta, timezone
+
+    user_id, cookies = _auth_cookies(db_path, email="gdiscon@example.com")
+    cred = MagicMock()
+    cred.token = "tok"
+    cred.refresh_token = "ref"
+    cred.expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+    store_google_tokens(db_path, user_id, cred, "cal123")
+
+    with patch("src.integrations.google_push.get_google_credentials") as mock_get_creds:
+        mock_get_creds.return_value = None
+        resp = client.post("/auth/google/disconnect", cookies=cookies)
+
+    assert resp.status_code == 303
+    assert "success=google_disconnected" in resp.headers["location"]
+
+    conn = sqlite3.connect(db_path)
+    row = conn.execute("SELECT * FROM google_tokens WHERE user_id = ?", (user_id,)).fetchone()
+    conn.close()
+    assert row is None
+
+
+def test_settings_shows_google_connect_when_enabled(client, db_path, monkeypatch):
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-secret")
+    user_id, cookies = _auth_cookies(db_path, email="gshow@example.com")
+    create_feed_token(db_path, user_id)
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    resp = client.get("/settings", cookies=cookies)
+    assert resp.status_code == 200
+    assert b"Connect with Google Calendar" in resp.content
+
+
+def test_settings_shows_connected_status(client, db_path, monkeypatch):
+    from unittest.mock import MagicMock
+    from datetime import datetime, timedelta, timezone
+
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-secret")
+    user_id, cookies = _auth_cookies(db_path, email="gconn@example.com")
+    create_feed_token(db_path, user_id)
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    cred = MagicMock()
+    cred.token = "tok"
+    cred.refresh_token = "ref"
+    cred.expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+    store_google_tokens(db_path, user_id, cred, "cal123")
+
+    resp = client.get("/settings", cookies=cookies)
+    assert resp.status_code == 200
+    assert b"Connected to Google Calendar" in resp.content
+
+
+def test_settings_hides_google_when_not_configured(client, db_path, monkeypatch):
+    monkeypatch.delenv("GOOGLE_CLIENT_ID", raising=False)
+    monkeypatch.delenv("GOOGLE_CLIENT_SECRET", raising=False)
+    user_id, cookies = _auth_cookies(db_path, email="ghide@example.com")
+    create_feed_token(db_path, user_id)
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    resp = client.get("/settings", cookies=cookies)
+    assert resp.status_code == 200
+    assert b"Connect with Google Calendar" not in resp.content
+
+
+def test_delete_account_cleans_google_tokens(db_path):
+    from unittest.mock import MagicMock
+    from datetime import datetime, timedelta, timezone
+
+    user_id = create_user(db_path, "gdelete@example.com", "supersecretpass1")
+    create_feed_token(db_path, user_id)
+    cred = MagicMock()
+    cred.token = "tok"
+    cred.refresh_token = "ref"
+    cred.expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+    store_google_tokens(db_path, user_id, cred, "cal123")
+
+    delete_user_account(db_path, user_id)
+
+    conn = sqlite3.connect(db_path)
+    row = conn.execute("SELECT * FROM google_tokens WHERE user_id = ?", (user_id,)).fetchone()
+    conn.close()
+    assert row is None

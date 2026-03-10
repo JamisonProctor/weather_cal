@@ -9,11 +9,23 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
+from src.integrations.google_push import (
+    create_google_tokens_table,
+    google_oauth_enabled,
+    get_oauth_flow,
+    store_google_tokens,
+    create_weathercal_calendar,
+    build_google_service,
+    delete_google_tokens,
+    is_google_connected,
+    push_events_for_user,
+)
 from src.integrations.ics_service import generate_ics
 from src.services.email_service import send_welcome_email
 from src.services.forecast_store import ForecastStore
 from src.services.forecast_service import ForecastService
-from src.web.auth import create_session_token, decode_session_token
+from jose import jwt
+from src.web.auth import create_session_token, decode_session_token, SECRET_KEY
 from src.events.db import create_event_tables, get_future_events, get_user_id_by_feed_token
 from src.events.ics_events import build_event_ics
 from src.web.db import (
@@ -88,6 +100,7 @@ ForecastStore(db_path=DB_PATH)  # ensures all tables exist before anything else 
 create_feedback_table(DB_PATH)
 create_user_preferences_table(DB_PATH)
 create_event_tables(DB_PATH)
+create_google_tokens_table(DB_PATH)
 
 
 def _get_user_id(request: Request):
@@ -293,6 +306,8 @@ async def connect(request: Request):
     return _template("connect.html", request, {
         "webcal_url": webcal_url,
         "google_cal_url": google_cal_url,
+        "google_oauth_enabled": google_oauth_enabled(),
+        "google_connected": is_google_connected(DB_PATH, user_id),
     })
 
 
@@ -342,6 +357,8 @@ async def settings(
         "error": error,
         "last_updated": last_updated,
         "is_admin": _is_admin(user_id),
+        "google_oauth_enabled": google_oauth_enabled(),
+        "google_connected": is_google_connected(DB_PATH, user_id),
     })
 
 
@@ -565,6 +582,113 @@ async def feedback_post(
     return _template("feedback.html", request, {
         "webcal_url": webcal_url, "locations": user_locations, "sent": True,
     })
+
+
+def _google_push_initial(db_path, user_id):
+    """Background task: push initial forecast events to Google Calendar."""
+    try:
+        from src.web.db import get_user_preferences, get_user_locations, DEFAULT_PREFS
+        locations = get_user_locations(db_path, user_id)
+        prefs_row = get_user_preferences(db_path, user_id)
+        prefs = dict(prefs_row) if prefs_row else DEFAULT_PREFS
+        for loc in locations:
+            store = ForecastStore(db_path=db_path)
+            forecasts = store.get_forecasts_for_locations([loc["location"]], days=14)
+            push_events_for_user(db_path, user_id, forecasts, prefs, loc["location"], loc["timezone"])
+    except Exception:
+        logger.exception("Initial Google push failed for user_id=%s", user_id)
+
+
+@app.get("/auth/google")
+async def google_auth_start(request: Request):
+    user_id = _get_user_id(request)
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+    if not google_oauth_enabled():
+        return RedirectResponse(url="/settings", status_code=303)
+
+    base_url = str(request.base_url).rstrip("/")
+    redirect_uri = base_url + "/auth/google/callback"
+    flow = get_oauth_flow(redirect_uri)
+
+    state = jwt.encode(
+        {"user_id": user_id, "purpose": "google_oauth"},
+        SECRET_KEY,
+        algorithm="HS256",
+    )
+    authorization_url, _ = flow.authorization_url(
+        access_type="offline",
+        prompt="consent",
+        state=state,
+    )
+    return RedirectResponse(url=authorization_url, status_code=303)
+
+
+@app.get("/auth/google/callback")
+async def google_auth_callback(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    code: str = Query(default=""),
+    state: str = Query(default=""),
+):
+    if not code or not state:
+        return RedirectResponse(url="/settings?error=google_auth_failed", status_code=303)
+
+    try:
+        payload = jwt.decode(state, SECRET_KEY, algorithms=["HS256"])
+        state_user_id = payload.get("user_id")
+    except Exception:
+        return RedirectResponse(url="/settings?error=google_auth_failed", status_code=303)
+
+    session_user_id = _get_user_id(request)
+    if not session_user_id or session_user_id != state_user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    base_url = str(request.base_url).rstrip("/")
+    redirect_uri = base_url + "/auth/google/callback"
+    flow = get_oauth_flow(redirect_uri)
+
+    try:
+        flow.fetch_token(code=code)
+    except Exception:
+        logger.exception("Google token exchange failed for user_id=%s", session_user_id)
+        return RedirectResponse(url="/settings?error=google_auth_failed", status_code=303)
+
+    credentials = flow.credentials
+
+    try:
+        service = build_google_service(credentials)
+        calendar_id = create_weathercal_calendar(service)
+    except Exception:
+        logger.exception("Failed to create WeatherCal calendar for user_id=%s", session_user_id)
+        return RedirectResponse(url="/settings?error=google_auth_failed", status_code=303)
+
+    store_google_tokens(DB_PATH, session_user_id, credentials, calendar_id)
+    background_tasks.add_task(_google_push_initial, DB_PATH, session_user_id)
+    return RedirectResponse(url="/settings?tab=reconnect&success=google_connected", status_code=303)
+
+
+@app.post("/auth/google/disconnect")
+async def google_auth_disconnect(request: Request):
+    user_id = _get_user_id(request)
+    if not user_id:
+        return RedirectResponse(url="/login", status_code=303)
+
+    from src.integrations.google_push import get_google_credentials
+    credentials = get_google_credentials(DB_PATH, user_id)
+    if credentials and credentials.token:
+        try:
+            import requests as _requests
+            _requests.post(
+                "https://oauth2.googleapis.com/revoke",
+                params={"token": credentials.token},
+                timeout=5,
+            )
+        except Exception:
+            logger.warning("Failed to revoke Google token for user_id=%s", user_id)
+
+    delete_google_tokens(DB_PATH, user_id)
+    return RedirectResponse(url="/settings?tab=reconnect&success=google_disconnected", status_code=303)
 
 
 @app.get("/feed/{token}/weather.ics")

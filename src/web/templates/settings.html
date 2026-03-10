@@ -392,6 +392,12 @@
       <div id="panel-reconnect" class="panel">
         <h1 class="panel-title">Connect</h1>
 
+        {% if success == 'google_connected' %}
+        <div class="alert alert-success">Connected to Google Calendar. Your forecasts are being synced now.</div>
+        {% elif success == 'google_disconnected' %}
+        <div class="alert alert-success">Disconnected from Google Calendar.</div>
+        {% endif %}
+
         <div class="section">
           <h2>Connect your calendar</h2>
           <p style="color:#374151;margin-bottom:1.5rem">Add your feed to a calendar app and forecasts will appear automatically.</p>
@@ -403,15 +409,30 @@
               <span class="connect-btn-note">Works on Mac and iPhone</span>
             </div>
             <div class="connect-btn-wrapper">
+              {% if google_oauth_enabled and not google_connected %}
+              <a href="/auth/google" class="btn-connect btn-cal-red">&#128197; Connect with Google Calendar</a>
+              <span class="connect-btn-note">Works on Android and in Gmail — events sync automatically</span>
+              {% elif google_oauth_enabled and google_connected %}
+              <span class="btn-connect btn-cal-red" style="opacity:0.6;cursor:default;pointer-events:none">&#128197; Connected to Google Calendar &#10003;</span>
+              <span class="connect-btn-note">Events are synced directly to your Google Calendar</span>
+              {% else %}
               <a href="{{ google_cal_url }}" class="btn-connect btn-cal-red" target="_blank" rel="noopener">&#128197; Add to Google Calendar</a>
               <span class="connect-btn-note">Works on Android and in Gmail</span>
+              {% endif %}
             </div>
             <div class="connect-btn-wrapper">
               <a href="{{ webcal_url }}" class="btn-connect btn-cal-slate">&#128197; Add to Outlook</a>
               <span class="connect-btn-note">Works on Windows and in Outlook desktop</span>
             </div>
           </div>
-          <p class="connect-btn-note" style="max-width:420px;margin-top:4px">Forecasts refresh automatically — usually within a few hours. Apple Calendar users can speed this up: right-click WeatherCal &#8594; Get Info &#8594; set Auto-refresh to Every Hour. Google Calendar may take up to 24 hours and offers no user control.</p>
+          {% if google_connected %}
+          <div style="margin-top:16px">
+            <form method="post" action="/auth/google/disconnect" style="display:inline">
+              <button type="submit" class="link-blue" style="background:none;border:none;cursor:pointer;padding:0;font-size:0.9rem;color:#dc2626">Disconnect Google Calendar</button>
+            </form>
+          </div>
+          {% endif %}
+          <p class="connect-btn-note" style="max-width:420px;margin-top:4px">Forecasts refresh automatically — usually within a few hours. Apple Calendar users can speed this up: right-click WeatherCal &#8594; Get Info &#8594; set Auto-refresh to Every Hour.{% if google_connected %} Google Calendar events sync directly and update faster than ICS subscriptions.{% else %} Google Calendar may take up to 24 hours and offers no user control.{% endif %}</p>
 
           <div style="border-top:1px solid #e5e7eb;padding-top:20px">
             <div class="feed-input-row">
@@ -448,9 +469,12 @@
       var hash = window.location.hash.replace('#', '');
       if (tabs.indexOf(hash) !== -1) return hash;
       var params = new URLSearchParams(window.location.search);
+      var tab = params.get('tab');
+      if (tab && tabs.indexOf(tab) !== -1) return tab;
       if (params.get('success') === 'prefs') return 'preferences';
       if (params.get('success') === 'feedback') return 'feedback';
       if (params.get('success') === 'email' || params.get('success') === 'password') return 'personal';
+      if (params.get('success') === 'google_connected' || params.get('success') === 'google_disconnected') return 'reconnect';
       if (params.get('error')) return 'personal';
       return 'preferences';
     }

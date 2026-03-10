@@ -413,8 +413,8 @@
               <a href="/auth/google" class="btn-connect btn-cal-red">&#128197; Connect with Google Calendar</a>
               <span class="connect-btn-note">Works on Android and in Gmail — events sync automatically</span>
               {% elif google_oauth_enabled and google_connected %}
-              <form method="post" action="/auth/google/disconnect" style="display:inline">
-                <button type="submit" class="btn-connect btn-cal-red" style="background:#dc2626">&#128197; Disconnect Google Calendar</button>
+              <form method="post" action="/auth/google/disconnect">
+                <button type="submit" class="btn-connect btn-cal-red" style="background:#dc2626;width:100%">&#128197; Disconnect Google Calendar</button>
               </form>
               <span class="connect-btn-note">Events are synced directly to your Google Calendar</span>
               {% else %}

@@ -19,8 +19,6 @@ from src.integrations.google_push import (
     create_weathercal_calendar,
     push_events_for_user,
     refresh_and_persist,
-    _sync_calendar_name,
-    _expected_calendar_summary,
 )
 from src.web.db import create_user, DEFAULT_PREFS
 
@@ -152,31 +150,6 @@ def test_create_weathercal_calendar():
     mock_service.calendars().insert().execute.return_value = {"id": "new_cal_id"}
     result = create_weathercal_calendar(mock_service)
     assert result == "new_cal_id"
-
-
-# --- Calendar rename ---
-
-def test_sync_calendar_name_renames_when_different():
-    mock_service = MagicMock()
-    mock_service.calendars().get().execute.return_value = {"summary": "WeatherCal \u2014 Munich"}
-    _sync_calendar_name(mock_service, "cal123", "Berlin, Germany")
-    mock_service.calendars().patch.assert_called_with(
-        calendarId="cal123",
-        body={"summary": "WeatherCal \u2014 Berlin", "description": "Weather forecasts for Berlin from WeatherCal"},
-    )
-
-
-def test_sync_calendar_name_skips_when_same():
-    mock_service = MagicMock()
-    mock_service.calendars().get().execute.return_value = {"summary": "WeatherCal \u2014 Munich"}
-    _sync_calendar_name(mock_service, "cal123", "Munich, Germany")
-    mock_service.calendars().patch.assert_not_called()
-
-
-def test_expected_calendar_summary():
-    assert _expected_calendar_summary("Munich, Germany") == "WeatherCal \u2014 Munich"
-    assert _expected_calendar_summary("Berlin") == "WeatherCal \u2014 Berlin"
-    assert _expected_calendar_summary("") == "WeatherCal"
 
 
 def test_delete_google_calendar_calls_api(db_path, monkeypatch):

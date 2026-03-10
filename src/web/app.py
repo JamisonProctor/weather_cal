@@ -658,7 +658,9 @@ async def google_auth_callback(
 
     try:
         service = build_google_service(credentials)
-        calendar_id = create_weathercal_calendar(service)
+        locations = get_user_locations(DB_PATH, session_user_id)
+        location_name = locations[0]["location"] if locations else ""
+        calendar_id = create_weathercal_calendar(service, location_name)
     except Exception:
         logger.exception("Failed to create WeatherCal calendar for user_id=%s", session_user_id)
         return RedirectResponse(url="/settings?error=google_auth_failed", status_code=303)

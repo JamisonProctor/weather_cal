@@ -27,6 +27,7 @@
 
     .btn-primary { padding: 10px 22px; background: #2563eb; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; }
     .btn-primary:hover { background: #1d4ed8; }
+    .btn-primary:disabled, .btn-danger:disabled, .btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-danger { padding: 10px 22px; background: #dc2626; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; }
     .btn-danger:hover { background: #b91c1c; }
 
@@ -46,8 +47,8 @@
 <body>
   <div class="{% block body_class %}layout-narrow{% endblock %}">
     <nav>
-      <a href="/" class="brand">WeatherCal ☀️</a>
-      <div class="nav-right">{% block nav_right %}{% if is_authenticated %}<form method="post" action="/logout" style="margin:0"><button class="logout-btn" type="submit">Logout</button></form>{% else %}<a href="/login" class="nav-link">Sign in</a>{% endif %}{% endblock %}</div>
+      <a href="{% if is_authenticated %}/settings{% else %}/{% endif %}" class="brand">WeatherCal ☀️</a>
+      <div class="nav-right">{% block nav_right %}{% if is_authenticated %}<a href="/settings" class="nav-link">Settings</a><form method="post" action="/logout" style="margin:0"><button class="logout-btn" type="submit">Logout</button></form>{% else %}<a href="/login" class="nav-link">Sign in</a><a href="/signup" class="nav-link" style="font-weight:600;color:#2563eb">Sign up</a>{% endif %}{% endblock %}</div>
     </nav>
     {% block content %}{% endblock %}
     {% block footer %}
@@ -55,6 +56,7 @@
       <a href="/impressum" style="color:#9ca3af;text-decoration:none">Impressum</a>
       <a href="/terms" style="color:#9ca3af;text-decoration:none">Terms</a>
       <a href="/privacy" style="color:#9ca3af;text-decoration:none">Privacy</a>
+      <a href="{% if is_authenticated %}/settings#feedback{% else %}/login{% endif %}" style="color:#9ca3af;text-decoration:none">Feedback</a>
     </footer>
     {% endblock %}
   </div>
@@ -65,7 +67,16 @@
         el.style.transition = 'opacity 0.5s';
         el.style.opacity = '0';
         setTimeout(function() { el.remove(); }, 500);
-      }, 5000);
+      }, 8000);
+    });
+    document.querySelectorAll('form').forEach(function(form) {
+      form.addEventListener('submit', function() {
+        var btn = form.querySelector('button[type="submit"]');
+        if (!btn || btn.disabled) return;
+        var loadingText = btn.getAttribute('data-loading-text') || 'Saving\u2026';
+        btn.disabled = true;
+        btn.textContent = loadingText;
+      });
     });
   </script>
 </body>

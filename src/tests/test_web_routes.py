@@ -117,7 +117,7 @@ def test_setup_post_first_time_redirects_to_connect(client, db_path, auth_cookie
         cookies=cookies,
     )
     assert resp.status_code == 303
-    assert resp.headers["location"] == "/connect"
+    assert resp.headers["location"] == "/connect?from=setup"
 
 
 def test_setup_post_location_change_redirects_to_settings(client, db_path, auth_cookies):
@@ -483,9 +483,16 @@ def test_terms_returns_200(client):
 
 # --- Connect, feedback, geocode routes ---
 
-def test_connect_page_returns_200(client, db_path, auth_cookies):
+def test_connect_page_redirects_to_settings(client, db_path, auth_cookies):
     _, cookies = auth_cookies(email="connect@example.com")
     resp = client.get("/connect", cookies=cookies)
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/settings?tab=reconnect"
+
+
+def test_connect_page_from_setup_returns_200(client, db_path, auth_cookies):
+    _, cookies = auth_cookies(email="connect2@example.com")
+    resp = client.get("/connect?from=setup", cookies=cookies)
     assert resp.status_code == 200
 
 
@@ -495,10 +502,11 @@ def test_connect_page_requires_auth(client):
     assert resp.headers["location"] == "/login"
 
 
-def test_feedback_get_returns_200(client, db_path, auth_cookies):
+def test_feedback_get_redirects_to_settings(client, db_path, auth_cookies):
     _, cookies = auth_cookies(email="fbget@example.com")
     resp = client.get("/feedback", cookies=cookies)
-    assert resp.status_code == 200
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/settings?tab=feedback"
 
 
 def test_feedback_post_saves_and_shows_sent(client, db_path, auth_cookies):

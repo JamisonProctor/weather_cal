@@ -26,5 +26,9 @@
     <li><span class="icon">📋</span><span><strong>Hourly detail on demand</strong> — tap any event to see a full hour-by-hour breakdown with per-hour weather</span></li>
     <li><span class="icon">📅</span><span><strong>Works everywhere</strong> — Apple Calendar, Google Calendar, Outlook — subscribe once, updated every morning</span></li>
   </ul>
+  {% if is_authenticated %}
+  <a href="/settings" class="cta">Go to settings</a>
+  {% else %}
   <a href="/signup" class="cta">Get started</a>
+  {% endif %}
 {% endblock %}

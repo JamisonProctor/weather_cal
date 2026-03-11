@@ -1,0 +1,8 @@
+[tool.pytest.ini_options]
+testpaths = ["src/tests"]
+addopts = "-q --tb=short"
+markers = [
+    "unit: Unit tests (default, no marker needed)",
+    "integration: Integration tests exercising real component boundaries",
+    "snapshot: Snapshot tests for ICS output format stability",
+]

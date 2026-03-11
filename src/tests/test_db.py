@@ -8,10 +8,8 @@ from src.web.db import (
     _detect_calendar_app,
     check_password,
     create_feed_token,
-    create_feedback_table,
     create_user,
     set_user_location,
-    create_user_preferences_table,
     get_admin_stats,
     get_feed_token_by_user,
     get_rows_by_token,
@@ -23,36 +21,6 @@ from src.web.db import (
     update_feed_poll,
     upsert_user_preferences,
 )
-
-
-def _create_google_tokens_table(db_path):
-    """Create google_tokens table (mirrors google_push.py)."""
-    import sqlite3 as _sqlite3
-    conn = _sqlite3.connect(db_path)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS google_tokens (
-            user_id            INTEGER PRIMARY KEY REFERENCES users(id),
-            access_token       TEXT NOT NULL,
-            refresh_token      TEXT NOT NULL,
-            token_expiry       TEXT,
-            google_calendar_id TEXT,
-            status             TEXT NOT NULL DEFAULT 'active',
-            connected_at       TEXT NOT NULL,
-            updated_at         TEXT NOT NULL
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-
-@pytest.fixture
-def db_path(tmp_path):
-    path = str(tmp_path / "test.db")
-    ForecastStore(db_path=path)
-    create_user_preferences_table(path)
-    create_feedback_table(path)
-    _create_google_tokens_table(path)
-    return path
 
 
 # --- User functions ---

@@ -7,13 +7,6 @@ from src.services.forecast_store import ForecastStore
 from src.utils.location_management import get_locations, load_locations_from_db
 
 
-@pytest.fixture
-def db_path(tmp_path):
-    path = str(tmp_path / "test.db")
-    ForecastStore(db_path=path)
-    return path
-
-
 def _insert_user(db_path, email, is_active=1):
     conn = sqlite3.connect(db_path)
     conn.execute(

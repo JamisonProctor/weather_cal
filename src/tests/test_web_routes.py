@@ -1,23 +1,18 @@
 import sqlite3
 
 import pytest
-from fastapi.testclient import TestClient
 
 import src.web.app as web_app
 from src.models.forecast import Forecast
 from src.services.forecast_store import ForecastStore
-from src.web.auth import create_session_token
-from src.events.db import create_event_tables
-from src.integrations.google_push import create_google_tokens_table, store_google_tokens
+from src.integrations.google_push import store_google_tokens
 from src.web.db import (
     check_password,
     create_feed_token,
-    create_feedback_table,
     create_user,
     delete_user_account,
     export_user_data,
     set_user_location,
-    create_user_preferences_table,
     get_feed_token_by_user,
     get_user_by_email,
     get_user_by_id,
@@ -27,31 +22,6 @@ from src.web.db import (
     upsert_user_preferences,
     DEFAULT_PREFS,
 )
-
-
-@pytest.fixture
-def db_path(tmp_path):
-    path = str(tmp_path / "test.db")
-    ForecastStore(db_path=path)
-    create_feedback_table(path)
-    create_user_preferences_table(path)
-    create_event_tables(path)
-    create_google_tokens_table(path)
-    return path
-
-
-@pytest.fixture
-def client(db_path, monkeypatch):
-    monkeypatch.setattr(web_app, "DB_PATH", db_path)
-    monkeypatch.setattr(web_app, "_initial_forecast_fetch", lambda *a, **kw: None)
-    return TestClient(web_app.app, follow_redirects=False)
-
-
-def _auth_cookies(db_path, email="test@example.com", password="supersecretpass1"):
-    """Create a user directly and return (user_id, cookies dict)."""
-    user_id = create_user(db_path, email, password)
-    token = create_session_token(user_id)
-    return user_id, {"session": token}
 
 
 # --- Signup ---
@@ -96,8 +66,8 @@ def test_settings_get_requires_auth(client):
     assert resp.headers["location"] == "/login"
 
 
-def test_settings_post_saves_preferences(client, db_path):
-    user_id, cookies = _auth_cookies(db_path)
+def test_settings_post_saves_preferences(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies()
     resp = client.post(
         "/settings",
         data={
@@ -134,8 +104,8 @@ def test_settings_post_saves_preferences(client, db_path):
 
 # --- Setup ---
 
-def test_setup_post_first_time_redirects_to_connect(client, db_path):
-    _, cookies = _auth_cookies(db_path)
+def test_setup_post_first_time_redirects_to_connect(client, db_path, auth_cookies):
+    _, cookies = auth_cookies()
     resp = client.post(
         "/setup",
         data={
@@ -150,8 +120,8 @@ def test_setup_post_first_time_redirects_to_connect(client, db_path):
     assert resp.headers["location"] == "/connect"
 
 
-def test_setup_post_location_change_redirects_to_settings(client, db_path):
-    user_id, cookies = _auth_cookies(db_path)
+def test_setup_post_location_change_redirects_to_settings(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies()
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
     resp = client.post(
         "/setup",
@@ -174,8 +144,8 @@ def test_feed_invalid_token_returns_404(client):
     assert resp.status_code == 404
 
 
-def test_feed_valid_token_returns_ics(client, db_path):
-    user_id, _ = _auth_cookies(db_path)
+def test_feed_valid_token_returns_ics(client, db_path, auth_cookies):
+    user_id, _ = auth_cookies()
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
     token = create_feed_token(db_path, user_id)
 
@@ -200,8 +170,8 @@ def test_feed_valid_token_returns_ics(client, db_path):
     assert "text/calendar" in resp.headers["content-type"]
 
 
-def test_feed_records_poll(client, db_path):
-    user_id, _ = _auth_cookies(db_path)
+def test_feed_records_poll(client, db_path, auth_cookies):
+    user_id, _ = auth_cookies()
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
     token = create_feed_token(db_path, user_id)
 
@@ -226,8 +196,8 @@ def test_feed_records_poll(client, db_path):
     assert len(poll_log_rows) == 2
 
 
-def test_settings_ref_cal_increments_clicks(client, db_path):
-    user_id, cookies = _auth_cookies(db_path)
+def test_settings_ref_cal_increments_clicks(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies()
     token = create_feed_token(db_path, user_id)
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
 
@@ -240,8 +210,8 @@ def test_settings_ref_cal_increments_clicks(client, db_path):
     assert row[0] == 2
 
 
-def test_setup_us_location_sets_fahrenheit(client, db_path):
-    _, cookies = _auth_cookies(db_path, email="us@example.com")
+def test_setup_us_location_sets_fahrenheit(client, db_path, auth_cookies):
+    _, cookies = auth_cookies(email="us@example.com")
     client.post(
         "/setup",
         data={
@@ -259,8 +229,8 @@ def test_setup_us_location_sets_fahrenheit(client, db_path):
     assert prefs["temp_unit"] == "F"
 
 
-def test_setup_non_us_location_does_not_set_fahrenheit(client, db_path):
-    _, cookies = _auth_cookies(db_path, email="de@example.com")
+def test_setup_non_us_location_does_not_set_fahrenheit(client, db_path, auth_cookies):
+    _, cookies = auth_cookies(email="de@example.com")
     client.post(
         "/setup",
         data={
@@ -277,8 +247,8 @@ def test_setup_non_us_location_does_not_set_fahrenheit(client, db_path):
     assert prefs is None  # no prefs auto-created for non-US
 
 
-def test_settings_saves_temp_unit_fahrenheit(client, db_path):
-    user_id, cookies = _auth_cookies(db_path)
+def test_settings_saves_temp_unit_fahrenheit(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies()
     # 37.4°F = 3°C, 57.2°F = 14°C, 82.4°F = 28°C
     resp = client.post(
         "/settings",
@@ -317,24 +287,24 @@ def test_admin_route_requires_auth(client):
     assert resp.headers["location"] == "/login"
 
 
-def test_admin_route_forbidden_for_non_admin(client, db_path, monkeypatch):
+def test_admin_route_forbidden_for_non_admin(client, db_path, monkeypatch, auth_cookies):
     monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
-    _, cookies = _auth_cookies(db_path, email="user@example.com")
+    _, cookies = auth_cookies(email="user@example.com")
     resp = client.get("/admin", cookies=cookies)
     assert resp.status_code == 403
 
 
-def test_admin_route_accessible_for_admin(client, db_path, monkeypatch):
+def test_admin_route_accessible_for_admin(client, db_path, monkeypatch, auth_cookies):
     monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
-    _, cookies = _auth_cookies(db_path, email="admin@example.com")
+    _, cookies = auth_cookies(email="admin@example.com")
     resp = client.get("/admin", cookies=cookies)
     assert resp.status_code == 200
     assert b"Admin" in resp.content
 
 
-def test_admin_shows_feedback(client, db_path, monkeypatch):
+def test_admin_shows_feedback(client, db_path, monkeypatch, auth_cookies):
     monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
-    _, cookies = _auth_cookies(db_path, email="admin@example.com")
+    _, cookies = auth_cookies(email="admin@example.com")
     from src.web.db import save_feedback
     save_feedback(db_path, 1, "sender@example.com", "", "Berlin", "Apple Calendar", "Love this app!", "", "", "", "", "")
     resp = client.get("/admin", cookies=cookies)
@@ -343,9 +313,9 @@ def test_admin_shows_feedback(client, db_path, monkeypatch):
     assert b"Love this app!" in resp.content
 
 
-def test_admin_shows_no_feedback_message(client, db_path, monkeypatch):
+def test_admin_shows_no_feedback_message(client, db_path, monkeypatch, auth_cookies):
     monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
-    _, cookies = _auth_cookies(db_path, email="admin@example.com")
+    _, cookies = auth_cookies(email="admin@example.com")
     resp = client.get("/admin", cookies=cookies)
     assert resp.status_code == 200
     assert b"No feedback yet." in resp.content
@@ -353,13 +323,13 @@ def test_admin_shows_no_feedback_message(client, db_path, monkeypatch):
 
 # --- Welcome email ---
 
-def test_setup_triggers_welcome_email_on_first_setup(client, db_path, monkeypatch):
+def test_setup_triggers_welcome_email_on_first_setup(client, db_path, monkeypatch, auth_cookies):
     """Welcome email is sent once on first location setup when ENABLE_WELCOME_EMAIL is set."""
     calls = []
     monkeypatch.setenv("ENABLE_WELCOME_EMAIL", "true")
     monkeypatch.setattr(web_app, "send_welcome_email", lambda *a, **kw: calls.append(a))
 
-    user_id, cookies = _auth_cookies(db_path, email="welcome@example.com")
+    user_id, cookies = auth_cookies(email="welcome@example.com")
     create_feed_token(db_path, user_id)
     client.post(
         "/setup",
@@ -377,8 +347,8 @@ def test_setup_triggers_welcome_email_on_first_setup(client, db_path, monkeypatc
 
 # --- Account management routes ---
 
-def test_settings_email_change_success(client, db_path):
-    user_id, cookies = _auth_cookies(db_path, email="emailchange@example.com")
+def test_settings_email_change_success(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies(email="emailchange@example.com")
     resp = client.post(
         "/settings/email",
         data={"new_email": "changed@example.com", "current_password": "supersecretpass1"},
@@ -389,8 +359,8 @@ def test_settings_email_change_success(client, db_path):
     assert get_user_by_email(db_path, "changed@example.com") is not None
 
 
-def test_settings_email_change_wrong_password(client, db_path):
-    _, cookies = _auth_cookies(db_path, email="emailwrong@example.com")
+def test_settings_email_change_wrong_password(client, db_path, auth_cookies):
+    _, cookies = auth_cookies(email="emailwrong@example.com")
     resp = client.post(
         "/settings/email",
         data={"new_email": "new@example.com", "current_password": "wrongpassword123"},
@@ -400,9 +370,9 @@ def test_settings_email_change_wrong_password(client, db_path):
     assert "error=wrong_password" in resp.headers["location"]
 
 
-def test_settings_email_change_duplicate_email(client, db_path):
+def test_settings_email_change_duplicate_email(client, db_path, auth_cookies):
     create_user(db_path, "existing@example.com", "password123456")
-    _, cookies = _auth_cookies(db_path, email="emaildup@example.com")
+    _, cookies = auth_cookies(email="emaildup@example.com")
     resp = client.post(
         "/settings/email",
         data={"new_email": "existing@example.com", "current_password": "supersecretpass1"},
@@ -421,8 +391,8 @@ def test_settings_email_change_requires_auth(client):
     assert resp.headers["location"] == "/login"
 
 
-def test_settings_password_change_success(client, db_path):
-    user_id, cookies = _auth_cookies(db_path, email="pwchange@example.com")
+def test_settings_password_change_success(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies(email="pwchange@example.com")
     resp = client.post(
         "/settings/password",
         data={"current_password": "supersecretpass1", "new_password": "newlongpassword1"},
@@ -434,8 +404,8 @@ def test_settings_password_change_success(client, db_path):
     assert check_password("newlongpassword1", user["password_hash"])
 
 
-def test_settings_password_change_wrong_current(client, db_path):
-    _, cookies = _auth_cookies(db_path, email="pwwrong@example.com")
+def test_settings_password_change_wrong_current(client, db_path, auth_cookies):
+    _, cookies = auth_cookies(email="pwwrong@example.com")
     resp = client.post(
         "/settings/password",
         data={"current_password": "wrongpassword123", "new_password": "newlongpassword1"},
@@ -445,8 +415,8 @@ def test_settings_password_change_wrong_current(client, db_path):
     assert "error=wrong_password" in resp.headers["location"]
 
 
-def test_settings_password_change_too_short(client, db_path):
-    _, cookies = _auth_cookies(db_path, email="pwshort@example.com")
+def test_settings_password_change_too_short(client, db_path, auth_cookies):
+    _, cookies = auth_cookies(email="pwshort@example.com")
     resp = client.post(
         "/settings/password",
         data={"current_password": "supersecretpass1", "new_password": "short"},
@@ -456,8 +426,8 @@ def test_settings_password_change_too_short(client, db_path):
     assert "error=password_too_short" in resp.headers["location"]
 
 
-def test_settings_delete_account_success(client, db_path):
-    user_id, cookies = _auth_cookies(db_path, email="delete@example.com")
+def test_settings_delete_account_success(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies(email="delete@example.com")
     resp = client.post(
         "/settings/delete",
         data={"confirm_email": "delete@example.com"},
@@ -468,8 +438,8 @@ def test_settings_delete_account_success(client, db_path):
     assert get_user_by_email(db_path, "delete@example.com") is None
 
 
-def test_settings_delete_account_email_mismatch(client, db_path):
-    _, cookies = _auth_cookies(db_path, email="nodelete@example.com")
+def test_settings_delete_account_email_mismatch(client, db_path, auth_cookies):
+    _, cookies = auth_cookies(email="nodelete@example.com")
     resp = client.post(
         "/settings/delete",
         data={"confirm_email": "wrong@example.com"},
@@ -479,8 +449,8 @@ def test_settings_delete_account_email_mismatch(client, db_path):
     assert "error=email_mismatch" in resp.headers["location"]
 
 
-def test_settings_delete_invalidates_feed(client, db_path):
-    user_id, cookies = _auth_cookies(db_path, email="delfeed@example.com")
+def test_settings_delete_invalidates_feed(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies(email="delfeed@example.com")
     token = create_feed_token(db_path, user_id)
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
     client.post("/settings/delete", data={"confirm_email": "delfeed@example.com"}, cookies=cookies)
@@ -513,8 +483,8 @@ def test_terms_returns_200(client):
 
 # --- Connect, feedback, geocode routes ---
 
-def test_connect_page_returns_200(client, db_path):
-    _, cookies = _auth_cookies(db_path, email="connect@example.com")
+def test_connect_page_returns_200(client, db_path, auth_cookies):
+    _, cookies = auth_cookies(email="connect@example.com")
     resp = client.get("/connect", cookies=cookies)
     assert resp.status_code == 200
 
@@ -525,14 +495,14 @@ def test_connect_page_requires_auth(client):
     assert resp.headers["location"] == "/login"
 
 
-def test_feedback_get_returns_200(client, db_path):
-    _, cookies = _auth_cookies(db_path, email="fbget@example.com")
+def test_feedback_get_returns_200(client, db_path, auth_cookies):
+    _, cookies = auth_cookies(email="fbget@example.com")
     resp = client.get("/feedback", cookies=cookies)
     assert resp.status_code == 200
 
 
-def test_feedback_post_saves_and_shows_sent(client, db_path):
-    user_id, cookies = _auth_cookies(db_path, email="fbpost@example.com")
+def test_feedback_post_saves_and_shows_sent(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies(email="fbpost@example.com")
     create_feed_token(db_path, user_id)
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
     resp = client.post(
@@ -558,8 +528,8 @@ def test_feedback_post_saves_and_shows_sent(client, db_path):
     assert row[0] == "Great app!"
 
 
-def test_settings_feedback_post_redirects(client, db_path):
-    user_id, cookies = _auth_cookies(db_path, email="sfb@example.com")
+def test_settings_feedback_post_redirects(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies(email="sfb@example.com")
     create_feed_token(db_path, user_id)
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
     resp = client.post(
@@ -584,13 +554,13 @@ def test_geocode_short_query_returns_empty(client):
     assert resp.json() == []
 
 
-def test_setup_does_not_trigger_welcome_email_on_location_change(client, db_path, monkeypatch):
+def test_setup_does_not_trigger_welcome_email_on_location_change(client, db_path, monkeypatch, auth_cookies):
     """Welcome email is NOT sent when user already has a location."""
     calls = []
     monkeypatch.setenv("ENABLE_WELCOME_EMAIL", "true")
     monkeypatch.setattr(web_app, "send_welcome_email", lambda *a, **kw: calls.append(a))
 
-    user_id, cookies = _auth_cookies(db_path, email="existing@example.com")
+    user_id, cookies = auth_cookies(email="existing@example.com")
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
 
     client.post(
@@ -671,8 +641,8 @@ def test_export_user_data_returns_all_sections(db_path):
     assert data["feedback"][0]["description"] == "Great!"
 
 
-def test_export_endpoint_returns_json_download(client, db_path):
-    user_id, cookies = _auth_cookies(db_path, email="exportroute@example.com")
+def test_export_endpoint_returns_json_download(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies(email="exportroute@example.com")
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
 
     resp = client.get("/settings/export", cookies=cookies)
@@ -701,10 +671,10 @@ def test_google_auth_start_requires_login(client):
     assert resp.headers["location"] == "/login"
 
 
-def test_google_auth_start_redirects_to_google(client, db_path, monkeypatch):
+def test_google_auth_start_redirects_to_google(client, db_path, monkeypatch, auth_cookies):
     monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-client-id")
     monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-client-secret")
-    _, cookies = _auth_cookies(db_path, email="gauth@example.com")
+    _, cookies = auth_cookies(email="gauth@example.com")
 
     from unittest.mock import MagicMock, patch
     mock_flow = MagicMock()
@@ -718,19 +688,20 @@ def test_google_auth_start_redirects_to_google(client, db_path, monkeypatch):
     assert "accounts.google.com" in resp.headers["location"]
 
 
-def test_google_auth_callback_stores_tokens(client, db_path, monkeypatch):
+def test_google_auth_callback_stores_tokens(client, db_path, monkeypatch, auth_cookies):
     from unittest.mock import MagicMock, patch
     from datetime import datetime, timedelta, timezone
     from jose import jwt as _jwt
+    from src.web.auth import SECRET_KEY
 
     monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-client-id")
     monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-client-secret")
 
-    user_id, cookies = _auth_cookies(db_path, email="gcallback@example.com")
+    user_id, cookies = auth_cookies(email="gcallback@example.com")
 
     state = _jwt.encode(
         {"user_id": user_id, "purpose": "google_oauth"},
-        "change-me-in-production",
+        SECRET_KEY,
         algorithm="HS256",
     )
 
@@ -765,11 +736,11 @@ def test_google_auth_disconnect_requires_login(client):
     assert resp.headers["location"] == "/login"
 
 
-def test_google_auth_disconnect_deletes_tokens(client, db_path, monkeypatch):
+def test_google_auth_disconnect_deletes_tokens(client, db_path, monkeypatch, auth_cookies):
     from unittest.mock import MagicMock, patch
     from datetime import datetime, timedelta, timezone
 
-    user_id, cookies = _auth_cookies(db_path, email="gdiscon@example.com")
+    user_id, cookies = auth_cookies(email="gdiscon@example.com")
     cred = MagicMock()
     cred.token = "tok"
     cred.refresh_token = "ref"
@@ -789,10 +760,10 @@ def test_google_auth_disconnect_deletes_tokens(client, db_path, monkeypatch):
     assert row is None
 
 
-def test_settings_shows_google_connect_when_enabled(client, db_path, monkeypatch):
+def test_settings_shows_google_connect_when_enabled(client, db_path, monkeypatch, auth_cookies):
     monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-id")
     monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-secret")
-    user_id, cookies = _auth_cookies(db_path, email="gshow@example.com")
+    user_id, cookies = auth_cookies(email="gshow@example.com")
     create_feed_token(db_path, user_id)
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
     resp = client.get("/settings", cookies=cookies)
@@ -800,13 +771,13 @@ def test_settings_shows_google_connect_when_enabled(client, db_path, monkeypatch
     assert b"Connect with Google Calendar" in resp.content
 
 
-def test_settings_shows_connected_status(client, db_path, monkeypatch):
+def test_settings_shows_connected_status(client, db_path, monkeypatch, auth_cookies):
     from unittest.mock import MagicMock
     from datetime import datetime, timedelta, timezone
 
     monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-id")
     monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-secret")
-    user_id, cookies = _auth_cookies(db_path, email="gconn@example.com")
+    user_id, cookies = auth_cookies(email="gconn@example.com")
     create_feed_token(db_path, user_id)
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
     cred = MagicMock()
@@ -820,10 +791,10 @@ def test_settings_shows_connected_status(client, db_path, monkeypatch):
     assert b"Disconnect Google Calendar" in resp.content
 
 
-def test_settings_hides_google_when_not_configured(client, db_path, monkeypatch):
+def test_settings_hides_google_when_not_configured(client, db_path, monkeypatch, auth_cookies):
     monkeypatch.delenv("GOOGLE_CLIENT_ID", raising=False)
     monkeypatch.delenv("GOOGLE_CLIENT_SECRET", raising=False)
-    user_id, cookies = _auth_cookies(db_path, email="ghide@example.com")
+    user_id, cookies = auth_cookies(email="ghide@example.com")
     create_feed_token(db_path, user_id)
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
     resp = client.get("/settings", cookies=cookies)
@@ -901,11 +872,11 @@ def test_resolve_prefs_preserves_zero_values(db_path):
     assert result["warn_rain"] == 0
 
 
-def test_settings_post_triggers_gcal_push_when_connected(client, db_path, monkeypatch):
+def test_settings_post_triggers_gcal_push_when_connected(client, db_path, monkeypatch, auth_cookies):
     from unittest.mock import MagicMock, patch
     from datetime import datetime, timedelta, timezone
 
-    user_id, cookies = _auth_cookies(db_path, email="gcalpush@example.com")
+    user_id, cookies = auth_cookies(email="gcalpush@example.com")
     create_feed_token(db_path, user_id)
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
 
@@ -923,8 +894,8 @@ def test_settings_post_triggers_gcal_push_when_connected(client, db_path, monkey
     mock_push.assert_called_once_with(db_path, user_id)
 
 
-def test_settings_post_no_gcal_push_when_not_connected(client, db_path):
-    user_id, cookies = _auth_cookies(db_path, email="nogcal@example.com")
+def test_settings_post_no_gcal_push_when_not_connected(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies(email="nogcal@example.com")
     create_feed_token(db_path, user_id)
     set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
 

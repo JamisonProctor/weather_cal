@@ -6,15 +6,6 @@ import pytest
 from src.events.constants import EVENT_CATEGORIES
 from src.events.db import create_event_tables
 from src.events.models import Event, EventSeries
-from src.services.forecast_store import ForecastStore
-
-
-@pytest.fixture
-def db_path(tmp_path):
-    path = str(tmp_path / "test_events.db")
-    ForecastStore(db_path=path)
-    create_event_tables(path)
-    return path
 
 
 # --- Dataclass tests ---

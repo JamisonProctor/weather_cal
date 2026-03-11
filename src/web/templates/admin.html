@@ -59,6 +59,10 @@
       <div class="value">{{ stats.total_settings_clicks }}</div>
     </div>
     <div class="stat-card">
+      <div class="label">Google connected</div>
+      <div class="value">{{ stats.google_connected_count }}</div>
+    </div>
+    <div class="stat-card">
       <div class="label">Feedback</div>
       <div class="value">{{ feedback|length }}</div>
     </div>
@@ -77,6 +81,7 @@
           <th>Last poll</th>
           <th>Last 24h</th>
           <th>Calendar app</th>
+          <th>Google</th>
           <th>Prefs</th>
           <th>Clicks</th>
         </tr>
@@ -90,6 +95,15 @@
           <td>{{ u.last_polled_at or '—' }}</td>
           <td>{{ u.polls_last_24h }}{% if u.low_polls %} <span class="dot dot-warn" title="Low poll rate"></span>{% endif %}</td>
           <td>{{ u.calendar_app }}</td>
+          <td>
+            {% if u.google_status == 'active' %}
+              <span class="dot" style="background:#22c55e" title="Connected"></span> Connected
+            {% elif u.google_status == 'revoked' %}
+              <span class="dot dot-warn" title="Revoked"></span> Revoked
+            {% else %}
+              <span style="color:#9ca3af">—</span>
+            {% endif %}
+          </td>
           <td>
             <span class="dot {% if u.changed_prefs %}dot-yes{% else %}dot-no{% endif %}"
                   title="{% if u.changed_prefs %}Changed{% else %}Default{% endif %}"></span>

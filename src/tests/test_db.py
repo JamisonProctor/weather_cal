@@ -25,12 +25,33 @@ from src.web.db import (
 )
 
 
+def _create_google_tokens_table(db_path):
+    """Create google_tokens table (mirrors google_push.py)."""
+    import sqlite3 as _sqlite3
+    conn = _sqlite3.connect(db_path)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS google_tokens (
+            user_id            INTEGER PRIMARY KEY REFERENCES users(id),
+            access_token       TEXT NOT NULL,
+            refresh_token      TEXT NOT NULL,
+            token_expiry       TEXT,
+            google_calendar_id TEXT,
+            status             TEXT NOT NULL DEFAULT 'active',
+            connected_at       TEXT NOT NULL,
+            updated_at         TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
 @pytest.fixture
 def db_path(tmp_path):
     path = str(tmp_path / "test.db")
     ForecastStore(db_path=path)
     create_user_preferences_table(path)
     create_feedback_table(path)
+    _create_google_tokens_table(path)
     return path
 
 
@@ -381,3 +402,75 @@ def test_get_last_forecast_update_with_data(db_path):
     ))
     result = get_last_forecast_update(db_path, ["Munich, Germany"])
     assert result == "2099-01-02T08:00:00"
+
+
+# --- Admin Google status tests ---
+
+
+def test_admin_stats_includes_google_status_active(db_path):
+    user_id = create_user(db_path, "gactive@example.com", "password123456")
+    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    create_feed_token(db_path, user_id)
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "INSERT INTO google_tokens (user_id, access_token, refresh_token, status, connected_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (user_id, "tok", "ref", "active", "2026-01-01T00:00:00", "2026-01-01T00:00:00"),
+    )
+    conn.commit()
+    conn.close()
+    stats = get_admin_stats(db_path)
+    user = next(u for u in stats["users"] if u["email"] == "gactive@example.com")
+    assert user["google_status"] == "active"
+
+
+def test_admin_stats_includes_google_status_revoked(db_path):
+    user_id = create_user(db_path, "grevoked@example.com", "password123456")
+    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    create_feed_token(db_path, user_id)
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "INSERT INTO google_tokens (user_id, access_token, refresh_token, status, connected_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (user_id, "tok", "ref", "revoked", "2026-01-01T00:00:00", "2026-01-01T00:00:00"),
+    )
+    conn.commit()
+    conn.close()
+    stats = get_admin_stats(db_path)
+    user = next(u for u in stats["users"] if u["email"] == "grevoked@example.com")
+    assert user["google_status"] == "revoked"
+
+
+def test_admin_stats_includes_google_status_none(db_path):
+    user_id = create_user(db_path, "gnone@example.com", "password123456")
+    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    create_feed_token(db_path, user_id)
+    stats = get_admin_stats(db_path)
+    user = next(u for u in stats["users"] if u["email"] == "gnone@example.com")
+    assert user["google_status"] is None
+
+
+def test_admin_stats_google_connected_count(db_path):
+    # User 1: active
+    uid1 = create_user(db_path, "gc1@example.com", "password123456")
+    set_user_location(db_path, uid1, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    create_feed_token(db_path, uid1)
+    # User 2: revoked
+    uid2 = create_user(db_path, "gc2@example.com", "password123456")
+    set_user_location(db_path, uid2, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    create_feed_token(db_path, uid2)
+    # User 3: no google token
+    uid3 = create_user(db_path, "gc3@example.com", "password123456")
+    set_user_location(db_path, uid3, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    create_feed_token(db_path, uid3)
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "INSERT INTO google_tokens (user_id, access_token, refresh_token, status, connected_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (uid1, "tok", "ref", "active", "2026-01-01T00:00:00", "2026-01-01T00:00:00"),
+    )
+    conn.execute(
+        "INSERT INTO google_tokens (user_id, access_token, refresh_token, status, connected_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (uid2, "tok", "ref", "revoked", "2026-01-01T00:00:00", "2026-01-01T00:00:00"),
+    )
+    conn.commit()
+    conn.close()
+    stats = get_admin_stats(db_path)
+    assert stats["google_connected_count"] == 1

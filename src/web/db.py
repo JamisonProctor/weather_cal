@@ -622,10 +622,12 @@ def get_admin_stats(db_path: str) -> dict:
                     COALESCE(ft.settings_clicks, 0) AS settings_clicks,
                     (SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END
                      FROM user_preferences up
-                     WHERE up.user_id = u.id AND ({changed_prefs_sql})) AS changed_prefs
+                     WHERE up.user_id = u.id AND ({changed_prefs_sql})) AS changed_prefs,
+                    gt.status AS google_status
                 FROM users u
                 LEFT JOIN user_locations ul ON ul.user_id = u.id
                 LEFT JOIN feed_tokens ft ON ft.user_id = u.id
+                LEFT JOIN google_tokens gt ON gt.user_id = u.id
                 WHERE u.is_active = 1
                 ORDER BY u.created_at DESC"""
         )
@@ -654,7 +656,12 @@ def get_admin_stats(db_path: str) -> dict:
                 "calendar_app": _detect_calendar_app(ua),
                 "settings_clicks": r["settings_clicks"],
                 "changed_prefs": bool(r["changed_prefs"]),
+                "google_status": r["google_status"],
             })
+
+        google_connected_count = sum(
+            1 for u in users if u["google_status"] == "active"
+        )
 
         return {
             "total_users": total_users,
@@ -662,6 +669,7 @@ def get_admin_stats(db_path: str) -> dict:
             "changed_prefs_count": changed_prefs_count,
             "total_polls": total_polls,
             "total_settings_clicks": total_settings_clicks,
+            "google_connected_count": google_connected_count,
             "users": users,
         }
     finally:

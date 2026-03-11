@@ -135,7 +135,7 @@ class ForecastService:
         params = {
             "latitude": lat,
             "longitude": lon,
-            "hourly": "temperature_2m,weathercode,precipitation_probability,windspeed_10m",
+            "hourly": "temperature_2m,weathercode,precipitation_probability,precipitation,windspeed_10m",
             "timezone": tz,
             "forecast_days": forecast_days,
         }
@@ -154,6 +154,7 @@ class ForecastService:
         temps = data["hourly"]["temperature_2m"]
         codes = data["hourly"]["weathercode"]
         rain_probs = data["hourly"].get("precipitation_probability", [0]*len(times))
+        precip = data["hourly"].get("precipitation", [0]*len(times))
         winds = data["hourly"].get("windspeed_10m", [0]*len(times))
 
         daily_data = {}
@@ -162,11 +163,12 @@ class ForecastService:
             date_str = dt.date().isoformat()
             if start_hour <= dt.hour <= end_hour:
                 if date_str not in daily_data:
-                    daily_data[date_str] = {"times": [], "temps": [], "codes": [], "rain": [], "winds": []}
+                    daily_data[date_str] = {"times": [], "temps": [], "codes": [], "rain": [], "precipitation": [], "winds": []}
                 daily_data[date_str]["times"].append(t)
                 daily_data[date_str]["temps"].append(temps[idx] if idx < len(temps) else None)
                 daily_data[date_str]["codes"].append(codes[idx] if idx < len(codes) else None)
                 daily_data[date_str]["rain"].append(rain_probs[idx] if idx < len(rain_probs) else None)
+                daily_data[date_str]["precipitation"].append(precip[idx] if idx < len(precip) else None)
                 daily_data[date_str]["winds"].append(winds[idx] if idx < len(winds) else None)
 
         forecasts = []
@@ -183,6 +185,7 @@ class ForecastService:
                 temps=vals["temps"],
                 codes=vals["codes"],
                 rain=vals["rain"],
+                precipitation=vals["precipitation"],
                 winds=vals["winds"],
                 description=None,
                 timezone=tz,

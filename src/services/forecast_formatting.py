@@ -8,12 +8,9 @@ from typing import List, Tuple
 
 from src.models.forecast import Forecast
 
-RAIN_WARNING_CODES = {
-    51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99
-}
 SNOW_WARNING_CODES = {71, 73, 75, 77, 85, 86}
 SUNNY_CODES = {0, 1, 2}
-RAIN_PROB_THRESHOLD = 40
+RAIN_MM_THRESHOLD = 0.5
 WIND_SPEED_THRESHOLD = 30
 COLD_TEMP_THRESHOLD = 3
 HOT_TEMP_THRESHOLD = 28
@@ -67,7 +64,8 @@ def format_summary(forecast: Forecast, prefs=None) -> str:
     morning_emoji, morning_temp, afternoon_emoji, afternoon_temp = map_morning_afternoon(
         forecast.times, forecast.temps, forecast.codes
     )
-    data = list(zip(forecast.times, forecast.temps, forecast.codes, forecast.rain, forecast.winds))
+    data = list(zip(forecast.times, forecast.temps, forecast.codes, forecast.rain,
+                    forecast.winds, forecast.precipitation or [0]*len(forecast.times)))
     warnings = _collect_warnings(data, prefs) if data else ""
 
     unit = prefs.get("temp_unit", "C") if prefs else "C"
@@ -79,7 +77,7 @@ def format_summary(forecast: Forecast, prefs=None) -> str:
 
     return f"AM{morning_emoji}{morning_value}° / PM{afternoon_emoji}{afternoon_value}°"
 
-def _collect_warnings(block: List[Tuple[str, float, int, float, float]], prefs=None) -> str:
+def _collect_warnings(block: List[Tuple[str, float, int, float, float, float]], prefs=None) -> str:
     """
     Return concatenated warning icons for a time block based on precipitation,
     snow, wind, and cold temperatures. Respects user prefs if provided.
@@ -89,18 +87,17 @@ def _collect_warnings(block: List[Tuple[str, float, int, float, float]], prefs=N
 
     cold_threshold = prefs.get("cold_threshold", COLD_TEMP_THRESHOLD) if prefs is not None else COLD_TEMP_THRESHOLD
 
-    rain_vals = [value for value in (d[3] for d in block) if value is not None]
+    precip_vals = [value for value in (d[5] for d in block) if value is not None]
     wind_vals = [value for value in (d[4] for d in block) if value is not None]
     temps = [value for value in (d[1] for d in block) if value is not None]
     codes = [d[2] for d in block if d[2] is not None]
 
     warnings: List[str] = []
-    max_rain = max(rain_vals) if rain_vals else 0
+    max_precip = max(precip_vals) if precip_vals else 0
     max_wind = max(wind_vals) if wind_vals else 0
 
     if prefs is None or prefs.get("allday_rain", 1):
-        is_rainy = max_rain >= RAIN_PROB_THRESHOLD or any(code in RAIN_WARNING_CODES for code in codes)
-        if is_rainy:
+        if max_precip >= RAIN_MM_THRESHOLD:
             warnings.append("☂️")
 
     if prefs is None or prefs.get("allday_wind", 1):
@@ -149,30 +146,30 @@ class MergedWarningWindow:
 _WARNING_CHECKS = [
     (
         "rain", "☂️", "Rain Warning",
-        lambda temp, code, rain, wind: (rain or 0) >= RAIN_PROB_THRESHOLD or code in RAIN_WARNING_CODES,
+        lambda temp, code, rain, wind, precip: (precip or 0) >= RAIN_MM_THRESHOLD,
     ),
     (
         "wind", "🌬️", "Wind Warning",
-        lambda temp, code, rain, wind: (wind or 0) >= WIND_SPEED_THRESHOLD,
+        lambda temp, code, rain, wind, precip: (wind or 0) >= WIND_SPEED_THRESHOLD,
     ),
     (
         "cold", "🥶", "Cold Warning",
-        lambda temp, code, rain, wind: (temp is not None) and temp < COLD_TEMP_THRESHOLD,
+        lambda temp, code, rain, wind, precip: (temp is not None) and temp < COLD_TEMP_THRESHOLD,
     ),
     (
         "snow", "☃️", "Snow Warning",
-        lambda temp, code, rain, wind: code in SNOW_WARNING_CODES,
+        lambda temp, code, rain, wind, precip: code in SNOW_WARNING_CODES,
     ),
     (
         "sunny", "☀️", "Nice weather — enjoy!",
-        lambda temp, code, rain, wind: code in SUNNY_CODES
+        lambda temp, code, rain, wind, precip: code in SUNNY_CODES
         and (temp is not None) and temp >= WARM_TEMP_THRESHOLD
-        and (rain or 0) < RAIN_PROB_THRESHOLD
+        and (precip or 0) < RAIN_MM_THRESHOLD
         and (wind or 0) < WIND_SPEED_THRESHOLD,
     ),
     (
         "hot", "🥵", "Heat Warning",
-        lambda temp, code, rain, wind: (temp is not None) and temp > HOT_TEMP_THRESHOLD,
+        lambda temp, code, rain, wind, precip: (temp is not None) and temp > HOT_TEMP_THRESHOLD,
     ),
 ]
 
@@ -184,7 +181,8 @@ def get_warning_windows(forecast: Forecast, prefs=None) -> List[WarningWindow]:
     Each warning type is evaluated independently, so overlapping windows of
     different types are possible. Respects user prefs if provided.
     """
-    data = list(zip(forecast.times, forecast.temps, forecast.codes, forecast.rain, forecast.winds))
+    data = list(zip(forecast.times, forecast.temps, forecast.codes, forecast.rain,
+                    forecast.winds, forecast.precipitation or [0]*len(forecast.times)))
     windows: List[WarningWindow] = []
 
     for wtype, emoji, label, check in _WARNING_CHECKS:
@@ -197,16 +195,16 @@ def get_warning_windows(forecast: Forecast, prefs=None) -> List[WarningWindow]:
 
         if wtype == "cold" and prefs is not None:
             ct = prefs.get("cold_threshold", COLD_TEMP_THRESHOLD)
-            active_check = lambda temp, code, rain, wind, ct=ct: (temp is not None) and temp < ct
+            active_check = lambda temp, code, rain, wind, precip, ct=ct: (temp is not None) and temp < ct
         elif wtype == "hot" and prefs is not None:
             ht = prefs.get("hot_threshold", HOT_TEMP_THRESHOLD)
-            active_check = lambda temp, code, rain, wind, ht=ht: (temp is not None) and temp > ht
+            active_check = lambda temp, code, rain, wind, precip, ht=ht: (temp is not None) and temp > ht
         elif wtype == "sunny" and prefs is not None:
             wt = prefs.get("warm_threshold", WARM_TEMP_THRESHOLD)
-            active_check = lambda temp, code, rain, wind, wt=wt: (
+            active_check = lambda temp, code, rain, wind, precip, wt=wt: (
                 code in SUNNY_CODES
                 and (temp is not None) and temp >= wt
-                and (rain or 0) < RAIN_PROB_THRESHOLD
+                and (precip or 0) < RAIN_MM_THRESHOLD
                 and (wind or 0) < WIND_SPEED_THRESHOLD
             )
         else:
@@ -215,8 +213,8 @@ def get_warning_windows(forecast: Forecast, prefs=None) -> List[WarningWindow]:
         run_start = None
         run_last = None
 
-        for t, temp, code, rain, wind in data:
-            if active_check(temp, code, rain, wind):
+        for t, temp, code, rain, wind, precip in data:
+            if active_check(temp, code, rain, wind, precip):
                 if run_start is None:
                     run_start = t
                 run_last = t
@@ -302,7 +300,8 @@ def format_detailed_forecast(forecast: Forecast, prefs=None) -> str:
     unit = prefs.get("temp_unit", "C") if prefs else "C"
     slots = [6, 9, 12, 15, 18, 21]
     description_lines = []
-    data = list(zip(forecast.times, forecast.temps, forecast.codes, forecast.rain, forecast.winds))
+    data = list(zip(forecast.times, forecast.temps, forecast.codes, forecast.rain,
+                    forecast.winds, forecast.precipitation or [0]*len(forecast.times)))
     for start in slots:
         block = [d for d in data if datetime.fromisoformat(d[0]).hour in (start, start+1, start+2)]
         if not block:

@@ -53,6 +53,7 @@ def test_fetch_forecasts(monkeypatch):
             "temperature_2m": [15, 16, 17, 22, 23, 24],
             "weathercode": [1, 1, 1, 2, 2, 2],
             "precipitation_probability": [0, 10, 20, 10, 0, 0],
+            "precipitation": [0, 0, 0.1, 0, 0, 0],
             "windspeed_10m": [5, 6, 7, 8, 7, 6]
         }
     }
@@ -74,7 +75,7 @@ def test_fetch_forecasts(monkeypatch):
 
 # 5. Test fetch_forecasts handles empty data
 def test_fetch_forecasts_empty(monkeypatch):
-    empty_data = {"hourly": {"time": [], "temperature_2m": [], "weathercode": [], "precipitation_probability": [], "windspeed_10m": []}}
+    empty_data = {"hourly": {"time": [], "temperature_2m": [], "weathercode": [], "precipitation_probability": [], "precipitation": [], "windspeed_10m": []}}
     monkeypatch.setattr(ForecastService, "get_coordinates_with_timezone", lambda *a, **k: (48.13, 11.58, "Europe/Berlin"))
     monkeypatch.setattr("requests.get", lambda *a, **k: MockResponse(empty_data))
     forecasts = ForecastService.fetch_forecasts("Munich")

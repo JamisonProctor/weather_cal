@@ -21,6 +21,7 @@ def _make_forecast(date="2026-03-10", location="Munich, Germany", timezone="Euro
         temps=[],
         codes=[],
         rain=[],
+        precipitation=[],
         winds=[],
         timezone=timezone,
     )
@@ -47,7 +48,7 @@ def test_no_warnings_emits_only_all_day_event():
 
 
 def test_warning_produces_timed_event():
-    # Rain probability >= 40% for a block of hours → Rain Warning
+    # Precipitation >= 0.5mm for a block of hours → Rain Warning
     forecast = _make_forecast(
         times=[
             "2026-03-10T10:00",
@@ -58,6 +59,7 @@ def test_warning_produces_timed_event():
         temps=[12, 12, 13, 13],
         codes=[1, 1, 1, 1],
         rain=[50, 60, 55, 45],
+        precipitation=[1.2, 2.0, 1.5, 0.8],
         winds=[5, 5, 5, 5],
     )
     ics_bytes = generate_ics([forecast], "Munich, Germany")
@@ -69,7 +71,7 @@ def test_warning_produces_timed_event():
     timed = next(e for e in events if hasattr(e["DTSTART"].dt, "hour"))
     summary = str(timed["SUMMARY"])
     assert "☂️" in summary
-    assert "%" in summary  # contextual rain probability
+    assert "mm" in summary  # shows total precipitation in mm
 
     # dtstart should be timezone-aware
     assert timed["DTSTART"].dt.tzinfo is not None
@@ -83,6 +85,7 @@ def test_warning_uid_is_stable():
         temps=[12, 12],
         codes=[1, 1],
         rain=[50, 55],
+        precipitation=[1.0, 1.5],
         winds=[5, 5],
     )
 
@@ -104,6 +107,7 @@ def test_generate_ics_with_rain_disabled_prefs():
         temps=[12, 12],
         codes=[61, 61],
         rain=[70, 70],
+        precipitation=[2.0, 3.0],
         winds=[5, 5],
     )
     prefs = {
@@ -166,6 +170,7 @@ def test_timed_event_description_contains_settings_url():
         temps=[12, 12],
         codes=[61, 61],
         rain=[70, 70],
+        precipitation=[2.0, 3.0],
         winds=[5, 5],
     )
     settings_url = "https://weathercal.app/settings"
@@ -184,6 +189,7 @@ def test_vtimezone_present_when_timed_events_exist():
         temps=[12, 12],
         codes=[1, 1],
         rain=[50, 60],
+        precipitation=[1.0, 1.5],
         winds=[5, 5],
     )
     ics_bytes = generate_ics([forecast], "Munich, Germany")
@@ -207,6 +213,7 @@ def test_generate_ics_both_allday_and_timed_disabled():
         temps=[12, 12],
         codes=[61, 61],
         rain=[70, 70],
+        precipitation=[2.0, 3.0],
         winds=[5, 5],
     )
     prefs = {
@@ -227,6 +234,7 @@ def test_generate_ics_unknown_timezone_falls_back_to_utc():
         temps=[12, 12],
         codes=[61, 61],
         rain=[70, 70],
+        precipitation=[2.0, 3.0],
         winds=[5, 5],
     )
     ics_bytes = generate_ics([forecast], "Munich, Germany")
@@ -257,7 +265,7 @@ def test_merged_window_summary_sunny_fahrenheit():
     assert "☀️" in result
 
 
-def test_merged_window_summary_rain_shows_probability():
+def test_merged_window_summary_rain_shows_mm():
     from src.integrations.ics_service import _merged_window_summary
     from src.services.forecast_formatting import MergedWarningWindow
     merged = MergedWarningWindow(
@@ -269,11 +277,12 @@ def test_merged_window_summary_rain_shows_probability():
         temps=[12, 13, 14],
         codes=[61, 61, 63],
         rain=[50, 70, 60],
+        precipitation=[1.2, 2.0, 1.5],
         winds=[5, 5, 5],
     )
     result = _merged_window_summary(merged, forecast)
     assert "☂️" in result
-    assert "50 ~ 70%" in result
+    assert "4.7mm" in result
 
 
 def test_merged_window_summary_wind_shows_speed():
@@ -337,6 +346,7 @@ def test_timed_event_description_contains_hourly_weather():
         temps=[12, 13, 14, 13],
         codes=[61, 61, 63, 61],
         rain=[50, 60, 70, 55],
+        precipitation=[1.2, 2.0, 3.5, 1.0],
         winds=[5, 5, 5, 5],
     )
     ics_bytes = generate_ics([forecast], "Munich, Germany")
@@ -364,6 +374,7 @@ def test_timed_event_description_fahrenheit():
         temps=[12, 14],
         codes=[61, 61],
         rain=[50, 60],
+        precipitation=[1.5, 2.0],
         winds=[5, 5],
     )
     prefs = {
@@ -391,6 +402,7 @@ def test_overlapping_rain_and_cold_produces_single_timed_event():
         temps=[2, 1, 0, -1, -1, -2],
         codes=[61, 61, 63, 63, 61, 61],
         rain=[50, 60, 70, 65, 55, 50],
+        precipitation=[1.5, 2.0, 3.0, 2.5, 1.5, 1.0],
         winds=[5, 5, 5, 5, 5, 5],
     )
     prefs = {

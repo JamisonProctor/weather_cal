@@ -99,6 +99,7 @@ def test_upsert_and_retrieve_preserves_hourly_data(store):
         temps=[15.5, 25.3],
         codes=[0, 1],
         rain=[0, 10],
+        precipitation=[0, 0.5],
         winds=[5, 8],
         timezone="Europe/Berlin",
     )
@@ -110,6 +111,7 @@ def test_upsert_and_retrieve_preserves_hourly_data(store):
     assert r.temps == [15.5, 25.3]
     assert r.codes == [0, 1]
     assert r.rain == [0, 10]
+    assert r.precipitation == [0, 0.5]
     assert r.winds == [5, 8]
     assert r.timezone == "Europe/Berlin"
 

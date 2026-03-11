@@ -50,26 +50,11 @@ def test_main_runs_full_pipeline(monkeypatch):
         ],
     }
     saved_forecasts = []
-    updated_forecasts = []
 
     class FakeStore:
         def upsert_forecast(self, forecast):
             saved_forecasts.append(forecast)
 
-        def get_forecasts_future(self, days):
-            assert days == 14
-            return list(saved_forecasts)
-
-    synced_warnings = []
-
-    class FakeCalendarService:
-        def upsert_event(self, forecast):
-            updated_forecasts.append(forecast)
-
-        def sync_warning_events(self, date, location, windows, timezone):
-            synced_warnings.append((date, location, windows))
-
-    monkeypatch.setenv("ENABLE_GOOGLE_CALENDAR_SYNC", "true")
     monkeypatch.setattr(main, "get_locations", lambda: [
         {"location": "Munich, Germany", "lat": 48.137, "lon": 11.576, "timezone": "Europe/Berlin"},
         {"location": "Berlin, Germany", "lat": 52.520, "lon": 13.405, "timezone": "Europe/Berlin"},
@@ -82,18 +67,14 @@ def test_main_runs_full_pipeline(monkeypatch):
     )
     monkeypatch.setattr(main, "format_summary", lambda forecast: f"summary-{forecast.location}")
     monkeypatch.setattr(main, "format_detailed_forecast", lambda forecast: f"description-{forecast.location}")
-    monkeypatch.setattr(main, "get_warning_windows", lambda forecast: [])
-    monkeypatch.setattr(main, "CalendarService", FakeCalendarService)
+    monkeypatch.setattr(main, "_push_google_calendars", lambda: None)
 
     main.main()
 
     assert len(saved_forecasts) == 2
-    assert len(updated_forecasts) == 2
     assert [forecast.location for forecast in saved_forecasts] == ["Munich, Germany", "Berlin, Germany"]
     assert all(forecast.summary.startswith("summary-") for forecast in saved_forecasts)
     assert all(forecast.description.startswith("description-") for forecast in saved_forecasts)
-    assert updated_forecasts == saved_forecasts
-    assert len(synced_warnings) == 2
 
 
 def test_short_term_main_fetches_and_stores(monkeypatch):
@@ -190,9 +171,9 @@ def test_short_term_main_continues_on_error(monkeypatch):
     assert saved_forecasts[0].location == "Berlin, Germany"
 
 
-def test_main_does_not_update_calendar_when_fetch_fails(monkeypatch):
-    store_calls = {"created": 0, "get_future": 0, "upsert": 0}
-    calendar_calls = {"created": 0}
+def test_main_does_not_store_when_fetch_fails(monkeypatch):
+    store_calls = {"created": 0, "upsert": 0}
+    push_calls = {"count": 0}
 
     class FakeStore:
         def __init__(self):
@@ -201,28 +182,18 @@ def test_main_does_not_update_calendar_when_fetch_fails(monkeypatch):
         def upsert_forecast(self, forecast):
             store_calls["upsert"] += 1
 
-        def get_forecasts_future(self, days):
-            store_calls["get_future"] += 1
-            return []
-
-    class FakeCalendarService:
-        def __init__(self):
-            calendar_calls["created"] += 1
-
     def fail_fetch(location, forecast_days, **kwargs):
         raise RuntimeError("upstream unavailable")
 
-    monkeypatch.setenv("ENABLE_GOOGLE_CALENDAR_SYNC", "true")
     monkeypatch.setattr(main, "get_locations", lambda: [
         {"location": "Munich, Germany", "lat": 48.137, "lon": 11.576, "timezone": "Europe/Berlin"},
     ])
     monkeypatch.setattr(main, "ForecastStore", FakeStore)
     monkeypatch.setattr(main.ForecastService, "fetch_forecasts", fail_fetch)
-    monkeypatch.setattr(main, "CalendarService", FakeCalendarService)
+    monkeypatch.setattr(main, "_push_google_calendars", lambda: push_calls.update(count=push_calls["count"] + 1))
 
     main.main()
 
     assert store_calls["created"] == 1
     assert store_calls["upsert"] == 0
-    assert store_calls["get_future"] == 0
-    assert calendar_calls["created"] == 1  # CalendarService is now initialised before the fetch loop
+    assert push_calls["count"] == 1  # Google push still runs (handles errors internally)

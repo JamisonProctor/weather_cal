@@ -12,17 +12,11 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from src.integrations.ics_service import (
-    _merged_window_summary,
-    _format_window_description,
-    _stable_uid,
+from src.services.calendar_events import (
+    CalendarEvent,
     _merged_warning_uid,
-)
-from src.services.forecast_formatting import (
-    format_detailed_forecast,
-    format_summary,
-    get_warning_windows,
-    merge_overlapping_windows,
+    _stable_uid,
+    build_calendar_events,
 )
 
 logger = logging.getLogger(__name__)
@@ -258,6 +252,7 @@ def push_events_for_user(db_path, user_id, forecasts, prefs, location, tz_name):
 
     calendar_id = row["google_calendar_id"] if row else None
     if not calendar_id:
+        logger.warning("No calendar_id for user_id=%s, skipping push", user_id)
         return
 
     try:
@@ -289,6 +284,7 @@ def _upsert_event(service, calendar_id, event_body):
     """Insert an event, or patch it if it already exists (by iCalUID)."""
     try:
         service.events().import_(calendarId=calendar_id, body=event_body).execute()
+        logger.debug("Inserted event uid=%s", event_body.get("iCalUID"))
     except HttpError as e:
         if e.resp.status == 409:
             # Event already exists — find it by iCalUID and patch
@@ -303,6 +299,7 @@ def _upsert_event(service, calendar_id, event_body):
                 service.events().patch(
                     calendarId=calendar_id, eventId=event_id, body=patch_body
                 ).execute()
+                logger.debug("Patched existing event uid=%s (409→patch)", ical_uid)
         else:
             raise
 
@@ -350,70 +347,43 @@ def _cleanup_stale_events(service, calendar_id, date_str,
         logger.warning("Failed to list events for cleanup on %s", date_str, exc_info=True)
 
 
-def _push_forecast_events(service, calendar_id, forecast, prefs, tz, tz_name):
+def _calendar_event_to_google_body(ce: CalendarEvent, tz_name: str | None) -> dict:
+    """Convert a CalendarEvent to a Google Calendar API event body."""
     from datetime import date as date_type
 
-    # 1. Compute expected UIDs based on current prefs
-    expected_allday_uids = set()
-    expected_timed_uids = set()
+    body = {
+        "iCalUID": ce.uid,
+        "summary": ce.summary,
+        "description": ce.description,
+        "location": ce.location,
+        "transparency": ce.transparency,
+    }
+    if ce.is_allday:
+        body["start"] = {"date": ce.start.isoformat()}
+        body["end"] = {"date": ce.end.isoformat()}
+    else:
+        tz_str = tz_name or "UTC"
+        body["start"] = {"dateTime": ce.start.isoformat(), "timeZone": tz_str}
+        body["end"] = {"dateTime": ce.end.isoformat(), "timeZone": tz_str}
+    return body
 
+
+def _push_forecast_events(service, calendar_id, forecast, prefs, tz, tz_name):
     show_allday = prefs.get("show_allday_events", 1) if prefs else 1
-    if show_allday:
-        expected_allday_uids.add(_stable_uid(forecast.date, forecast.location))
-
     timed_enabled = prefs.get("timed_events_enabled", 1) if prefs else 1
-    merged_windows = []
-    if timed_enabled:
-        windows = get_warning_windows(forecast, prefs)
-        merged_windows = merge_overlapping_windows(windows)
-        for merged in merged_windows:
-            expected_timed_uids.add(
-                _merged_warning_uid(merged.start_time, forecast.location, merged.warning_types)
-            )
+    logger.debug("push forecast date=%s show_allday=%s timed=%s", forecast.date, show_allday, timed_enabled)
 
-    # 2. Clean up stale events for this date
+    events = build_calendar_events(forecast, prefs)
+    expected_allday_uids = {e.uid for e in events if e.is_allday}
+    expected_timed_uids = {e.uid for e in events if not e.is_allday}
+
+    # Clean up stale events for this date
     _cleanup_stale_events(service, calendar_id, forecast.date,
                           expected_allday_uids, expected_timed_uids, tz)
 
-    # 3. Upsert current all-day event
-    if show_allday:
-        uid = _stable_uid(forecast.date, forecast.location)
-        summary = format_summary(forecast, prefs) if prefs else (forecast.summary or "Weather")
-        description = format_detailed_forecast(forecast, prefs) if prefs else (forecast.description or "")
-
-        event_body = {
-            "iCalUID": uid,
-            "summary": summary,
-            "description": description,
-            "location": forecast.location,
-            "start": {"date": forecast.date},
-            "end": {"date": (date_type.fromisoformat(forecast.date) + timedelta(days=1)).isoformat()},
-            "transparency": "transparent",
-        }
-        _upsert_event(service, calendar_id, event_body)
-
-    # 4. Upsert current timed events
-    for merged in merged_windows:
-        uid = _merged_warning_uid(merged.start_time, forecast.location, merged.warning_types)
-        summary = _merged_window_summary(merged, forecast, prefs)
-        description = _format_window_description(forecast, merged, prefs)
-        tz_str = tz_name or "UTC"
-
-        event_body = {
-            "iCalUID": uid,
-            "summary": summary,
-            "description": description,
-            "location": forecast.location,
-            "start": {
-                "dateTime": datetime.fromisoformat(merged.start_time).replace(tzinfo=tz).isoformat(),
-                "timeZone": tz_str,
-            },
-            "end": {
-                "dateTime": datetime.fromisoformat(merged.end_time).replace(tzinfo=tz).isoformat(),
-                "timeZone": tz_str,
-            },
-            "transparency": "transparent",
-        }
+    # Upsert current events
+    for ce in events:
+        event_body = _calendar_event_to_google_body(ce, tz_name)
         _upsert_event(service, calendar_id, event_body)
 
 

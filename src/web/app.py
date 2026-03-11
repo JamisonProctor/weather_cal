@@ -218,7 +218,7 @@ async def setup_post(
             webcal_url, _ = _build_feed_urls(request, feed_token)
             background_tasks.add_task(send_welcome_email, user["email"], webcal_url, location)
     background_tasks.add_task(_initial_forecast_fetch, location, DB_PATH, resolved_lat, resolved_lon, resolved_tz)
-    redirect_url = "/settings" if is_location_change else "/connect"
+    redirect_url = "/settings" if is_location_change else "/connect?from=setup"
     return RedirectResponse(url=redirect_url, status_code=303)
 
 
@@ -277,7 +277,7 @@ async def login_post(
 
 @app.post("/logout")
 async def logout():
-    response = RedirectResponse(url="/login", status_code=303)
+    response = RedirectResponse(url="/", status_code=303)
     response.delete_cookie("session")
     return response
 
@@ -300,6 +300,11 @@ async def connect(request: Request):
     user_id = _get_user_id(request)
     if not user_id:
         return RedirectResponse(url="/login", status_code=303)
+
+    # Returning users go to settings; new users from setup see the connect page
+    from_setup = request.query_params.get("from") == "setup"
+    if not from_setup:
+        return RedirectResponse(url="/settings?tab=reconnect", status_code=303)
 
     feed_token = get_feed_token_by_user(DB_PATH, user_id)
     webcal_url, google_cal_url = _build_feed_urls(request, feed_token) if feed_token else (None, None)
@@ -542,16 +547,9 @@ async def settings_feedback_post(
 @app.get("/feedback", response_class=HTMLResponse)
 async def feedback_get(request: Request):
     user_id = _get_user_id(request)
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
-
-    feed_token = get_feed_token_by_user(DB_PATH, user_id)
-    locations = get_user_locations(DB_PATH, user_id)
-    webcal_url, _ = _build_feed_urls(request, feed_token) if feed_token else (None, None)
-
-    return _template("feedback.html", request, {
-        "webcal_url": webcal_url, "locations": locations, "sent": False,
-    })
+    if user_id:
+        return RedirectResponse(url="/settings?tab=feedback", status_code=303)
+    return RedirectResponse(url="/login", status_code=303)
 
 
 @app.post("/feedback", response_class=HTMLResponse)

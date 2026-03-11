@@ -58,6 +58,23 @@ def test_login_invalid_credentials_returns_401(client, db_path):
     assert resp.status_code == 401
 
 
+def test_logout_redirects_to_landing(client, auth_cookies):
+    _, cookies = auth_cookies(email="logout@example.com")
+    resp = client.post("/logout", cookies=cookies)
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/"
+
+
+def test_logout_clears_session_cookie(client, auth_cookies):
+    _, cookies = auth_cookies(email="logout2@example.com")
+    resp = client.post("/logout", cookies=cookies)
+    assert resp.status_code == 303
+    # Response should include a Set-Cookie header that expires the session cookie
+    set_cookie = resp.headers.get("set-cookie", "")
+    assert "session=" in set_cookie
+    assert ('max-age=0' in set_cookie.lower() or 'expires=' in set_cookie.lower())
+
+
 # --- Settings ---
 
 def test_settings_get_requires_auth(client):
@@ -117,7 +134,7 @@ def test_setup_post_first_time_redirects_to_connect(client, db_path, auth_cookie
         cookies=cookies,
     )
     assert resp.status_code == 303
-    assert resp.headers["location"] == "/connect"
+    assert resp.headers["location"] == "/connect?from=setup"
 
 
 def test_setup_post_location_change_redirects_to_settings(client, db_path, auth_cookies):
@@ -483,9 +500,16 @@ def test_terms_returns_200(client):
 
 # --- Connect, feedback, geocode routes ---
 
-def test_connect_page_returns_200(client, db_path, auth_cookies):
+def test_connect_page_redirects_to_settings(client, db_path, auth_cookies):
     _, cookies = auth_cookies(email="connect@example.com")
     resp = client.get("/connect", cookies=cookies)
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/settings?tab=reconnect"
+
+
+def test_connect_page_from_setup_returns_200(client, db_path, auth_cookies):
+    _, cookies = auth_cookies(email="connect2@example.com")
+    resp = client.get("/connect?from=setup", cookies=cookies)
     assert resp.status_code == 200
 
 
@@ -495,10 +519,17 @@ def test_connect_page_requires_auth(client):
     assert resp.headers["location"] == "/login"
 
 
-def test_feedback_get_returns_200(client, db_path, auth_cookies):
+def test_feedback_get_redirects_to_settings(client, db_path, auth_cookies):
     _, cookies = auth_cookies(email="fbget@example.com")
     resp = client.get("/feedback", cookies=cookies)
-    assert resp.status_code == 200
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/settings?tab=feedback"
+
+
+def test_feedback_get_unauthenticated_redirects_to_login(client):
+    resp = client.get("/feedback")
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/login"
 
 
 def test_feedback_post_saves_and_shows_sent(client, db_path, auth_cookies):

@@ -226,15 +226,15 @@ def create_weathercal_calendar(service, location: str = "") -> str:
     return created["id"]
 
 
-def push_events_for_user(db_path, user_id, forecasts, prefs, location, tz_name):
+def _get_valid_credentials(db_path, user_id):
+    """Retrieve and refresh Google credentials. Returns (credentials, calendar_id) or (None, None)."""
     credentials = get_google_credentials(db_path, user_id)
     if not credentials:
-        return
+        return None, None
     credentials = refresh_and_persist(db_path, user_id, credentials)
     if not credentials:
-        return
+        return None, None
 
-    # Get calendar_id
     conn = _conn(db_path)
     try:
         row = conn.execute(
@@ -246,6 +246,14 @@ def push_events_for_user(db_path, user_id, forecasts, prefs, location, tz_name):
     calendar_id = row["google_calendar_id"] if row else None
     if not calendar_id:
         logger.warning("No calendar_id for user_id=%s, skipping push", user_id)
+        return None, None
+
+    return credentials, calendar_id
+
+
+def push_events_for_user(db_path, user_id, forecasts, prefs, location, tz_name):
+    credentials, calendar_id = _get_valid_credentials(db_path, user_id)
+    if not credentials:
         return
 
     try:
@@ -259,7 +267,9 @@ def push_events_for_user(db_path, user_id, forecasts, prefs, location, tz_name):
     except ZoneInfoNotFoundError:
         tz = timezone.utc
 
+    forecast_dates = set()
     for forecast in forecasts:
+        forecast_dates.add(forecast.date)
         try:
             _push_forecast_events(service, calendar_id, forecast, prefs, tz, tz_name)
         except HttpError as e:
@@ -272,37 +282,40 @@ def push_events_for_user(db_path, user_id, forecasts, prefs, location, tz_name):
             _mark_revoked(db_path, user_id)
             return
 
+    # Clean up events beyond the forecast window
+    if forecast_dates:
+        try:
+            _cleanup_beyond_forecast(service, calendar_id, forecast_dates, tz)
+        except HttpError:
+            logger.warning("Failed to clean up events beyond forecast window", exc_info=True)
+
 
 def _upsert_event(service, calendar_id, event_body):
-    """Insert an event, or patch it if it already exists (by iCalUID)."""
-    try:
+    """Insert or restore an event by iCalUID.
+
+    Checks for existing events (including soft-deleted/cancelled) first,
+    so we can restore events that were previously deleted by a settings toggle.
+    """
+    ical_uid = event_body["iCalUID"]
+
+    # Check for existing event first (including soft-deleted)
+    existing = service.events().list(
+        calendarId=calendar_id, iCalUID=ical_uid,
+        showDeleted=True, maxResults=1
+    ).execute()
+    items = existing.get("items", [])
+
+    if items:
+        event_id = items[0]["id"]
+        patch_body = {k: v for k, v in event_body.items() if k != "iCalUID"}
+        patch_body["status"] = "confirmed"
+        service.events().patch(
+            calendarId=calendar_id, eventId=event_id, body=patch_body
+        ).execute()
+        logger.debug("Patched event uid=%s (status→confirmed)", ical_uid)
+    else:
         service.events().import_(calendarId=calendar_id, body=event_body).execute()
-        logger.debug("Inserted event uid=%s", event_body.get("iCalUID"))
-    except HttpError as e:
-        if e.resp.status == 409:
-            # Event already exists — find it by iCalUID and patch
-            ical_uid = event_body["iCalUID"]
-            existing = service.events().list(
-                calendarId=calendar_id, iCalUID=ical_uid, maxResults=1
-            ).execute()
-            items = existing.get("items", [])
-            if not items:
-                # Event was soft-deleted (status: cancelled) — re-list including deleted
-                existing = service.events().list(
-                    calendarId=calendar_id, iCalUID=ical_uid,
-                    showDeleted=True, maxResults=1
-                ).execute()
-                items = existing.get("items", [])
-            if items:
-                event_id = items[0]["id"]
-                patch_body = {k: v for k, v in event_body.items() if k != "iCalUID"}
-                patch_body["status"] = "confirmed"
-                service.events().patch(
-                    calendarId=calendar_id, eventId=event_id, body=patch_body
-                ).execute()
-                logger.debug("Patched existing event uid=%s (409→patch)", ical_uid)
-        else:
-            raise
+        logger.debug("Inserted event uid=%s", ical_uid)
 
 
 def _cleanup_stale_events(service, calendar_id, date_str,
@@ -346,6 +359,40 @@ def _cleanup_stale_events(service, calendar_id, date_str,
                     logger.warning("Failed to delete stale event %s", event["id"], exc_info=True)
     except HttpError:
         logger.warning("Failed to list events for cleanup on %s", date_str, exc_info=True)
+
+
+def _cleanup_beyond_forecast(service, calendar_id, forecast_dates, tz):
+    """Delete WeatherCal events for dates beyond the current forecast window."""
+    from datetime import date as date_type
+
+    parsed_dates = sorted(date_type.fromisoformat(d) for d in forecast_dates)
+    last_forecast = parsed_dates[-1]
+    # Look 14 days past the last forecast date to catch any stale events
+    scan_start = last_forecast + timedelta(days=1)
+    scan_end = last_forecast + timedelta(days=15)
+
+    start_dt = datetime.combine(scan_start, datetime.min.time()).replace(tzinfo=tz)
+    end_dt = datetime.combine(scan_end, datetime.min.time()).replace(tzinfo=tz)
+
+    existing = service.events().list(
+        calendarId=calendar_id,
+        timeMin=start_dt.isoformat(),
+        timeMax=end_dt.isoformat(),
+        singleEvents=True,
+        maxResults=250,
+    ).execute()
+
+    for event in existing.get("items", []):
+        ical_uid = event.get("iCalUID", "")
+        if not ical_uid or "@weathercal.app" not in ical_uid:
+            continue
+        try:
+            service.events().delete(
+                calendarId=calendar_id, eventId=event["id"]
+            ).execute()
+            logger.debug("Deleted beyond-window event %s (uid=%s)", event["id"], ical_uid)
+        except HttpError:
+            logger.warning("Failed to delete beyond-window event %s", event["id"], exc_info=True)
 
 
 def _calendar_event_to_google_body(ce: CalendarEvent, tz_name: str | None) -> dict:

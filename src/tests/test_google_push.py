@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.integrations.google_push import (
+    _cleanup_beyond_forecast,
     _cleanup_stale_events,
     _upsert_event,
     create_google_tokens_table,
@@ -273,23 +274,23 @@ class TestCleanupStaleEvents:
                               tz=tz)
 
 
-# --- Upsert event (soft-delete restoration) ---
+# --- Upsert event (list-first approach) ---
 
 class TestUpsertEvent:
-    """Tests for _upsert_event including soft-deleted event restoration."""
+    """Tests for _upsert_event — always lists first (including soft-deleted)."""
 
-    def test_insert_succeeds(self):
+    def test_inserts_new_event(self):
         service = MagicMock()
+        service.events().list().execute.return_value = {"items": []}
+
         event_body = {"iCalUID": "uid@weathercal.app", "summary": "Sunny"}
         _upsert_event(service, "cal123", event_body)
-        service.events().import_.assert_called_with(calendarId="cal123", body=event_body)
 
-    def test_409_patches_existing_event(self):
-        from googleapiclient.errors import HttpError
+        service.events().import_.assert_called_with(calendarId="cal123", body=event_body)
+        service.events().patch.assert_not_called()
+
+    def test_patches_existing_event(self):
         service = MagicMock()
-        mock_resp = MagicMock()
-        mock_resp.status = 409
-        service.events().import_().execute.side_effect = HttpError(mock_resp, b"Conflict")
         service.events().list().execute.return_value = {
             "items": [{"id": "evt_existing", "iCalUID": "uid@weathercal.app"}]
         }
@@ -301,45 +302,65 @@ class TestUpsertEvent:
             calendarId="cal123", eventId="evt_existing",
             body={"summary": "Sunny", "status": "confirmed"}
         )
+        service.events().import_.assert_not_called()
 
-    def test_409_restores_soft_deleted_event(self):
-        """When an event was deleted and re-enabled, list without showDeleted
-        returns nothing. Must re-list with showDeleted=True to find and restore it."""
-        from googleapiclient.errors import HttpError
+    def test_restores_soft_deleted_event(self):
+        """Cancelled events found via showDeleted=True are patched back to confirmed."""
         service = MagicMock()
-        mock_resp = MagicMock()
-        mock_resp.status = 409
-        service.events().import_().execute.side_effect = HttpError(mock_resp, b"Conflict")
-
-        # First list (no showDeleted) returns empty, second (showDeleted=True) finds it
-        service.events().list().execute.side_effect = [
-            {"items": []},
-            {"items": [{"id": "evt_cancelled", "iCalUID": "uid@weathercal.app", "status": "cancelled"}]},
-        ]
+        service.events().list().execute.return_value = {
+            "items": [{"id": "evt_cancelled", "iCalUID": "uid@weathercal.app", "status": "cancelled"}]
+        }
 
         event_body = {"iCalUID": "uid@weathercal.app", "summary": "Sunny"}
         _upsert_event(service, "cal123", event_body)
 
-        # Should have called list twice
-        assert service.events().list().execute.call_count == 2
-        # Should patch with status=confirmed to restore
         service.events().patch.assert_called_with(
             calendarId="cal123", eventId="evt_cancelled",
             body={"summary": "Sunny", "status": "confirmed"}
         )
+        service.events().import_.assert_not_called()
 
-    def test_409_both_lists_empty_no_error(self):
-        """If event can't be found even with showDeleted, don't crash."""
-        from googleapiclient.errors import HttpError
+
+# --- Cleanup beyond forecast window ---
+
+class TestCleanupBeyondForecast:
+    """Tests for _cleanup_beyond_forecast."""
+
+    def test_deletes_weathercal_events_beyond_window(self):
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("Europe/Berlin")
         service = MagicMock()
-        mock_resp = MagicMock()
-        mock_resp.status = 409
-        service.events().import_().execute.side_effect = HttpError(mock_resp, b"Conflict")
-        service.events().list().execute.side_effect = [
-            {"items": []},
-            {"items": []},
-        ]
+        service.events().list().execute.return_value = {
+            "items": [
+                {"id": "evt_stale", "iCalUID": "abc123@weathercal.app", "start": {"date": "2026-03-26"}},
+            ]
+        }
 
-        event_body = {"iCalUID": "uid@weathercal.app", "summary": "Sunny"}
-        _upsert_event(service, "cal123", event_body)  # should not raise
-        service.events().patch.assert_not_called()
+        forecast_dates = {"2026-03-11", "2026-03-12", "2026-03-24"}
+        _cleanup_beyond_forecast(service, "cal123", forecast_dates, tz)
+
+        service.events().delete.assert_called_with(calendarId="cal123", eventId="evt_stale")
+
+    def test_ignores_non_weathercal_events(self):
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("Europe/Berlin")
+        service = MagicMock()
+        service.events().list().execute.return_value = {
+            "items": [
+                {"id": "evt_other", "iCalUID": "something@gmail.com", "start": {"date": "2026-03-26"}},
+            ]
+        }
+
+        forecast_dates = {"2026-03-11", "2026-03-24"}
+        _cleanup_beyond_forecast(service, "cal123", forecast_dates, tz)
+
+        service.events().delete.assert_not_called()
+
+    def test_no_crash_on_empty_response(self):
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("Europe/Berlin")
+        service = MagicMock()
+        service.events().list().execute.return_value = {"items": []}
+
+        _cleanup_beyond_forecast(service, "cal123", {"2026-03-11"}, tz)
+        service.events().delete.assert_not_called()

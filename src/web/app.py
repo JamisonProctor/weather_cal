@@ -421,27 +421,28 @@ async def settings_post(
             cold_threshold, warm_threshold, hot_threshold
         )
 
+    def _on(val): return 1 if val == "on" else 0
+
     upsert_user_preferences(
-        DB_PATH,
-        user_id,
+        DB_PATH, user_id,
         cold_threshold=cold_threshold,
-        warn_in_allday=1 if warn_in_allday == "on" else 0,
-        warn_rain=1 if warn_rain == "on" else 0,
-        warn_wind=1 if warn_wind == "on" else 0,
-        warn_cold=1 if warn_cold == "on" else 0,
-        warn_snow=1 if warn_snow == "on" else 0,
-        warn_sunny=1 if warn_sunny == "on" else 0,
-        show_allday_events=1 if show_allday_events == "on" else 0,
-        timed_events_enabled=1 if timed_events_enabled == "on" else 0,
-        allday_rain=1 if allday_rain == "on" else 0,
-        allday_wind=1 if allday_wind == "on" else 0,
-        allday_cold=1 if allday_cold == "on" else 0,
-        allday_snow=1 if allday_snow == "on" else 0,
-        allday_sunny=1 if allday_sunny == "on" else 0,
         warm_threshold=warm_threshold,
         hot_threshold=hot_threshold,
-        allday_hot=1 if allday_hot == "on" else 0,
-        warn_hot=1 if warn_hot == "on" else 0,
+        warn_in_allday=_on(warn_in_allday),
+        warn_rain=_on(warn_rain),
+        warn_wind=_on(warn_wind),
+        warn_cold=_on(warn_cold),
+        warn_snow=_on(warn_snow),
+        warn_sunny=_on(warn_sunny),
+        warn_hot=_on(warn_hot),
+        show_allday_events=_on(show_allday_events),
+        timed_events_enabled=_on(timed_events_enabled),
+        allday_rain=_on(allday_rain),
+        allday_wind=_on(allday_wind),
+        allday_cold=_on(allday_cold),
+        allday_snow=_on(allday_snow),
+        allday_sunny=_on(allday_sunny),
+        allday_hot=_on(allday_hot),
         temp_unit=temp_unit,
     )
     if is_google_connected(DB_PATH, user_id):

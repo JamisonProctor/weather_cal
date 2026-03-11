@@ -453,74 +453,193 @@ def increment_settings_clicks(db_path: str, user_id: int) -> None:
         conn.close()
 
 
+def _export_account(cur, user_id: int) -> dict:
+    cur.execute("SELECT id, email, created_at FROM users WHERE id = ?", (user_id,))
+    row = cur.fetchone()
+    return dict(row) if row else {}
+
+
+def _export_poll_logs(cur, user_id: int) -> list:
+    cur.execute("SELECT token FROM feed_tokens WHERE user_id = ?", (user_id,))
+    tokens = [row["token"] for row in cur.fetchall()]
+    if not tokens:
+        return []
+    placeholders = ",".join("?" * len(tokens))
+    cur.execute(
+        f"SELECT polled_at, user_agent FROM poll_log WHERE token IN ({placeholders}) ORDER BY polled_at DESC",
+        tokens,
+    )
+    return [dict(r) for r in cur.fetchall()]
+
+
+def _export_google_connection(cur, user_id: int) -> dict | None:
+    try:
+        cur.execute(
+            "SELECT connected_at, status FROM google_tokens WHERE user_id = ?",
+            (user_id,),
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None
+    except sqlite3.OperationalError:
+        return None
+
+
 def export_user_data(db_path: str, user_id: int) -> dict:
     """Return all personal data for a user as a dictionary (GDPR data export)."""
     conn = _conn(db_path)
     try:
         cur = conn.cursor()
 
-        # Account info
-        cur.execute("SELECT id, email, created_at FROM users WHERE id = ?", (user_id,))
-        user_row = cur.fetchone()
-        account = dict(user_row) if user_row else {}
-
-        # Locations
         cur.execute("SELECT location, lat, lon, timezone, created_at FROM user_locations WHERE user_id = ?", (user_id,))
         locations = [dict(r) for r in cur.fetchall()]
 
-        # Preferences
         cur.execute("SELECT * FROM user_preferences WHERE user_id = ?", (user_id,))
         prefs_row = cur.fetchone()
-        preferences = dict(prefs_row) if prefs_row else {}
 
-        # Feed tokens (metadata only, not the token itself)
         cur.execute(
             "SELECT created_at, last_polled_at, poll_count FROM feed_tokens WHERE user_id = ?",
             (user_id,),
         )
         feed_tokens = [dict(r) for r in cur.fetchall()]
 
-        # Poll log entries
-        cur.execute("SELECT token FROM feed_tokens WHERE user_id = ?", (user_id,))
-        tokens = [row["token"] for row in cur.fetchall()]
-        poll_logs = []
-        if tokens:
-            placeholders = ",".join("?" * len(tokens))
-            cur.execute(
-                f"SELECT polled_at, user_agent FROM poll_log WHERE token IN ({placeholders}) ORDER BY polled_at DESC",
-                tokens,
-            )
-            poll_logs = [dict(r) for r in cur.fetchall()]
-
-        # Feedback
         cur.execute(
             "SELECT description, calendar_app, locations, created_at FROM feedback WHERE user_id = ?",
             (user_id,),
         )
         feedback = [dict(r) for r in cur.fetchall()]
 
-        # Google Calendar connection
-        try:
-            cur.execute(
-                "SELECT connected_at, status FROM google_tokens WHERE user_id = ?",
-                (user_id,),
-            )
-            google_row = cur.fetchone()
-            google_connection = dict(google_row) if google_row else None
-        except sqlite3.OperationalError:
-            google_connection = None
-
         return {
-            "account": account,
+            "account": _export_account(cur, user_id),
             "locations": locations,
-            "preferences": preferences,
+            "preferences": dict(prefs_row) if prefs_row else {},
             "feed_tokens": feed_tokens,
-            "poll_logs": poll_logs,
+            "poll_logs": _export_poll_logs(cur, user_id),
             "feedback": feedback,
-            "google_calendar": google_connection,
+            "google_calendar": _export_google_connection(cur, user_id),
         }
     finally:
         conn.close()
+
+
+_CHANGED_PREFS_SQL = """
+    cold_threshold != 3.0
+    OR warm_threshold != 14.0
+    OR hot_threshold != 28.0
+    OR warn_in_allday != 1
+    OR warn_rain != 1
+    OR warn_wind != 1
+    OR warn_cold != 1
+    OR warn_snow != 1
+    OR warn_sunny != 0
+    OR warn_hot != 1
+    OR show_allday_events != 1
+    OR timed_events_enabled != 1
+    OR allday_rain != 1
+    OR allday_wind != 1
+    OR allday_cold != 1
+    OR allday_snow != 1
+    OR allday_sunny != 0
+    OR allday_hot != 1
+"""
+
+
+def _get_summary_stats(cur) -> dict:
+    """Aggregate counts for the admin dashboard header."""
+    cur.execute("SELECT COUNT(*) FROM users WHERE is_active = 1")
+    total_users = cur.fetchone()[0]
+
+    cur.execute(
+        """SELECT COUNT(DISTINCT ul.location)
+           FROM user_locations ul
+           JOIN users u ON ul.user_id = u.id
+           WHERE u.is_active = 1"""
+    )
+    unique_locations = cur.fetchone()[0]
+
+    cur.execute(
+        f"""SELECT COUNT(*)
+            FROM user_preferences up
+            JOIN users u ON up.user_id = u.id
+            WHERE u.is_active = 1 AND ({_CHANGED_PREFS_SQL})"""
+    )
+    changed_prefs_count = cur.fetchone()[0]
+
+    cur.execute(
+        """SELECT COALESCE(SUM(ft.poll_count), 0), COALESCE(SUM(ft.settings_clicks), 0)
+           FROM feed_tokens ft
+           JOIN users u ON ft.user_id = u.id
+           WHERE u.is_active = 1"""
+    )
+    row = cur.fetchone()
+
+    return {
+        "total_users": total_users,
+        "unique_locations": unique_locations,
+        "changed_prefs_count": changed_prefs_count,
+        "total_polls": row[0],
+        "total_settings_clicks": row[1],
+    }
+
+
+def _get_per_user_stats(cur, now) -> list[dict]:
+    """Build per-user stats list for the admin dashboard table."""
+    twenty_four_hours_ago = (now - timedelta(hours=24)).isoformat()
+    cur.execute(
+        """SELECT token, COUNT(*) AS cnt FROM poll_log
+           WHERE polled_at >= ? GROUP BY token""",
+        (twenty_four_hours_ago,),
+    )
+    token_polls_24h = {r["token"]: r["cnt"] for r in cur.fetchall()}
+
+    cur.execute(
+        f"""SELECT
+                u.email,
+                ul.location,
+                u.created_at,
+                ft.last_polled_at,
+                COALESCE(ft.poll_count, 0) AS poll_count,
+                ft.token,
+                ft.created_at AS token_created_at,
+                ft.last_user_agent,
+                COALESCE(ft.settings_clicks, 0) AS settings_clicks,
+                (SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END
+                 FROM user_preferences up
+                 WHERE up.user_id = u.id AND ({_CHANGED_PREFS_SQL})) AS changed_prefs,
+                gt.status AS google_status
+            FROM users u
+            LEFT JOIN user_locations ul ON ul.user_id = u.id
+            LEFT JOIN feed_tokens ft ON ft.user_id = u.id
+            LEFT JOIN google_tokens gt ON gt.user_id = u.id
+            WHERE u.is_active = 1
+            ORDER BY u.created_at DESC"""
+    )
+
+    users = []
+    for r in cur.fetchall():
+        ua = r["last_user_agent"] or ""
+        last_poll = r["last_polled_at"] or ""
+        token = r["token"] or ""
+        token_created = r["token_created_at"]
+        polls_last_24h = token_polls_24h.get(token, 0)
+        if token_created:
+            days_since = (now - datetime.fromisoformat(token_created)).total_seconds() / 86400
+            low_polls = polls_last_24h < 1 and days_since > 1.0
+        else:
+            low_polls = False
+        users.append({
+            "email": r["email"],
+            "location": r["location"] or "",
+            "created_at": (r["created_at"] or "")[:10],
+            "last_polled_at": last_poll[:10] if last_poll else "",
+            "poll_count": r["poll_count"],
+            "polls_last_24h": polls_last_24h,
+            "low_polls": low_polls,
+            "calendar_app": _detect_calendar_app(ua),
+            "settings_clicks": r["settings_clicks"],
+            "changed_prefs": bool(r["changed_prefs"]),
+            "google_status": r["google_status"],
+        })
+    return users
 
 
 def get_admin_stats(db_path: str) -> dict:
@@ -528,130 +647,14 @@ def get_admin_stats(db_path: str) -> dict:
     conn = _conn(db_path)
     try:
         cur = conn.cursor()
-
-        cur.execute("SELECT COUNT(*) FROM users WHERE is_active = 1")
-        total_users = cur.fetchone()[0]
-
-        cur.execute(
-            """SELECT COUNT(DISTINCT ul.location)
-               FROM user_locations ul
-               JOIN users u ON ul.user_id = u.id
-               WHERE u.is_active = 1"""
-        )
-        unique_locations = cur.fetchone()[0]
-
-        changed_prefs_sql = """
-            cold_threshold != 3.0
-            OR warm_threshold != 14.0
-            OR hot_threshold != 28.0
-            OR warn_in_allday != 1
-            OR warn_rain != 1
-            OR warn_wind != 1
-            OR warn_cold != 1
-            OR warn_snow != 1
-            OR warn_sunny != 0
-            OR warn_hot != 1
-            OR show_allday_events != 1
-            OR timed_events_enabled != 1
-            OR allday_rain != 1
-            OR allday_wind != 1
-            OR allday_cold != 1
-            OR allday_snow != 1
-            OR allday_sunny != 0
-            OR allday_hot != 1
-        """
-        cur.execute(
-            f"""SELECT COUNT(*)
-                FROM user_preferences up
-                JOIN users u ON up.user_id = u.id
-                WHERE u.is_active = 1 AND ({changed_prefs_sql})"""
-        )
-        changed_prefs_count = cur.fetchone()[0]
-
-        cur.execute(
-            """SELECT COALESCE(SUM(ft.poll_count), 0), COALESCE(SUM(ft.settings_clicks), 0)
-               FROM feed_tokens ft
-               JOIN users u ON ft.user_id = u.id
-               WHERE u.is_active = 1"""
-        )
-        row = cur.fetchone()
-        total_polls = row[0]
-        total_settings_clicks = row[1]
-
         now = datetime.now()
-        twenty_four_hours_ago = (now - timedelta(hours=24)).isoformat()
-
-        # Per-token poll counts from poll_log for last 24h
-        cur.execute(
-            """SELECT token, COUNT(*) AS cnt FROM poll_log
-               WHERE polled_at >= ? GROUP BY token""",
-            (twenty_four_hours_ago,),
-        )
-        token_polls_24h = {row["token"]: row["cnt"] for row in cur.fetchall()}
-
-        cur.execute(
-            f"""SELECT
-                    u.email,
-                    ul.location,
-                    u.created_at,
-                    ft.last_polled_at,
-                    COALESCE(ft.poll_count, 0) AS poll_count,
-                    ft.token,
-                    ft.created_at AS token_created_at,
-                    ft.last_user_agent,
-                    COALESCE(ft.settings_clicks, 0) AS settings_clicks,
-                    (SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END
-                     FROM user_preferences up
-                     WHERE up.user_id = u.id AND ({changed_prefs_sql})) AS changed_prefs,
-                    gt.status AS google_status
-                FROM users u
-                LEFT JOIN user_locations ul ON ul.user_id = u.id
-                LEFT JOIN feed_tokens ft ON ft.user_id = u.id
-                LEFT JOIN google_tokens gt ON gt.user_id = u.id
-                WHERE u.is_active = 1
-                ORDER BY u.created_at DESC"""
-        )
-        rows = cur.fetchall()
-
-        users = []
-        for r in rows:
-            ua = r["last_user_agent"] or ""
-            last_poll = r["last_polled_at"] or ""
-            token = r["token"] or ""
-            token_created = r["token_created_at"]
-            polls_last_24h = token_polls_24h.get(token, 0)
-            if token_created:
-                days_since = (now - datetime.fromisoformat(token_created)).total_seconds() / 86400
-                low_polls = polls_last_24h < 1 and days_since > 1.0
-            else:
-                low_polls = False
-            users.append({
-                "email": r["email"],
-                "location": r["location"] or "",
-                "created_at": (r["created_at"] or "")[:10],
-                "last_polled_at": last_poll[:10] if last_poll else "",
-                "poll_count": r["poll_count"],
-                "polls_last_24h": polls_last_24h,
-                "low_polls": low_polls,
-                "calendar_app": _detect_calendar_app(ua),
-                "settings_clicks": r["settings_clicks"],
-                "changed_prefs": bool(r["changed_prefs"]),
-                "google_status": r["google_status"],
-            })
-
-        google_connected_count = sum(
+        summary = _get_summary_stats(cur)
+        users = _get_per_user_stats(cur, now)
+        summary["google_connected_count"] = sum(
             1 for u in users if u["google_status"] == "active"
         )
-
-        return {
-            "total_users": total_users,
-            "unique_locations": unique_locations,
-            "changed_prefs_count": changed_prefs_count,
-            "total_polls": total_polls,
-            "total_settings_clicks": total_settings_clicks,
-            "google_connected_count": google_connected_count,
-            "users": users,
-        }
+        summary["users"] = users
+        return summary
     finally:
         conn.close()
 

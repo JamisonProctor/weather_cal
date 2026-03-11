@@ -5,11 +5,10 @@ import time
 import schedule
 
 from src.services.forecast_service import ForecastService
-from src.services.forecast_formatting import format_summary, format_detailed_forecast, get_warning_windows
+from src.services.forecast_formatting import format_summary, format_detailed_forecast
 from src.utils.logging_config import setup_logging
 from src.utils.location_management import get_locations
 from src.services.forecast_store import ForecastStore
-from src.integrations.calendar_service import CalendarService
 from src.integrations.google_push import (
     create_google_tokens_table,
     get_google_connected_users,
@@ -84,13 +83,6 @@ def main():
 
     forecast_days = 14
 
-    calendar = None
-    if os.getenv("ENABLE_GOOGLE_CALENDAR_SYNC"):
-        try:
-            calendar = CalendarService()
-        except Exception as e:
-            logger.error(f"Failed to initialize CalendarService: {e}", exc_info=True)
-
     try:
         for loc in locations:
             forecasts = ForecastService.fetch_forecasts(
@@ -103,26 +95,8 @@ def main():
                 forecast.description = format_detailed_forecast(forecast)
                 store.upsert_forecast(forecast)
 
-                if calendar:
-                    warning_windows = get_warning_windows(forecast)
-                    tz = forecast.timezone or "UTC"
-                    logger.info(
-                        "Syncing %d warning event(s) for date=%s, location=%s",
-                        len(warning_windows),
-                        forecast.date,
-                        forecast.location,
-                    )
-                    calendar.sync_warning_events(forecast.date, forecast.location, warning_windows, tz)
-
-        if calendar:
-            logger.info("Retrieving forecasts from DB for calendar population...")
-            all_forecasts = store.get_forecasts_future(days=forecast_days)
-            for forecast in all_forecasts:
-                logger.info(f"Updating calendar for date={forecast.date}, location={forecast.location}")
-                calendar.upsert_event(forecast)
-
     except Exception as e:
-        logger.error(f"Failed to fetch, process, store, or update calendar with forecasts: {e}", exc_info=True)
+        logger.error(f"Failed to fetch, process, or store forecasts: {e}", exc_info=True)
 
     _push_google_calendars()
 

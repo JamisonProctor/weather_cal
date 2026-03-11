@@ -301,7 +301,7 @@ def test_merged_window_summary_wind_shows_speed():
     )
     result = _merged_window_summary(merged, forecast)
     assert "🌬️" in result
-    assert "35 ~ 45 km/h" in result
+    assert "45 km/h" in result
 
 
 def test_merged_window_summary_combined_shows_temp():

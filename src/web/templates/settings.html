@@ -411,7 +411,7 @@
             <div class="connect-btn-wrapper">
               {% if google_oauth_enabled and not google_connected %}
               <a href="/auth/google" class="btn-connect btn-cal-red">&#128197; Connect with Google Calendar</a>
-              <span class="connect-btn-note">Syncs instantly to iPhone, Android, and desktop &mdash; no manual refresh needed. This is the best option even if you use Apple Calendar.</span>
+              <span class="connect-btn-note">Syncs instantly to iPhone, Android, or desktop.</span>
               {% elif google_oauth_enabled and google_connected %}
               <form method="post" action="/auth/google/disconnect">
                 <button type="submit" class="btn-connect btn-cal-red" style="background:#dc2626;width:100%">&#128197; Disconnect Google Calendar</button>
@@ -419,7 +419,7 @@
               <span class="connect-btn-note">Events are synced directly to your Google Calendar.</span>
               {% else %}
               <a href="{{ google_cal_url }}" class="btn-connect btn-cal-red" target="_blank" rel="noopener">&#128197; Add to Google Calendar</a>
-              <span class="connect-btn-note">Syncs instantly to iPhone, Android, and desktop &mdash; no manual refresh needed. This is the best option even if you use Apple Calendar.</span>
+              <span class="connect-btn-note">Syncs instantly to iPhone, Android, or desktop.</span>
               {% endif %}
             </div>
           </div>
@@ -431,7 +431,7 @@
           <div class="connect-btn-row">
             <div class="connect-btn-wrapper">
               <a href="{{ webcal_url }}" class="btn-connect btn-cal-neutral">&#128197; Add to calendar</a>
-              <span class="connect-btn-note">Works with Apple Calendar, Outlook, and any app that supports subscriptions.</span>
+              <span class="connect-btn-note">Works with Apple Calendar, Outlook, and any app that supports subscriptions &mdash; updates approx every 4 hours.</span>
             </div>
           </div>
           <div style="margin-top:4px">

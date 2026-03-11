@@ -31,6 +31,7 @@ from src.events.ics_events import build_event_ics
 from src.web.db import (
     DEFAULT_PREFS,
     check_password,
+    resolve_prefs,
     create_feed_token,
     create_feedback_table,
     create_user,
@@ -333,7 +334,7 @@ async def settings(
     locations = get_user_locations(DB_PATH, user_id)
     webcal_url, google_cal_url = _build_feed_urls(request, feed_token) if feed_token else (None, None)
     prefs_row = get_user_preferences(DB_PATH, user_id)
-    prefs = dict(prefs_row) if prefs_row else DEFAULT_PREFS
+    prefs = resolve_prefs(prefs_row)
 
     location_names = [loc["location"] for loc in locations]
     last_updated_raw = get_last_forecast_update(DB_PATH, location_names)
@@ -365,6 +366,7 @@ async def settings(
 @app.post("/settings")
 async def settings_post(
     request: Request,
+    background_tasks: BackgroundTasks,
     cold_threshold: float = Form(default=3.0),
     warn_in_allday: str = Form(default=""),
     warn_rain: str = Form(default=""),
@@ -417,6 +419,9 @@ async def settings_post(
         warn_hot=1 if warn_hot == "on" else 0,
         temp_unit=temp_unit,
     )
+    if is_google_connected(DB_PATH, user_id):
+        background_tasks.add_task(_google_push_initial, DB_PATH, user_id)
+
     return RedirectResponse(url="/settings?success=prefs", status_code=303)
 
 
@@ -587,10 +592,10 @@ async def feedback_post(
 def _google_push_initial(db_path, user_id):
     """Background task: push initial forecast events to Google Calendar."""
     try:
-        from src.web.db import get_user_preferences, get_user_locations, DEFAULT_PREFS
+        from src.web.db import get_user_preferences, get_user_locations, resolve_prefs as _resolve_prefs
         locations = get_user_locations(db_path, user_id)
         prefs_row = get_user_preferences(db_path, user_id)
-        prefs = dict(prefs_row) if prefs_row else DEFAULT_PREFS
+        prefs = _resolve_prefs(prefs_row)
         for loc in locations:
             store = ForecastStore(db_path=db_path)
             forecasts = store.get_forecasts_for_locations([loc["location"]], days=14)
@@ -714,7 +719,7 @@ async def feed(request: Request, token: str):
 
     location_name = locations[0] if locations else "Unknown"
     prefs_row = get_user_preferences(DB_PATH, user_id)
-    prefs = dict(prefs_row) if prefs_row else DEFAULT_PREFS
+    prefs = resolve_prefs(prefs_row)
     settings_url = str(request.base_url).rstrip("/") + "/settings?ref=cal"
     ics_content = generate_ics(forecasts, location_name, prefs=prefs, settings_url=settings_url)
 

@@ -849,3 +849,88 @@ def test_delete_account_cleans_google_tokens(db_path):
     row = conn.execute("SELECT * FROM google_tokens WHERE user_id = ?", (user_id,)).fetchone()
     conn.close()
     assert row is None
+
+
+# --- resolve_prefs ---
+
+
+def test_resolve_prefs_none_returns_defaults():
+    from src.web.db import resolve_prefs, DEFAULT_PREFS
+    result = resolve_prefs(None)
+    assert result == DEFAULT_PREFS
+    # Ensure it's a copy, not the same object
+    assert result is not DEFAULT_PREFS
+
+
+def test_resolve_prefs_fills_null_columns(db_path):
+    """A row with NULL columns should fall back to defaults for those keys."""
+    from src.web.db import resolve_prefs, DEFAULT_PREFS
+    # Simulate a sqlite3.Row with some NULL values
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    conn.execute(
+        "INSERT INTO user_preferences (user_id, cold_threshold, show_allday_events) VALUES (?, ?, ?)",
+        (999, 5.0, None),
+    )
+    conn.commit()
+    row = conn.execute("SELECT * FROM user_preferences WHERE user_id = 999").fetchone()
+    conn.close()
+
+    result = resolve_prefs(row)
+    # NULL show_allday_events should be filled from default (1)
+    assert result["show_allday_events"] == DEFAULT_PREFS["show_allday_events"]
+    # Explicit value should be preserved
+    assert result["cold_threshold"] == 5.0
+
+
+def test_resolve_prefs_preserves_zero_values(db_path):
+    """0-valued prefs (like show_allday_events=0) must survive the merge."""
+    from src.web.db import resolve_prefs
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    conn.execute(
+        "INSERT INTO user_preferences (user_id, show_allday_events, warn_rain) VALUES (?, ?, ?)",
+        (998, 0, 0),
+    )
+    conn.commit()
+    row = conn.execute("SELECT * FROM user_preferences WHERE user_id = 998").fetchone()
+    conn.close()
+
+    result = resolve_prefs(row)
+    assert result["show_allday_events"] == 0
+    assert result["warn_rain"] == 0
+
+
+def test_settings_post_triggers_gcal_push_when_connected(client, db_path, monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from datetime import datetime, timedelta, timezone
+
+    user_id, cookies = _auth_cookies(db_path, email="gcalpush@example.com")
+    create_feed_token(db_path, user_id)
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+
+    # Store Google tokens to make user "connected"
+    cred = MagicMock()
+    cred.token = "tok"
+    cred.refresh_token = "ref"
+    cred.expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+    store_google_tokens(db_path, user_id, cred, "cal123")
+
+    with patch("src.web.app._google_push_initial") as mock_push:
+        resp = client.post("/settings", data={"cold_threshold": "3.0"}, cookies=cookies)
+
+    assert resp.status_code == 303
+    mock_push.assert_called_once_with(db_path, user_id)
+
+
+def test_settings_post_no_gcal_push_when_not_connected(client, db_path):
+    user_id, cookies = _auth_cookies(db_path, email="nogcal@example.com")
+    create_feed_token(db_path, user_id)
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+
+    from unittest.mock import patch
+    with patch("src.web.app._google_push_initial") as mock_push:
+        resp = client.post("/settings", data={"cold_threshold": "3.0"}, cookies=cookies)
+
+    assert resp.status_code == 303
+    mock_push.assert_not_called()

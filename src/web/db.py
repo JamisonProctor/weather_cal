@@ -226,6 +226,13 @@ DEFAULT_PREFS = {
 }
 
 
+def resolve_prefs(prefs_row) -> dict:
+    """Merge saved preferences with defaults, filling NULL/missing keys."""
+    if not prefs_row:
+        return dict(DEFAULT_PREFS)
+    return {**DEFAULT_PREFS, **{k: v for k, v in dict(prefs_row).items() if v is not None}}
+
+
 def create_user_preferences_table(db_path: str) -> None:
     conn = _conn(db_path)
     try:

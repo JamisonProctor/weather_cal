@@ -15,7 +15,7 @@ from src.integrations.google_push import (
     get_google_connected_users,
     push_events_for_user,
 )
-from src.web.db import get_user_preferences, get_user_locations, DEFAULT_PREFS
+from src.web.db import get_user_preferences, get_user_locations, DEFAULT_PREFS, resolve_prefs
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ def _push_google_calendars(db_path: str = None):
         try:
             locations = get_user_locations(db_path, user_id)
             prefs_row = get_user_preferences(db_path, user_id)
-            prefs = dict(prefs_row) if prefs_row else DEFAULT_PREFS
+            prefs = resolve_prefs(prefs_row)
             for loc in locations:
                 forecasts = store.get_forecasts_for_locations([loc["location"]], days=14)
                 push_events_for_user(db_path, user_id, forecasts, prefs, loc["location"], loc["timezone"])

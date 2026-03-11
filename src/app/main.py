@@ -14,7 +14,8 @@ from src.integrations.google_push import (
     get_google_connected_users,
     push_events_for_user,
 )
-from src.web.db import get_user_preferences, get_user_locations, DEFAULT_PREFS, resolve_prefs
+from src.constants import DEFAULT_PREFS
+from src.web.db import get_user_preferences, get_user_locations, resolve_prefs
 
 setup_logging()
 logger = logging.getLogger(__name__)

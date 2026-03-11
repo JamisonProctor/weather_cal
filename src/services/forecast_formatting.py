@@ -6,16 +6,17 @@ from datetime import datetime, timedelta
 from statistics import mean
 from typing import List, Tuple
 
+from src.constants import (
+    COLD_TEMP_THRESHOLD,
+    HOT_TEMP_THRESHOLD,
+    MIN_SUNNY_HOURS,
+    RAIN_MM_THRESHOLD,
+    SNOW_WARNING_CODES,
+    SUNNY_CODES,
+    WARM_TEMP_THRESHOLD,
+    WIND_SPEED_THRESHOLD,
+)
 from src.models.forecast import Forecast
-
-SNOW_WARNING_CODES = {71, 73, 75, 77, 85, 86}
-SUNNY_CODES = {0, 1, 2}
-RAIN_MM_THRESHOLD = 0.5
-WIND_SPEED_THRESHOLD = 30
-COLD_TEMP_THRESHOLD = 3
-HOT_TEMP_THRESHOLD = 28
-WARM_TEMP_THRESHOLD = 14
-MIN_SUNNY_HOURS = 2
 
 def c_to_f(temp: float) -> float:
     return temp * 9 / 5 + 32

@@ -28,8 +28,8 @@ from jose import jwt
 from src.web.auth import create_session_token, decode_session_token, SECRET_KEY
 from src.events.db import create_event_tables, get_future_events, get_user_id_by_feed_token
 from src.events.ics_events import build_event_ics
+from src.constants import DEFAULT_PREFS
 from src.web.db import (
-    DEFAULT_PREFS,
     check_password,
     resolve_prefs,
     create_feed_token,

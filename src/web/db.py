@@ -5,14 +5,10 @@ from datetime import datetime, timedelta
 
 import bcrypt
 
+from src.constants import DEFAULT_PREFS
+from src.utils.db import get_connection as _conn
+
 logger = logging.getLogger(__name__)
-
-
-def _conn(db_path: str) -> sqlite3.Connection:
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
 
 
 def create_user(db_path: str, email: str, password: str) -> int:
@@ -201,29 +197,6 @@ def get_feedback(db_path: str) -> list:
         return result
     finally:
         conn.close()
-
-
-DEFAULT_PREFS = {
-    "cold_threshold": 3.0,
-    "warn_in_allday": 1,
-    "warn_rain": 1,
-    "warn_wind": 1,
-    "warn_cold": 1,
-    "warn_snow": 1,
-    "warn_sunny": 1,
-    "warn_hot": 1,
-    "show_allday_events": 1,
-    "timed_events_enabled": 1,
-    "allday_rain": 1,
-    "allday_wind": 1,
-    "allday_cold": 1,
-    "allday_snow": 1,
-    "allday_sunny": 0,
-    "allday_hot": 1,
-    "warm_threshold": 14.0,
-    "hot_threshold": 28.0,
-    "temp_unit": "C",
-}
 
 
 def resolve_prefs(prefs_row) -> dict:

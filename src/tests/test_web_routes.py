@@ -3,6 +3,7 @@ import sqlite3
 import pytest
 
 import src.web.app as web_app
+from src.constants import DEFAULT_PREFS
 from src.models.forecast import Forecast
 from src.services.forecast_store import ForecastStore
 from src.integrations.google_push import store_google_tokens
@@ -20,7 +21,6 @@ from src.web.db import (
     log_feed_poll,
     save_feedback,
     upsert_user_preferences,
-    DEFAULT_PREFS,
 )
 
 
@@ -857,7 +857,8 @@ def test_delete_account_cleans_google_tokens(db_path):
 
 
 def test_resolve_prefs_none_returns_defaults():
-    from src.web.db import resolve_prefs, DEFAULT_PREFS
+    from src.constants import DEFAULT_PREFS
+    from src.web.db import resolve_prefs
     result = resolve_prefs(None)
     assert result == DEFAULT_PREFS
     # Ensure it's a copy, not the same object
@@ -866,7 +867,8 @@ def test_resolve_prefs_none_returns_defaults():
 
 def test_resolve_prefs_fills_null_columns(db_path):
     """A row with NULL columns should fall back to defaults for those keys."""
-    from src.web.db import resolve_prefs, DEFAULT_PREFS
+    from src.constants import DEFAULT_PREFS
+    from src.web.db import resolve_prefs
     # Simulate a sqlite3.Row with some NULL values
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row

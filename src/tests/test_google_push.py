@@ -19,7 +19,8 @@ from src.integrations.google_push import (
     push_events_for_user,
     refresh_and_persist,
 )
-from src.web.db import create_user, DEFAULT_PREFS
+from src.constants import DEFAULT_PREFS
+from src.web.db import create_user
 
 
 def _make_credentials(token="access_tok", refresh="refresh_tok", expiry=None):

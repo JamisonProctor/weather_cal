@@ -9,7 +9,7 @@ from src.integrations.google_push import _push_forecast_events
 from src.integrations.ics_service import generate_ics, _stable_uid, _merged_warning_uid
 from src.models.forecast import Forecast
 from src.services.forecast_formatting import get_warning_windows, merge_overlapping_windows
-from src.web.db import DEFAULT_PREFS
+from src.constants import DEFAULT_PREFS
 
 
 def _rainy_forecast(date="2026-03-11", location="Munich, Germany"):

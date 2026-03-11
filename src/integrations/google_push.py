@@ -307,10 +307,75 @@ def _upsert_event(service, calendar_id, event_body):
             raise
 
 
+def _cleanup_stale_events(service, calendar_id, date_str,
+                          expected_allday_uids, expected_timed_uids, tz):
+    """Delete events for a date whose iCalUID is not in the expected sets."""
+    from datetime import date as date_type
+
+    try:
+        day = date_type.fromisoformat(date_str)
+        day_start = datetime.combine(day, datetime.min.time()).replace(tzinfo=tz)
+        day_end = day_start + timedelta(days=1)
+
+        existing = service.events().list(
+            calendarId=calendar_id,
+            timeMin=day_start.isoformat(),
+            timeMax=day_end.isoformat(),
+            singleEvents=True,
+            maxResults=100,
+        ).execute()
+
+        for event in existing.get("items", []):
+            ical_uid = event.get("iCalUID", "")
+            if not ical_uid:
+                continue
+
+            is_timed = "dateTime" in event.get("start", {})
+            is_allday = "date" in event.get("start", {}) and "dateTime" not in event.get("start", {})
+
+            should_delete = False
+            if is_timed and ical_uid not in expected_timed_uids:
+                should_delete = True
+            elif is_allday and ical_uid not in expected_allday_uids:
+                should_delete = True
+
+            if should_delete:
+                try:
+                    service.events().delete(
+                        calendarId=calendar_id, eventId=event["id"]
+                    ).execute()
+                except HttpError:
+                    logger.warning("Failed to delete stale event %s", event["id"], exc_info=True)
+    except HttpError:
+        logger.warning("Failed to list events for cleanup on %s", date_str, exc_info=True)
+
+
 def _push_forecast_events(service, calendar_id, forecast, prefs, tz, tz_name):
     from datetime import date as date_type
 
+    # 1. Compute expected UIDs based on current prefs
+    expected_allday_uids = set()
+    expected_timed_uids = set()
+
     show_allday = prefs.get("show_allday_events", 1) if prefs else 1
+    if show_allday:
+        expected_allday_uids.add(_stable_uid(forecast.date, forecast.location))
+
+    timed_enabled = prefs.get("timed_events_enabled", 1) if prefs else 1
+    merged_windows = []
+    if timed_enabled:
+        windows = get_warning_windows(forecast, prefs)
+        merged_windows = merge_overlapping_windows(windows)
+        for merged in merged_windows:
+            expected_timed_uids.add(
+                _merged_warning_uid(merged.start_time, forecast.location, merged.warning_types)
+            )
+
+    # 2. Clean up stale events for this date
+    _cleanup_stale_events(service, calendar_id, forecast.date,
+                          expected_allday_uids, expected_timed_uids, tz)
+
+    # 3. Upsert current all-day event
     if show_allday:
         uid = _stable_uid(forecast.date, forecast.location)
         summary = format_summary(forecast, prefs) if prefs else (forecast.summary or "Weather")
@@ -327,32 +392,29 @@ def _push_forecast_events(service, calendar_id, forecast, prefs, tz, tz_name):
         }
         _upsert_event(service, calendar_id, event_body)
 
-    timed_enabled = prefs.get("timed_events_enabled", 1) if prefs else 1
-    if timed_enabled:
-        windows = get_warning_windows(forecast, prefs)
-        merged_windows = merge_overlapping_windows(windows)
-        for merged in merged_windows:
-            uid = _merged_warning_uid(merged.start_time, forecast.location, merged.warning_types)
-            summary = _merged_window_summary(merged, forecast, prefs)
-            description = _format_window_description(forecast, merged, prefs)
-            tz_str = tz_name or "UTC"
+    # 4. Upsert current timed events
+    for merged in merged_windows:
+        uid = _merged_warning_uid(merged.start_time, forecast.location, merged.warning_types)
+        summary = _merged_window_summary(merged, forecast, prefs)
+        description = _format_window_description(forecast, merged, prefs)
+        tz_str = tz_name or "UTC"
 
-            event_body = {
-                "iCalUID": uid,
-                "summary": summary,
-                "description": description,
-                "location": forecast.location,
-                "start": {
-                    "dateTime": datetime.fromisoformat(merged.start_time).replace(tzinfo=tz).isoformat(),
-                    "timeZone": tz_str,
-                },
-                "end": {
-                    "dateTime": datetime.fromisoformat(merged.end_time).replace(tzinfo=tz).isoformat(),
-                    "timeZone": tz_str,
-                },
-                "transparency": "transparent",
-            }
-            _upsert_event(service, calendar_id, event_body)
+        event_body = {
+            "iCalUID": uid,
+            "summary": summary,
+            "description": description,
+            "location": forecast.location,
+            "start": {
+                "dateTime": datetime.fromisoformat(merged.start_time).replace(tzinfo=tz).isoformat(),
+                "timeZone": tz_str,
+            },
+            "end": {
+                "dateTime": datetime.fromisoformat(merged.end_time).replace(tzinfo=tz).isoformat(),
+                "timeZone": tz_str,
+            },
+            "transparency": "transparent",
+        }
+        _upsert_event(service, calendar_id, event_body)
 
 
 def _clear_calendar_id(db_path: str, user_id: int) -> None:

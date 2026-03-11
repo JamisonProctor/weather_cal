@@ -30,6 +30,7 @@ def test_format_summary_with_warnings():
         temps=[7, 7, 7, 1, 13, 13, 13, 13],
         codes=[61, 61, 1, 1, 1, 1, 1, 1],
         rain=[60, 45, 0, 0, 0, 0, 0, 0],
+        precipitation=[1.5, 0.8, 0, 0, 0, 0, 0, 0],
         winds=[12, 10, 35, 32, 8, 7, 12, 10],
     )
 
@@ -53,6 +54,7 @@ def test_format_summary_without_warnings():
         temps=[6, 6, 13, 13],
         codes=[1, 1, 2, 2],
         rain=[5, 5, 0, 0],
+        precipitation=[0, 0, 0, 0],
         winds=[10, 12, 8, 6],
     )
 
@@ -80,6 +82,7 @@ def test_format_detailed_forecast_emits_warnings():
         temps=[5, 4, 6, 5, 2, 1, -1, -2],
         codes=[61, 61, 1, 1, 1, 1, 71, 71],
         rain=[60, 45, 0, 0, 0, 0, 20, 20],
+        precipitation=[1.5, 0.8, 0, 0, 0, 0, 0, 0],
         winds=[12, 10, 35, 32, 8, 7, 12, 10],
     )
 
@@ -106,6 +109,7 @@ def test_format_detailed_forecast_no_warnings():
         temps=[18, 17, 20, 21],
         codes=[1, 1, 2, 2],
         rain=[5, 5, 0, 0],
+        precipitation=[0, 0, 0, 0],
         winds=[10, 12, 8, 6],
     )
 
@@ -113,7 +117,7 @@ def test_format_detailed_forecast_no_warnings():
     assert "⚠️" not in description
 
 
-def _make_forecast(times, temps, codes, rain, winds):
+def _make_forecast(times, temps, codes, rain, winds, precipitation=None):
     return Forecast(
         date="2025-08-01",
         location="Munich",
@@ -123,6 +127,7 @@ def _make_forecast(times, temps, codes, rain, winds):
         temps=temps,
         codes=codes,
         rain=rain,
+        precipitation=precipitation or [0]*len(times),
         winds=winds,
     )
 
@@ -134,6 +139,7 @@ def test_get_warning_windows_single_rain_window():
         codes=[61, 61, 1, 1],
         rain=[60, 55, 5, 5],
         winds=[10, 10, 10, 10],
+        precipitation=[1.5, 0.8, 0, 0],
     )
     windows = get_warning_windows(forecast)
     rain = [w for w in windows if w.warning_type == "rain"]
@@ -155,6 +161,7 @@ def test_get_warning_windows_two_separate_rain_windows():
         codes=[61, 61, 1, 63, 63],
         rain=[60, 60, 5, 70, 70],
         winds=[10, 10, 10, 10, 10],
+        precipitation=[1.2, 1.0, 0, 2.5, 3.0],
     )
     windows = get_warning_windows(forecast)
     rain = [w for w in windows if w.warning_type == "rain"]
@@ -205,6 +212,7 @@ def test_format_summary_fahrenheit():
         temps=[20, 28],
         codes=[1, 1],
         rain=[0, 0],
+        precipitation=[0, 0],
         winds=[5, 5],
     )
     prefs = {"temp_unit": "F", "warn_in_allday": 1, "allday_rain": 1, "allday_wind": 1,
@@ -225,6 +233,7 @@ def test_format_detailed_forecast_fahrenheit():
         temps=[20, 28],
         codes=[1, 1],
         rain=[0, 0],
+        precipitation=[0, 0],
         winds=[5, 5],
     )
     prefs = {"temp_unit": "F"}
@@ -277,6 +286,7 @@ def test_sunny_window_excludes_partly_cloudy_with_rain():
         codes=[2, 2, 2],
         rain=[50, 55, 60],
         winds=[5, 5, 5],
+        precipitation=[1.0, 1.5, 2.0],
     )
     windows = get_warning_windows(forecast, prefs=_SUNNY_PREFS)
     sunny = [w for w in windows if w.warning_type == "sunny"]

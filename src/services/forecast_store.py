@@ -116,6 +116,7 @@ class ForecastStore:
             "temps": forecast.temps or [],
             "codes": forecast.codes or [],
             "rain": forecast.rain or [],
+            "precipitation": forecast.precipitation or [],
             "winds": forecast.winds or [],
         })
         cur.execute("""
@@ -169,6 +170,7 @@ class ForecastStore:
                 temps=hourly.get("temps", []),
                 codes=hourly.get("codes", []),
                 rain=hourly.get("rain", []),
+                precipitation=hourly.get("precipitation", []),
                 winds=hourly.get("winds", []),
                 timezone=row[8],
             ))
@@ -206,6 +208,7 @@ class ForecastStore:
                 temps=hourly.get("temps", []),
                 codes=hourly.get("codes", []),
                 rain=hourly.get("rain", []),
+                precipitation=hourly.get("precipitation", []),
                 winds=hourly.get("winds", []),
                 timezone=row[8],
             ))

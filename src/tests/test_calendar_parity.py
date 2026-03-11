@@ -18,7 +18,8 @@ def _rainy_forecast(date="2026-03-11", location="Munich, Germany"):
     times = [f"{base}{h:02d}:00" for h in range(6, 22)]
     temps = [10 + i for i in range(len(times))]
     codes = [61] * len(times)  # rain code
-    rain = [80] * len(times)   # 80% chance -> triggers rain warning
+    rain = [80] * len(times)   # 80% chance
+    precipitation = [2.5] * len(times)  # 2.5mm/h -> triggers rain warning
     winds = [10] * len(times)
     return Forecast(
         date=date,
@@ -31,6 +32,7 @@ def _rainy_forecast(date="2026-03-11", location="Munich, Germany"):
         temps=temps,
         codes=codes,
         rain=rain,
+        precipitation=precipitation,
         winds=winds,
         timezone="Europe/Berlin",
     )

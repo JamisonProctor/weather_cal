@@ -49,12 +49,17 @@ def _merged_window_summary(merged: MergedWarningWindow, forecast: Forecast, pref
 
     emoji_str = "".join(merged.emojis)
 
+    precip_in_window = [
+        p for slot, p in zip(forecast.times, forecast.precipitation or [])
+        if start <= datetime.fromisoformat(slot) < end and p is not None
+    ]
+
     # Single type: show type-specific data
     if len(merged.warning_types) == 1:
         wtype = merged.warning_types[0]
-        if wtype == "rain" and rain_in_window:
-            lo, hi = round(min(rain_in_window)), round(max(rain_in_window))
-            return f"☂️ {lo} ~ {hi}%"
+        if wtype == "rain" and precip_in_window:
+            total_mm = sum(precip_in_window)
+            return f"☂️ {total_mm:.1f}mm"
         if wtype == "wind" and wind_in_window:
             lo, hi = round(min(wind_in_window)), round(max(wind_in_window))
             return f"🌬️ {lo} ~ {hi} km/h"
@@ -78,15 +83,18 @@ def _format_window_description(forecast: Forecast, window, prefs=None) -> str:
     start = datetime.fromisoformat(window.start_time)
     end = datetime.fromisoformat(window.end_time)
     lines = []
-    for t, temp, code, rain, wind in zip(forecast.times, forecast.temps, forecast.codes, forecast.rain, forecast.winds):
+    precip_list = forecast.precipitation or [0]*len(forecast.times)
+    for t, temp, code, rain, wind, precip in zip(
+        forecast.times, forecast.temps, forecast.codes, forecast.rain, forecast.winds, precip_list
+    ):
         dt = datetime.fromisoformat(t)
         if dt < start or dt >= end:
             continue
         emoji = map_code_to_emoji(code)
         t_val = _fmt_temp(temp, unit)
         parts = [f"{dt.hour:02d}:00 {emoji} {t_val}°{unit}"]
-        if rain and rain >= 40:
-            parts.append(f"💧{round(rain)}%")
+        if precip and precip > 0:
+            parts.append(f"💧{precip:.1f}mm ({round(rain)}%)")
         if wind and wind >= 30:
             parts.append(f"💨{round(wind)}km/h")
         lines.append("  ".join(parts))

@@ -20,7 +20,7 @@ def db_path(tmp_path):
     return path
 
 
-def _make_forecast(times, temps, codes, rain, winds, date="2025-08-01"):
+def _make_forecast(times, temps, codes, rain, winds, date="2025-08-01", precipitation=None):
     return Forecast(
         date=date,
         location="Munich",
@@ -30,6 +30,7 @@ def _make_forecast(times, temps, codes, rain, winds, date="2025-08-01"):
         temps=temps,
         codes=codes,
         rain=rain,
+        precipitation=precipitation or [0]*len(times),
         winds=winds,
     )
 
@@ -102,6 +103,7 @@ def test_format_summary_hides_warnings_when_warn_in_allday_false():
         codes=[61, 61],
         rain=[60, 60],
         winds=[35, 35],
+        precipitation=[1.5, 2.0],
     )
     prefs = {**DEFAULT_PREFS, "warn_in_allday": 0}
     summary = format_summary(forecast, prefs=prefs)
@@ -115,6 +117,7 @@ def test_format_summary_filters_rain_warning():
         codes=[61, 61],
         rain=[70, 70],
         winds=[5, 5],
+        precipitation=[2.0, 3.0],
     )
     prefs = {**DEFAULT_PREFS, "allday_rain": 0}
     summary = format_summary(forecast, prefs=prefs)
@@ -146,6 +149,7 @@ def test_get_warning_windows_filters_rain_when_disabled():
         codes=[61, 61],
         rain=[70, 70],
         winds=[5, 5],
+        precipitation=[2.0, 3.0],
     )
     prefs = {**DEFAULT_PREFS, "warn_rain": 0}
     windows = get_warning_windows(forecast, prefs=prefs)
@@ -211,6 +215,7 @@ def _make_rainy_forecast():
         codes=[61, 61, 61],
         rain=[70, 70, 70],
         winds=[5, 5, 5],
+        precipitation=[2.0, 3.0, 2.5],
     )
 
 
@@ -293,4 +298,4 @@ def test_allday_rain_false_hides_rain_icon_but_timed_event_remains():
     allday = next(e for e in events if not hasattr(e["DTSTART"].dt, "hour"))
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
     assert "☂️" not in str(allday["SUMMARY"])
-    assert any("☂️" in str(e["SUMMARY"]) and "%" in str(e["SUMMARY"]) for e in timed)
+    assert any("☂️" in str(e["SUMMARY"]) and "mm" in str(e["SUMMARY"]) for e in timed)

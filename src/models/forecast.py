@@ -18,6 +18,7 @@ class Forecast:
     temps: List[float] = field(default_factory=list)   # temperatures for each time slot
     codes: List[int] = field(default_factory=list)     # weather codes for each time slot
     rain: List[float] = field(default_factory=list)    # % chance of rain per time slot
+    precipitation: List[float] = field(default_factory=list)  # mm per time slot
     winds: List[float] = field(default_factory=list)   # wind speed per time slot
     fetch_time: Optional[str] = None                   # When the forecast was retrieved (ISO string)
     timezone: Optional[str] = None                     # IANA timezone name, e.g. "Europe/Berlin"

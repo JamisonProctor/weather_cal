@@ -311,17 +311,14 @@ def _upsert_event(service, calendar_id, event_body):
         old_status = items[0].get("status", "unknown")
 
         if old_status == "cancelled":
-            # Cancelled events can't be reliably restored via patch.
-            # Delete the ghost, then insert fresh.
-            try:
-                service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
-            except HttpError as e:
-                if e.resp.status not in (404, 410):
-                    raise
-            # Insert fresh — use insert() not import_() to avoid iCalUID conflict
-            # with the just-deleted ghost
-            service.events().insert(calendarId=calendar_id, body=event_body).execute()
-            logger.info("Re-created event uid=%s (was cancelled) summary=%s", ical_uid, event_body.get("summary", "")[:50])
+            # Cancelled events can't be restored via patch() — API returns 200
+            # but Google Calendar UI doesn't show them. Full update() works.
+            update_body = {k: v for k, v in event_body.items() if k != "iCalUID"}
+            update_body["status"] = "confirmed"
+            service.events().update(
+                calendarId=calendar_id, eventId=event_id, body=update_body
+            ).execute()
+            logger.info("Restored event uid=%s (was cancelled) summary=%s", ical_uid, event_body.get("summary", "")[:50])
         else:
             patch_body = {k: v for k, v in event_body.items() if k != "iCalUID"}
             patch_body["status"] = "confirmed"

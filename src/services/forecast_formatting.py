@@ -139,41 +139,45 @@ class WarningWindow:
 @dataclass
 class MergedWarningWindow:
     """One or more overlapping WarningWindows merged into a single calendar event."""
-    warning_types: List[str]    # e.g. ["rain", "cold"] — ordered by _WARNING_CHECKS
+    warning_types: List[str]    # e.g. ["rain", "cold"] — ordered by _WARNING_TYPES
     emojis: List[str]           # e.g. ["☂️", "🥶"]
     start_time: str             # min of all overlapping starts
     end_time: str               # max of all overlapping ends
 
 
-_WARNING_CHECKS = [
-    (
-        "rain", "☂️", "Rain Warning",
-        lambda temp, code, rain, wind, precip: (precip or 0) >= RAIN_MM_THRESHOLD,
-    ),
-    (
-        "wind", "🌬️", "Wind Warning",
-        lambda temp, code, rain, wind, precip: (wind or 0) >= WIND_SPEED_THRESHOLD,
-    ),
-    (
-        "cold", "🥶", "Cold Warning",
-        lambda temp, code, rain, wind, precip: (temp is not None) and temp < COLD_TEMP_THRESHOLD,
-    ),
-    (
-        "snow", "☃️", "Snow Warning",
-        lambda temp, code, rain, wind, precip: code in SNOW_WARNING_CODES,
-    ),
-    (
-        "sunny", "☀️", "Nice weather — enjoy!",
-        lambda temp, code, rain, wind, precip: code in SUNNY_CODES
-        and (temp is not None) and temp >= WARM_TEMP_THRESHOLD
-        and (precip or 0) < RAIN_MM_THRESHOLD
-        and (wind or 0) < WIND_SPEED_THRESHOLD,
-    ),
-    (
-        "hot", "🥵", "Heat Warning",
-        lambda temp, code, rain, wind, precip: (temp is not None) and temp > HOT_TEMP_THRESHOLD,
-    ),
+_WARNING_TYPES = [
+    ("rain", "☂️", "Rain Warning"),
+    ("wind", "🌬️", "Wind Warning"),
+    ("cold", "🥶", "Cold Warning"),
+    ("snow", "☃️", "Snow Warning"),
+    ("sunny", "☀️", "Nice weather — enjoy!"),
+    ("hot", "🥵", "Heat Warning"),
 ]
+
+
+def _make_check(wtype: str, prefs=None):
+    """Build the check lambda for a warning type, respecting user prefs for thresholds."""
+    if wtype == "rain":
+        return lambda temp, code, rain, wind, precip: (precip or 0) >= RAIN_MM_THRESHOLD
+    if wtype == "wind":
+        return lambda temp, code, rain, wind, precip: (wind or 0) >= WIND_SPEED_THRESHOLD
+    if wtype == "cold":
+        ct = prefs.get("cold_threshold", COLD_TEMP_THRESHOLD) if prefs else COLD_TEMP_THRESHOLD
+        return lambda temp, code, rain, wind, precip, ct=ct: (temp is not None) and temp < ct
+    if wtype == "snow":
+        return lambda temp, code, rain, wind, precip: code in SNOW_WARNING_CODES
+    if wtype == "sunny":
+        wt = prefs.get("warm_threshold", WARM_TEMP_THRESHOLD) if prefs else WARM_TEMP_THRESHOLD
+        return lambda temp, code, rain, wind, precip, wt=wt: (
+            code in SUNNY_CODES
+            and (temp is not None) and temp >= wt
+            and (precip or 0) < RAIN_MM_THRESHOLD
+            and (wind or 0) < WIND_SPEED_THRESHOLD
+        )
+    if wtype == "hot":
+        ht = prefs.get("hot_threshold", HOT_TEMP_THRESHOLD) if prefs else HOT_TEMP_THRESHOLD
+        return lambda temp, code, rain, wind, precip, ht=ht: (temp is not None) and temp > ht
+    raise ValueError(f"Unknown warning type: {wtype}")
 
 
 def get_warning_windows(forecast: Forecast, prefs=None) -> List[WarningWindow]:
@@ -187,7 +191,7 @@ def get_warning_windows(forecast: Forecast, prefs=None) -> List[WarningWindow]:
                     forecast.winds, forecast.precipitation or [0]*len(forecast.times)))
     windows: List[WarningWindow] = []
 
-    for wtype, emoji, label, check in _WARNING_CHECKS:
+    for wtype, emoji, label in _WARNING_TYPES:
         # Opt-in types (sunny, hot): skip unless prefs explicitly enables them
         if wtype in ("sunny", "hot") and (prefs is None or not prefs.get(f"warn_{wtype}", 0)):
             continue
@@ -195,23 +199,7 @@ def get_warning_windows(forecast: Forecast, prefs=None) -> List[WarningWindow]:
         if prefs is not None and wtype not in ("sunny", "hot") and not prefs.get(f"warn_{wtype}", 1):
             continue
 
-        if wtype == "cold" and prefs is not None:
-            ct = prefs.get("cold_threshold", COLD_TEMP_THRESHOLD)
-            active_check = lambda temp, code, rain, wind, precip, ct=ct: (temp is not None) and temp < ct
-        elif wtype == "hot" and prefs is not None:
-            ht = prefs.get("hot_threshold", HOT_TEMP_THRESHOLD)
-            active_check = lambda temp, code, rain, wind, precip, ht=ht: (temp is not None) and temp > ht
-        elif wtype == "sunny" and prefs is not None:
-            wt = prefs.get("warm_threshold", WARM_TEMP_THRESHOLD)
-            active_check = lambda temp, code, rain, wind, precip, wt=wt: (
-                code in SUNNY_CODES
-                and (temp is not None) and temp >= wt
-                and (precip or 0) < RAIN_MM_THRESHOLD
-                and (wind or 0) < WIND_SPEED_THRESHOLD
-            )
-        else:
-            active_check = check
-
+        active_check = _make_check(wtype, prefs)
         run_start = None
         run_last = None
 
@@ -252,7 +240,7 @@ def get_warning_windows(forecast: Forecast, prefs=None) -> List[WarningWindow]:
     return windows
 
 
-_TYPE_ORDER = {wtype: i for i, (wtype, *_) in enumerate(_WARNING_CHECKS)}
+_TYPE_ORDER = {wtype: i for i, (wtype, *_) in enumerate(_WARNING_TYPES)}
 
 
 def merge_overlapping_windows(windows: List[WarningWindow]) -> List[MergedWarningWindow]:

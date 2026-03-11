@@ -58,6 +58,23 @@ def test_login_invalid_credentials_returns_401(client, db_path):
     assert resp.status_code == 401
 
 
+def test_logout_redirects_to_landing(client, auth_cookies):
+    _, cookies = auth_cookies(email="logout@example.com")
+    resp = client.post("/logout", cookies=cookies)
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/"
+
+
+def test_logout_clears_session_cookie(client, auth_cookies):
+    _, cookies = auth_cookies(email="logout2@example.com")
+    resp = client.post("/logout", cookies=cookies)
+    assert resp.status_code == 303
+    # Response should include a Set-Cookie header that expires the session cookie
+    set_cookie = resp.headers.get("set-cookie", "")
+    assert "session=" in set_cookie
+    assert ('max-age=0' in set_cookie.lower() or 'expires=' in set_cookie.lower())
+
+
 # --- Settings ---
 
 def test_settings_get_requires_auth(client):
@@ -507,6 +524,12 @@ def test_feedback_get_redirects_to_settings(client, db_path, auth_cookies):
     resp = client.get("/feedback", cookies=cookies)
     assert resp.status_code == 303
     assert resp.headers["location"] == "/settings?tab=feedback"
+
+
+def test_feedback_get_unauthenticated_redirects_to_login(client):
+    resp = client.get("/feedback")
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/login"
 
 
 def test_feedback_post_saves_and_shows_sent(client, db_path, auth_cookies):

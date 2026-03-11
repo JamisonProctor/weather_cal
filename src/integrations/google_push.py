@@ -307,15 +307,16 @@ def _upsert_event(service, calendar_id, event_body):
 
     if items:
         event_id = items[0]["id"]
+        old_status = items[0].get("status", "unknown")
         patch_body = {k: v for k, v in event_body.items() if k != "iCalUID"}
         patch_body["status"] = "confirmed"
         service.events().patch(
             calendarId=calendar_id, eventId=event_id, body=patch_body
         ).execute()
-        logger.debug("Patched event uid=%s (status→confirmed)", ical_uid)
+        logger.info("Patched event uid=%s old_status=%s summary=%s", ical_uid, old_status, event_body.get("summary", "")[:50])
     else:
         service.events().import_(calendarId=calendar_id, body=event_body).execute()
-        logger.debug("Inserted event uid=%s", ical_uid)
+        logger.info("Inserted event uid=%s summary=%s", ical_uid, event_body.get("summary", "")[:50])
 
 
 def _cleanup_stale_events(service, calendar_id, date_str,
@@ -419,9 +420,13 @@ def _calendar_event_to_google_body(ce: CalendarEvent, tz_name: str | None) -> di
 def _push_forecast_events(service, calendar_id, forecast, prefs, tz, tz_name):
     show_allday = prefs.get("show_allday_events", 1) if prefs else 1
     timed_enabled = prefs.get("timed_events_enabled", 1) if prefs else 1
-    logger.debug("push forecast date=%s show_allday=%s timed=%s", forecast.date, show_allday, timed_enabled)
+    logger.info("push forecast date=%s show_allday=%s timed=%s", forecast.date, show_allday, timed_enabled)
 
     events = build_calendar_events(forecast, prefs)
+    logger.info("Built %d events for date=%s (allday=%d, timed=%d)",
+                len(events), forecast.date,
+                sum(1 for e in events if e.is_allday),
+                sum(1 for e in events if not e.is_allday))
     expected_allday_uids = {e.uid for e in events if e.is_allday}
     expected_timed_uids = {e.uid for e in events if not e.is_allday}
 
@@ -432,7 +437,10 @@ def _push_forecast_events(service, calendar_id, forecast, prefs, tz, tz_name):
     # Upsert current events
     for ce in events:
         event_body = _calendar_event_to_google_body(ce, tz_name)
-        _upsert_event(service, calendar_id, event_body)
+        try:
+            _upsert_event(service, calendar_id, event_body)
+        except Exception:
+            logger.exception("Failed to upsert event uid=%s date=%s", ce.uid, forecast.date)
 
 
 def _clear_calendar_id(db_path: str, user_id: int) -> None:

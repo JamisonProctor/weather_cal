@@ -8,22 +8,23 @@
 <style>
   h1 { margin-bottom: 0.4rem; }
   .subtitle { color: #333; margin-bottom: 2rem; }
-  .btn-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }
+  .connect-section { margin-bottom: 28px; }
+  .section-label { font-size: 0.95rem; font-weight: 600; color: #374151; margin: 0 0 10px; }
+  .section-label .badge { font-size: 0.75rem; font-weight: 500; color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 2px 8px; margin-left: 8px; vertical-align: middle; }
   .btn-wrapper { display: flex; flex-direction: column; gap: 4px; }
   .btn-note { font-size: 0.8rem; color: #6b7280; padding-left: 4px; }
   .btn { width: 100%; }
-  .btn-blue { background: #2563eb; color: #fff; }
-  .btn-blue:hover { background: #1d4ed8; }
   .btn-red { background: #ea4335; color: #fff; }
   .btn-red:hover { background: #c5392c; }
-  .btn-slate { background: #0f172a; color: #fff; }
-  .btn-slate:hover { background: #1e293b; }
-  .copy-section { border-top: 1px solid #e5e7eb; padding-top: 24px; }
+  .btn-neutral { background: #374151; color: #fff; }
+  .btn-neutral:hover { background: #1f2937; }
+  .divider { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
   .feed-input-row { display: flex; gap: 8px; }
   .feed-url { flex: 1; padding: 10px 12px; font-family: monospace; font-size: 0.82rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px; color: #374151; cursor: text; }
   .copy-btn { padding: 10px 16px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
   .copy-btn:hover { background: #e5e7eb; }
   .copy-hint { font-size: 0.8rem; color: #6b7280; margin-top: 6px; }
+  .help-text { font-size: 0.8rem; color: #6b7280; line-height: 1.5; margin-top: 24px; }
   .cta-section { margin-top: 28px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
   .nav-done { font-weight: 600; font-size: 1rem; color: #2563eb; text-decoration: none; }
   .nav-done:hover { text-decoration: underline; }
@@ -36,21 +37,16 @@
   <h1>Connect your calendar</h1>
   <p class="subtitle">Add your feed to a calendar app and forecasts will appear automatically.</p>
 
-  <div class="btn-row">
-    <div class="btn-wrapper">
-      <a href="{{ webcal_url }}" class="btn btn-blue">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-        Add to Apple Calendar
-      </a>
-      <span class="btn-note">Works on Mac and iPhone</span>
-    </div>
+  <!-- Google Calendar section -->
+  <div class="connect-section">
+    <p class="section-label">Google Calendar <span class="badge">Recommended</span></p>
     <div class="btn-wrapper">
       {% if google_oauth_enabled and not google_connected %}
       <a href="/auth/google" class="btn btn-red">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
         Connect with Google Calendar
       </a>
-      <span class="btn-note">Works on Android and in Gmail — events sync automatically</span>
+      <span class="btn-note">Best experience &mdash; syncs instantly on all your devices, including iPhone and Android.</span>
       {% elif google_oauth_enabled and google_connected %}
       <form method="post" action="/auth/google/disconnect">
         <button type="submit" class="btn btn-red" style="background:#dc2626;width:100%">
@@ -58,32 +54,41 @@
           Disconnect Google Calendar
         </button>
       </form>
-      <span class="btn-note">Events are synced directly to your Google Calendar</span>
+      <span class="btn-note">Events are synced directly to your Google Calendar.</span>
       {% else %}
       <a href="{{ google_cal_url }}" class="btn btn-red" target="_blank" rel="noopener">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
         Add to Google Calendar
       </a>
-      <span class="btn-note">Works on Android and in Gmail</span>
+      <span class="btn-note">Best experience &mdash; syncs instantly on all your devices, including iPhone and Android.</span>
       {% endif %}
     </div>
-    <div class="btn-wrapper">
-      <a href="{{ webcal_url }}" class="btn btn-slate">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M1 1h10.5v10.5H1V1zm12.5 0H24v10.5H13.5V1zM1 13.5h10.5V24H1V13.5zm12.5 0H24V24H13.5V13.5z"/></svg>
-        Add to Outlook
-      </a>
-      <span class="btn-note">Works on Windows and in Outlook desktop</span>
-    </div>
   </div>
-  <p class="btn-note" style="margin-top:4px">Forecasts refresh automatically — usually within a few hours. Apple Calendar users can speed this up: right-click WeatherCal &#8594; Get Info &#8594; set Auto-refresh to Every Hour.{% if google_connected %} Google Calendar events sync directly and update faster than ICS subscriptions.{% endif %}</p>
 
-  <div class="copy-section">
-    <div class="feed-input-row">
-      <input type="text" class="feed-url" id="feed-url" value="{{ webcal_url }}" readonly onclick="this.select()">
-      <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('feed-url').value); var b=this; b.textContent='Copied!'; setTimeout(function(){b.textContent='Copy'},2000)">Copy</button>
+  <hr class="divider">
+
+  <!-- Subscribe with a calendar link -->
+  <div class="connect-section">
+    <p class="section-label">Subscribe with a calendar link</p>
+    <div class="btn-wrapper">
+      <a href="{{ webcal_url }}" class="btn btn-neutral">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg>
+        Add to calendar
+      </a>
+      <span class="btn-note">Works with Apple Calendar, Outlook, and any app that supports subscriptions.</span>
     </div>
-    <p class="copy-hint">Or paste this URL directly into any calendar app.</p>
+    <div style="margin-top: 16px">
+      <div class="feed-input-row">
+        <input type="text" class="feed-url" id="feed-url" value="{{ webcal_url }}" readonly onclick="this.select()">
+        <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('feed-url').value); var b=this; b.textContent='Copied!'; setTimeout(function(){b.textContent='Copy'},2000)">Copy</button>
+      </div>
+      <p class="copy-hint">Or copy the link and paste it into any calendar app.</p>
+    </div>
   </div>
+
+  <hr class="divider">
+
+  <p class="help-text">Calendar links refresh every few hours. Apple Calendar users can speed this up: right-click WeatherCal &#8594; Get Info &#8594; set Auto-refresh to Every Hour.</p>
 
   <div class="cta-section">
     <a href="/settings" class="nav-done">Go to settings &rarr;</a>

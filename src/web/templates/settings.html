@@ -63,16 +63,18 @@
   .copy-btn:hover { background: #e5e7eb; }
   .copy-hint { font-size: 0.8rem; color: #6b7280; margin-top: 6px; }
 
-  .connect-btn-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+  .connect-btn-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
   .connect-btn-wrapper { display: flex; flex-direction: column; gap: 4px; }
   .connect-btn-note { font-size: 0.8rem; color: #6b7280; padding-left: 4px; }
   .btn-connect { display: inline-flex; align-items: center; gap: 8px; padding: 13px 20px; border-radius: 8px; font-size: 1rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; }
-  .btn-cal-blue { background: #0071e3; color: #fff; }
-  .btn-cal-blue:hover { background: #0060c0; }
   .btn-cal-red { background: #ea4335; color: #fff; }
   .btn-cal-red:hover { background: #c5392c; }
-  .btn-cal-slate { background: #0078d4; color: #fff; }
-  .btn-cal-slate:hover { background: #006ab8; }
+  .btn-cal-neutral { background: #374151; color: #fff; }
+  .btn-cal-neutral:hover { background: #1f2937; }
+  .connect-section-label { font-size: 0.95rem; font-weight: 600; color: #374151; margin: 0 0 10px; }
+  .connect-section-label .badge { font-size: 0.75rem; font-weight: 500; color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 2px 8px; margin-left: 8px; vertical-align: middle; }
+  .connect-divider { border: none; border-top: 1px solid #e5e7eb; margin: 20px 0; }
+  .connect-help-text { font-size: 0.8rem; color: #6b7280; line-height: 1.5; }
 
   /* Mobile responsive */
   @media (max-width: 640px) {
@@ -403,39 +405,46 @@
           <p style="color:#374151;margin-bottom:1.5rem">Add your feed to a calendar app and forecasts will appear automatically.</p>
 
           {% if webcal_url %}
+          <!-- Google Calendar section -->
+          <p class="connect-section-label">Google Calendar <span class="badge">Recommended</span></p>
           <div class="connect-btn-row">
-            <div class="connect-btn-wrapper">
-              <a href="{{ webcal_url }}" class="btn-connect btn-cal-blue">&#128197; Add to Apple Calendar</a>
-              <span class="connect-btn-note">Works on Mac and iPhone</span>
-            </div>
             <div class="connect-btn-wrapper">
               {% if google_oauth_enabled and not google_connected %}
               <a href="/auth/google" class="btn-connect btn-cal-red">&#128197; Connect with Google Calendar</a>
-              <span class="connect-btn-note">Works on Android and in Gmail — events sync automatically</span>
+              <span class="connect-btn-note">Best experience &mdash; syncs instantly on all your devices, including iPhone and Android.</span>
               {% elif google_oauth_enabled and google_connected %}
               <form method="post" action="/auth/google/disconnect">
                 <button type="submit" class="btn-connect btn-cal-red" style="background:#dc2626;width:100%">&#128197; Disconnect Google Calendar</button>
               </form>
-              <span class="connect-btn-note">Events are synced directly to your Google Calendar</span>
+              <span class="connect-btn-note">Events are synced directly to your Google Calendar.</span>
               {% else %}
               <a href="{{ google_cal_url }}" class="btn-connect btn-cal-red" target="_blank" rel="noopener">&#128197; Add to Google Calendar</a>
-              <span class="connect-btn-note">Works on Android and in Gmail</span>
+              <span class="connect-btn-note">Best experience &mdash; syncs instantly on all your devices, including iPhone and Android.</span>
               {% endif %}
             </div>
+          </div>
+
+          <hr class="connect-divider">
+
+          <!-- Subscribe with a calendar link -->
+          <p class="connect-section-label">Subscribe with a calendar link</p>
+          <div class="connect-btn-row">
             <div class="connect-btn-wrapper">
-              <a href="{{ webcal_url }}" class="btn-connect btn-cal-slate">&#128197; Add to Outlook</a>
-              <span class="connect-btn-note">Works on Windows and in Outlook desktop</span>
+              <a href="{{ webcal_url }}" class="btn-connect btn-cal-neutral">&#128197; Add to calendar</a>
+              <span class="connect-btn-note">Works with Apple Calendar, Outlook, and any app that supports subscriptions.</span>
             </div>
           </div>
-          <p class="connect-btn-note" style="max-width:420px;margin-top:4px">Forecasts refresh automatically — usually within a few hours. Apple Calendar users can speed this up: right-click WeatherCal &#8594; Get Info &#8594; set Auto-refresh to Every Hour.{% if google_connected %} Google Calendar events sync directly and update faster than ICS subscriptions.{% else %} Google Calendar may take up to 24 hours and offers no user control.{% endif %}</p>
-
-          <div style="border-top:1px solid #e5e7eb;padding-top:20px">
+          <div style="margin-top:4px">
             <div class="feed-input-row">
               <input type="text" class="feed-url" id="reconnect-feed-url" value="{{ webcal_url }}" readonly onclick="this.select()">
               <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('reconnect-feed-url').value); var b=this; b.textContent='Copied!'; setTimeout(function(){b.textContent='Copy'},2000)">Copy</button>
             </div>
-            <p class="copy-hint">Or paste this URL directly into any calendar app.</p>
+            <p class="copy-hint">Or copy the link and paste it into any calendar app.</p>
           </div>
+
+          <hr class="connect-divider">
+
+          <p class="connect-help-text">Calendar links refresh every few hours. Apple Calendar users can speed this up: right-click WeatherCal &#8594; Get Info &#8594; set Auto-refresh to Every Hour.</p>
           {% else %}
           <p style="color:#6b7280">No feed token found. Please contact support.</p>
           {% endif %}

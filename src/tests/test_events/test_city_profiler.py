@@ -12,13 +12,6 @@ from src.events.discovery.city_profiler import (
 from src.events.sources import CityProfile, create_source_tables, get_city_profile, save_city_profile
 
 
-@pytest.fixture
-def db_path(tmp_path):
-    path = str(tmp_path / "test_profiler.db")
-    create_source_tables(path)
-    return path
-
-
 MOCK_PROFILE_RESPONSE = {
     "languages": ["German", "English"],
     "neighborhoods": ["Schwabing", "Maxvorstadt", "Glockenbachviertel", "Haidhausen"],

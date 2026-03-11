@@ -20,13 +20,6 @@ from src.events.sources import (
 )
 
 
-@pytest.fixture
-def db_path(tmp_path):
-    path = str(tmp_path / "test_sources.db")
-    create_source_tables(path)
-    return path
-
-
 # --- CityProfile dataclass ---
 
 

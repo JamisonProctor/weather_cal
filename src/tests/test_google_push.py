@@ -4,9 +4,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.services.forecast_store import ForecastStore
-from src.web.db import create_feedback_table, create_user_preferences_table
-from src.events.db import create_event_tables
 from src.integrations.google_push import (
     _cleanup_stale_events,
     create_google_tokens_table,
@@ -22,17 +19,6 @@ from src.integrations.google_push import (
     refresh_and_persist,
 )
 from src.web.db import create_user, DEFAULT_PREFS
-
-
-@pytest.fixture
-def db_path(tmp_path):
-    path = str(tmp_path / "test.db")
-    ForecastStore(db_path=path)
-    create_feedback_table(path)
-    create_user_preferences_table(path)
-    create_event_tables(path)
-    create_google_tokens_table(path)
-    return path
 
 
 def _make_credentials(token="access_tok", refresh="refresh_tok", expiry=None):

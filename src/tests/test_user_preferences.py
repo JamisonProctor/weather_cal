@@ -3,21 +3,11 @@ import pytest
 from src.models.forecast import Forecast
 from src.integrations.ics_service import generate_ics
 from src.services.forecast_formatting import format_summary, get_warning_windows
-from src.services.forecast_store import ForecastStore
 from src.web.db import (
     DEFAULT_PREFS,
-    create_user_preferences_table,
     get_user_preferences,
     upsert_user_preferences,
 )
-
-
-@pytest.fixture
-def db_path(tmp_path):
-    path = str(tmp_path / "test.db")
-    ForecastStore(db_path=path)
-    create_user_preferences_table(path)
-    return path
 
 
 def _make_forecast(times, temps, codes, rain, winds, date="2025-08-01", precipitation=None):

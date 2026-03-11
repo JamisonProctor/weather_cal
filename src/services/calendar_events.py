@@ -37,17 +37,17 @@ class CalendarEvent:
 
 # --- UID helpers ---
 
-def _stable_uid(date_str: str, location: str) -> str:
+def stable_uid(date_str: str, location: str) -> str:
     raw = f"{date_str}:{location}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16] + "@weathercal.app"
 
 
-def _warning_uid(start_time: str, location: str, warning_type: str) -> str:
+def warning_uid(start_time: str, location: str, warning_type: str) -> str:
     raw = f"{start_time}:{location}:{warning_type}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16] + "@weathercal.app"
 
 
-def _merged_warning_uid(start_time: str, location: str, warning_types: List[str]) -> str:
+def merged_warning_uid(start_time: str, location: str, warning_types: List[str]) -> str:
     types_key = "+".join(sorted(warning_types))
     raw = f"{start_time}:{location}:{types_key}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16] + "@weathercal.app"
@@ -161,7 +161,7 @@ def build_calendar_events(forecast: Forecast, prefs=None, settings_url: str = No
         if settings_url:
             description += f"\n\n\u2699\ufe0f Change your settings: {settings_url}"
         events.append(CalendarEvent(
-            uid=_stable_uid(forecast.date, forecast.location),
+            uid=stable_uid(forecast.date, forecast.location),
             summary=summary,
             description=description,
             location=forecast.location,
@@ -181,7 +181,7 @@ def build_calendar_events(forecast: Forecast, prefs=None, settings_url: str = No
             if settings_url:
                 description += f"\n\n\u2699\ufe0f Change your settings: {settings_url}"
             events.append(CalendarEvent(
-                uid=_merged_warning_uid(merged.start_time, forecast.location, merged.warning_types),
+                uid=merged_warning_uid(merged.start_time, forecast.location, merged.warning_types),
                 summary=summary,
                 description=description,
                 location=forecast.location,

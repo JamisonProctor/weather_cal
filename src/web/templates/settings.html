@@ -509,7 +509,7 @@
       });
     });
 
-    // Temperature unit toggle
+    // Temperature unit toggle — values are pre-converted server-side
     (function () {
       var radios = document.querySelectorAll('input[name="temp_unit"]');
       var fields = {
@@ -527,12 +527,6 @@
       function fToC(f) { return Math.round(((f - 32) * 5 / 9) * 2) / 2; }
 
       var currentUnit = document.querySelector('input[name="temp_unit"]:checked').value;
-
-      if (currentUnit === 'F') {
-        for (var key in fields) {
-          fields[key].value = cToF(parseFloat(fields[key].value));
-        }
-      }
 
       radios.forEach(function (r) {
         r.addEventListener('change', function () {

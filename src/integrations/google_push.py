@@ -13,9 +13,9 @@ from googleapiclient.errors import HttpError
 
 from src.services.calendar_events import (
     CalendarEvent,
-    _merged_warning_uid,
-    _stable_uid,
     build_calendar_events,
+    merged_warning_uid,
+    stable_uid,
 )
 from src.utils.db import get_connection as _conn
 

@@ -6,7 +6,7 @@ import pytest
 from icalendar import Calendar
 
 from src.integrations.google_push import _push_forecast_events
-from src.integrations.ics_service import generate_ics, _stable_uid, _merged_warning_uid
+from src.integrations.ics_service import generate_ics
 from src.models.forecast import Forecast
 from src.services.forecast_formatting import get_warning_windows, merge_overlapping_windows
 from src.constants import DEFAULT_PREFS

@@ -247,7 +247,7 @@ def test_generate_ics_unknown_timezone_falls_back_to_utc():
 
 
 def test_merged_window_summary_sunny_fahrenheit():
-    from src.integrations.ics_service import _merged_window_summary
+    from src.services.calendar_events import _merged_window_summary
     from src.services.forecast_formatting import MergedWarningWindow
     merged = MergedWarningWindow(
         warning_types=["sunny"], emojis=["☀️"],
@@ -266,7 +266,7 @@ def test_merged_window_summary_sunny_fahrenheit():
 
 
 def test_merged_window_summary_rain_shows_mm():
-    from src.integrations.ics_service import _merged_window_summary
+    from src.services.calendar_events import _merged_window_summary
     from src.services.forecast_formatting import MergedWarningWindow
     merged = MergedWarningWindow(
         warning_types=["rain"], emojis=["☂️"],
@@ -286,7 +286,7 @@ def test_merged_window_summary_rain_shows_mm():
 
 
 def test_merged_window_summary_wind_shows_speed():
-    from src.integrations.ics_service import _merged_window_summary
+    from src.services.calendar_events import _merged_window_summary
     from src.services.forecast_formatting import MergedWarningWindow
     merged = MergedWarningWindow(
         warning_types=["wind"], emojis=["🌬️"],
@@ -305,7 +305,7 @@ def test_merged_window_summary_wind_shows_speed():
 
 
 def test_merged_window_summary_combined_shows_temp():
-    from src.integrations.ics_service import _merged_window_summary
+    from src.services.calendar_events import _merged_window_summary
     from src.services.forecast_formatting import MergedWarningWindow
     merged = MergedWarningWindow(
         warning_types=["rain", "cold"], emojis=["☂️", "🥶"],
@@ -326,10 +326,10 @@ def test_merged_window_summary_combined_shows_temp():
 
 
 def test_stable_uid_determinism():
-    from src.integrations.ics_service import _stable_uid
-    uid1 = _stable_uid("2026-03-10", "Munich, Germany")
-    uid2 = _stable_uid("2026-03-10", "Munich, Germany")
-    uid3 = _stable_uid("2026-03-11", "Munich, Germany")
+    from src.services.calendar_events import stable_uid
+    uid1 = stable_uid("2026-03-10", "Munich, Germany")
+    uid2 = stable_uid("2026-03-10", "Munich, Germany")
+    uid3 = stable_uid("2026-03-11", "Munich, Germany")
     assert uid1 == uid2
     assert uid1 != uid3
     assert uid1.endswith("@weathercal.app")

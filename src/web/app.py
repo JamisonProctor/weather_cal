@@ -111,6 +111,29 @@ def _get_user_id(request: Request):
     return decode_session_token(token)
 
 
+class _LoginRequired(Exception):
+    """Sentinel exception used by _require_login to trigger a redirect."""
+    pass
+
+
+@app.exception_handler(_LoginRequired)
+async def _handle_login_required(request: Request, exc: _LoginRequired):
+    return RedirectResponse(url="/login", status_code=303)
+
+
+def _require_login(request: Request) -> int:
+    """Return user_id or raise _LoginRequired to redirect to /login."""
+    user_id = _get_user_id(request)
+    if not user_id:
+        raise _LoginRequired()
+    return user_id
+
+
+def _convert_thresholds_to_celsius(cold: float, warm: float, hot: float) -> tuple[float, float, float]:
+    """Convert Fahrenheit threshold values to Celsius."""
+    return (cold - 32) * 5 / 9, (warm - 32) * 5 / 9, (hot - 32) * 5 / 9
+
+
 def _is_admin(user_id: int) -> bool:
     if not ADMIN_EMAIL:
         return False
@@ -172,9 +195,7 @@ async def signup_post(
 
 @app.get("/setup", response_class=HTMLResponse)
 async def setup_get(request: Request):
-    user_id = _get_user_id(request)
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
+    user_id = _require_login(request)
     return _template("setup.html", request, {"error": None})
 
 
@@ -188,9 +209,7 @@ async def setup_post(
     timezone: str = Form(default=""),
     country: str = Form(default=""),
 ):
-    user_id = _get_user_id(request)
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
+    user_id = _require_login(request)
 
     existing_locations = get_user_locations(DB_PATH, user_id)
     is_location_change = len(existing_locations) > 0
@@ -297,9 +316,7 @@ def _build_feed_urls(request: Request, feed_token: str):
 
 @app.get("/connect", response_class=HTMLResponse)
 async def connect(request: Request):
-    user_id = _get_user_id(request)
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
+    user_id = _require_login(request)
 
     # Returning users go to settings; new users from setup see the connect page
     from_setup = request.query_params.get("from") == "setup"
@@ -324,9 +341,7 @@ async def settings(
     error: str = Query(default=""),
     ref: str = Query(default=""),
 ):
-    user_id = _get_user_id(request)
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
+    user_id = _require_login(request)
 
     user = get_user_by_id(DB_PATH, user_id)
     if not user:
@@ -340,6 +355,13 @@ async def settings(
     webcal_url, google_cal_url = _build_feed_urls(request, feed_token) if feed_token else (None, None)
     prefs_row = get_user_preferences(DB_PATH, user_id)
     prefs = resolve_prefs(prefs_row)
+
+    # Convert thresholds for display in user's preferred unit
+    if prefs.get("temp_unit") == "F":
+        from src.services.forecast_formatting import c_to_f
+        prefs["cold_threshold"] = round(c_to_f(prefs["cold_threshold"]) * 2) / 2
+        prefs["warm_threshold"] = round(c_to_f(prefs["warm_threshold"]) * 2) / 2
+        prefs["hot_threshold"] = round(c_to_f(prefs["hot_threshold"]) * 2) / 2
 
     location_names = [loc["location"] for loc in locations]
     last_updated_raw = get_last_forecast_update(DB_PATH, location_names)
@@ -392,14 +414,12 @@ async def settings_post(
     warn_hot: str = Form(default=""),
     temp_unit: str = Form(default="C"),
 ):
-    user_id = _get_user_id(request)
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
+    user_id = _require_login(request)
 
     if temp_unit == "F":
-        cold_threshold = (cold_threshold - 32) * 5 / 9
-        warm_threshold = (warm_threshold - 32) * 5 / 9
-        hot_threshold = (hot_threshold - 32) * 5 / 9
+        cold_threshold, warm_threshold, hot_threshold = _convert_thresholds_to_celsius(
+            cold_threshold, warm_threshold, hot_threshold
+        )
 
     upsert_user_preferences(
         DB_PATH,
@@ -436,9 +456,7 @@ async def settings_email_post(
     new_email: str = Form(...),
     current_password: str = Form(...),
 ):
-    user_id = _get_user_id(request)
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
+    user_id = _require_login(request)
 
     user = get_user_by_id(DB_PATH, user_id)
     if not user or not check_password(current_password, user["password_hash"]):
@@ -458,9 +476,7 @@ async def settings_password_post(
     current_password: str = Form(...),
     new_password: str = Form(...),
 ):
-    user_id = _get_user_id(request)
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
+    user_id = _require_login(request)
 
     user = get_user_by_id(DB_PATH, user_id)
     if not user or not check_password(current_password, user["password_hash"]):
@@ -475,9 +491,7 @@ async def settings_password_post(
 
 @app.get("/settings/export")
 async def settings_export(request: Request):
-    user_id = _get_user_id(request)
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
+    user_id = _require_login(request)
 
     data = export_user_data(DB_PATH, user_id)
     return JSONResponse(
@@ -491,9 +505,7 @@ async def settings_delete_post(
     request: Request,
     confirm_email: str = Form(...),
 ):
-    user_id = _get_user_id(request)
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
+    user_id = _require_login(request)
 
     user = get_user_by_id(DB_PATH, user_id)
     if not user or confirm_email.strip().lower() != user["email"].lower():
@@ -516,9 +528,7 @@ async def settings_feedback_post(
     screen_height: str = Form(default=""),
     timezone: str = Form(default=""),
 ):
-    user_id = _get_user_id(request)
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
+    user_id = _require_login(request)
 
     user = get_user_by_id(DB_PATH, user_id)
     email = user["email"] if user else ""
@@ -565,9 +575,7 @@ async def feedback_post(
     feed_url: str = Form(default=""),
     locations: str = Form(default=""),
 ):
-    user_id = _get_user_id(request)
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
+    user_id = _require_login(request)
 
     user = get_user_by_id(DB_PATH, user_id)
     email = user["email"] if user else ""
@@ -604,9 +612,7 @@ def _google_push_initial(db_path, user_id):
 
 @app.get("/auth/google")
 async def google_auth_start(request: Request):
-    user_id = _get_user_id(request)
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
+    user_id = _require_login(request)
     if not google_oauth_enabled():
         return RedirectResponse(url="/settings", status_code=303)
 
@@ -675,9 +681,7 @@ async def google_auth_callback(
 
 @app.post("/auth/google/disconnect")
 async def google_auth_disconnect(request: Request):
-    user_id = _get_user_id(request)
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
+    user_id = _require_login(request)
 
     from src.integrations.google_push import get_google_credentials, delete_google_calendar
     # Delete the WeatherCal calendar from user's Google account first
@@ -769,9 +773,7 @@ async def feed_events(token: str):
 
 @app.get("/admin", response_class=HTMLResponse)
 async def admin(request: Request):
-    user_id = _get_user_id(request)
-    if not user_id:
-        return RedirectResponse(url="/login", status_code=303)
+    user_id = _require_login(request)
     if not _is_admin(user_id):
         return Response(content="Forbidden", status_code=403)
     stats = get_admin_stats(DB_PATH)

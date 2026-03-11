@@ -7,11 +7,9 @@ from src.models.forecast import Forecast
 from src.services.calendar_events import (
     CalendarEvent,
     build_calendar_events,
-    _format_window_description,
-    _merged_warning_uid,
-    _merged_window_summary,
-    _stable_uid,
-    _warning_uid,
+    merged_warning_uid,
+    stable_uid,
+    warning_uid,
 )
 
 

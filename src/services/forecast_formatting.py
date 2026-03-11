@@ -15,6 +15,7 @@ WIND_SPEED_THRESHOLD = 30
 COLD_TEMP_THRESHOLD = 3
 HOT_TEMP_THRESHOLD = 28
 WARM_TEMP_THRESHOLD = 14
+MIN_SUNNY_HOURS = 2
 
 def c_to_f(temp: float) -> float:
     return temp * 9 / 5 + 32
@@ -240,6 +241,12 @@ def get_warning_windows(forecast: Forecast, prefs=None) -> List[WarningWindow]:
                 start_time=run_start,
                 end_time=end_dt.strftime("%Y-%m-%dT%H:%M"),
             ))
+
+    windows = [
+        w for w in windows
+        if w.warning_type != "sunny"
+        or (datetime.fromisoformat(w.end_time) - datetime.fromisoformat(w.start_time)) >= timedelta(hours=MIN_SUNNY_HOURS)
+    ]
 
     return windows
 

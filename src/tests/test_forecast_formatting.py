@@ -464,6 +464,36 @@ def test_merge_overlapping_windows_emoji_ordering():
     assert merged[0].emojis == ["☂️", "🥶"]
 
 
+def test_sunny_window_1_hour_suppressed():
+    """A single hour of sunny weather is too short and should be filtered out."""
+    forecast = _make_forecast(
+        times=["2025-08-01T10:00", "2025-08-01T11:00", "2025-08-01T12:00"],
+        temps=[20, 10, 10],
+        codes=[0, 3, 3],
+        rain=[0, 0, 0],
+        winds=[5, 5, 5],
+    )
+    windows = get_warning_windows(forecast, prefs=_SUNNY_PREFS)
+    sunny = [w for w in windows if w.warning_type == "sunny"]
+    assert len(sunny) == 0
+
+
+def test_sunny_window_2_hours_emitted():
+    """Exactly 2 hours of sunny weather meets the minimum and should be emitted."""
+    forecast = _make_forecast(
+        times=["2025-08-01T10:00", "2025-08-01T11:00", "2025-08-01T12:00"],
+        temps=[20, 21, 10],
+        codes=[0, 1, 3],
+        rain=[0, 0, 0],
+        winds=[5, 5, 5],
+    )
+    windows = get_warning_windows(forecast, prefs=_SUNNY_PREFS)
+    sunny = [w for w in windows if w.warning_type == "sunny"]
+    assert len(sunny) == 1
+    assert sunny[0].start_time == "2025-08-01T10:00"
+    assert sunny[0].end_time == "2025-08-01T12:00"
+
+
 def test_merge_overlapping_windows_adjacent_not_merged():
     """Adjacent windows (end == start) are NOT merged — only strict overlap."""
     windows = [

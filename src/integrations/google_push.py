@@ -1,4 +1,3 @@
-import hashlib
 import logging
 import os
 import sqlite3
@@ -18,17 +17,11 @@ from src.services.calendar_events import (
     _stable_uid,
     build_calendar_events,
 )
+from src.utils.db import get_connection as _conn
 
 logger = logging.getLogger(__name__)
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.app.created"]
-
-
-def _conn(db_path: str) -> sqlite3.Connection:
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
 
 
 def create_google_tokens_table(db_path: str) -> None:
@@ -293,9 +286,17 @@ def _upsert_event(service, calendar_id, event_body):
                 calendarId=calendar_id, iCalUID=ical_uid, maxResults=1
             ).execute()
             items = existing.get("items", [])
+            if not items:
+                # Event was soft-deleted (status: cancelled) — re-list including deleted
+                existing = service.events().list(
+                    calendarId=calendar_id, iCalUID=ical_uid,
+                    showDeleted=True, maxResults=1
+                ).execute()
+                items = existing.get("items", [])
             if items:
                 event_id = items[0]["id"]
                 patch_body = {k: v for k, v in event_body.items() if k != "iCalUID"}
+                patch_body["status"] = "confirmed"
                 service.events().patch(
                     calendarId=calendar_id, eventId=event_id, body=patch_body
                 ).execute()

@@ -6,6 +6,7 @@ import pytest
 
 from src.integrations.google_push import (
     _cleanup_stale_events,
+    _upsert_event,
     create_google_tokens_table,
     delete_google_calendar,
     delete_google_tokens,
@@ -269,3 +270,75 @@ class TestCleanupStaleEvents:
                               expected_allday_uids=set(),
                               expected_timed_uids=set(),
                               tz=tz)
+
+
+# --- Upsert event (soft-delete restoration) ---
+
+class TestUpsertEvent:
+    """Tests for _upsert_event including soft-deleted event restoration."""
+
+    def test_insert_succeeds(self):
+        service = MagicMock()
+        event_body = {"iCalUID": "uid@weathercal.app", "summary": "Sunny"}
+        _upsert_event(service, "cal123", event_body)
+        service.events().import_.assert_called_with(calendarId="cal123", body=event_body)
+
+    def test_409_patches_existing_event(self):
+        from googleapiclient.errors import HttpError
+        service = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status = 409
+        service.events().import_().execute.side_effect = HttpError(mock_resp, b"Conflict")
+        service.events().list().execute.return_value = {
+            "items": [{"id": "evt_existing", "iCalUID": "uid@weathercal.app"}]
+        }
+
+        event_body = {"iCalUID": "uid@weathercal.app", "summary": "Sunny"}
+        _upsert_event(service, "cal123", event_body)
+
+        service.events().patch.assert_called_with(
+            calendarId="cal123", eventId="evt_existing",
+            body={"summary": "Sunny", "status": "confirmed"}
+        )
+
+    def test_409_restores_soft_deleted_event(self):
+        """When an event was deleted and re-enabled, list without showDeleted
+        returns nothing. Must re-list with showDeleted=True to find and restore it."""
+        from googleapiclient.errors import HttpError
+        service = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status = 409
+        service.events().import_().execute.side_effect = HttpError(mock_resp, b"Conflict")
+
+        # First list (no showDeleted) returns empty, second (showDeleted=True) finds it
+        service.events().list().execute.side_effect = [
+            {"items": []},
+            {"items": [{"id": "evt_cancelled", "iCalUID": "uid@weathercal.app", "status": "cancelled"}]},
+        ]
+
+        event_body = {"iCalUID": "uid@weathercal.app", "summary": "Sunny"}
+        _upsert_event(service, "cal123", event_body)
+
+        # Should have called list twice
+        assert service.events().list().execute.call_count == 2
+        # Should patch with status=confirmed to restore
+        service.events().patch.assert_called_with(
+            calendarId="cal123", eventId="evt_cancelled",
+            body={"summary": "Sunny", "status": "confirmed"}
+        )
+
+    def test_409_both_lists_empty_no_error(self):
+        """If event can't be found even with showDeleted, don't crash."""
+        from googleapiclient.errors import HttpError
+        service = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status = 409
+        service.events().import_().execute.side_effect = HttpError(mock_resp, b"Conflict")
+        service.events().list().execute.side_effect = [
+            {"items": []},
+            {"items": []},
+        ]
+
+        event_body = {"iCalUID": "uid@weathercal.app", "summary": "Sunny"}
+        _upsert_event(service, "cal123", event_body)  # should not raise
+        service.events().patch.assert_not_called()

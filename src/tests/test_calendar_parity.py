@@ -193,3 +193,129 @@ class TestSummaryParity:
 
         for (_, ics_summary), (_, g_summary) in zip(ics_timed, google_timed):
             assert ics_summary == g_summary
+
+
+def _cold_forecast(date="2026-03-13", location="Munich, Germany"):
+    """Forecast with temps at 8°C — triggers cold warning at threshold=10."""
+    base = f"{date}T"
+    times = [f"{base}{h:02d}:00" for h in range(6, 22)]
+    return Forecast(
+        date=date,
+        location=location,
+        high=9, low=2,
+        summary="Cold day",
+        description="Very cold",
+        times=times,
+        temps=[8] * len(times),
+        codes=[3] * len(times),
+        rain=[0] * len(times),
+        winds=[5] * len(times),
+        timezone="Europe/Berlin",
+    )
+
+
+def _windy_rainy_forecast(date="2026-03-14", location="Munich, Germany"):
+    """Forecast with rain + high wind — triggers both warnings."""
+    base = f"{date}T"
+    times = [f"{base}{h:02d}:00" for h in range(6, 22)]
+    return Forecast(
+        date=date,
+        location=location,
+        high=15, low=10,
+        summary="Stormy day",
+        description="Wind and rain",
+        times=times,
+        temps=[12] * len(times),
+        codes=[63] * len(times),
+        rain=[80] * len(times),
+        precipitation=[3.0] * len(times),
+        winds=[55] * len(times),
+        timezone="Europe/Berlin",
+    )
+
+
+class TestCustomPrefsParity:
+    def test_custom_cold_threshold_parity(self):
+        """cold_threshold=10 — both ICS and Google produce same cold warning events."""
+        forecast = _cold_forecast()
+        prefs = {**DEFAULT_PREFS, "cold_threshold": 10.0}
+
+        ics_events = _parse_ics_events(generate_ics([forecast], forecast.location, prefs))
+        google_events = _capture_google_upserts(forecast, prefs)
+
+        ics_timed = sorted([(uid, s) for uid, s, allday in ics_events if not allday])
+        google_timed = sorted([
+            (e["iCalUID"], e["summary"]) for e in google_events
+            if "dateTime" in e.get("start", {})
+        ])
+
+        assert len(ics_timed) == len(google_timed)
+        assert len(ics_timed) > 0, "Expected cold warning with threshold=10 and temp=8"
+        for (ics_uid, ics_s), (g_uid, g_s) in zip(ics_timed, google_timed):
+            assert ics_uid == g_uid
+            assert ics_s == g_s
+
+    def test_fahrenheit_summary_parity(self):
+        """temp_unit=F — both produce matching summaries; timed events show °F."""
+        forecast = _rainy_forecast()
+        prefs = {**DEFAULT_PREFS, "temp_unit": "F"}
+
+        ics_events = _parse_ics_events(generate_ics([forecast], forecast.location, prefs))
+        google_events = _capture_google_upserts(forecast, prefs)
+
+        # All-day summaries match between ICS and Google
+        ics_allday = [(uid, s) for uid, s, allday in ics_events if allday]
+        google_allday = [(e["iCalUID"], e["summary"]) for e in google_events if "date" in e.get("start", {})]
+        assert len(ics_allday) == len(google_allday) == 1
+        assert ics_allday[0][0] == google_allday[0][0]
+        assert ics_allday[0][1] == google_allday[0][1]
+
+        # Timed event summaries match and contain °F
+        ics_timed = sorted([(uid, s) for uid, s, allday in ics_events if not allday])
+        google_timed = sorted([
+            (e["iCalUID"], e["summary"]) for e in google_events
+            if "dateTime" in e.get("start", {})
+        ])
+        assert len(ics_timed) == len(google_timed)
+        for (ics_uid, ics_s), (g_uid, g_s) in zip(ics_timed, google_timed):
+            assert ics_uid == g_uid
+            assert ics_s == g_s
+
+    def test_multiple_warnings_disabled_parity(self):
+        """warn_rain=0, warn_wind=0 — no timed events from either path."""
+        forecast = _windy_rainy_forecast()
+        prefs = {**DEFAULT_PREFS, "warn_rain": 0, "warn_wind": 0}
+
+        ics_events = _parse_ics_events(generate_ics([forecast], forecast.location, prefs))
+        google_events = _capture_google_upserts(forecast, prefs)
+
+        ics_timed = [e for e in ics_events if not e[2]]
+        google_timed = [e for e in google_events if "dateTime" in e.get("start", {})]
+
+        assert len(ics_timed) == 0
+        assert len(google_timed) == 0
+
+    def test_allday_off_timed_on_parity(self):
+        """show_allday_events=0, timed_events_enabled=1 — only timed events, matching."""
+        forecast = _rainy_forecast()
+        prefs = {**DEFAULT_PREFS, "show_allday_events": 0, "timed_events_enabled": 1, "warn_rain": 1}
+
+        ics_events = _parse_ics_events(generate_ics([forecast], forecast.location, prefs))
+        google_events = _capture_google_upserts(forecast, prefs)
+
+        ics_allday = [e for e in ics_events if e[2]]
+        google_allday = [e for e in google_events if "date" in e.get("start", {})]
+        assert len(ics_allday) == 0
+        assert len(google_allday) == 0
+
+        ics_timed = sorted([(uid, s) for uid, s, allday in ics_events if not allday])
+        google_timed = sorted([
+            (e["iCalUID"], e["summary"]) for e in google_events
+            if "dateTime" in e.get("start", {})
+        ])
+
+        assert len(ics_timed) == len(google_timed)
+        assert len(ics_timed) > 0
+        for (ics_uid, ics_s), (g_uid, g_s) in zip(ics_timed, google_timed):
+            assert ics_uid == g_uid
+            assert ics_s == g_s

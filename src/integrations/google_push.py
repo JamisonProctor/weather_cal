@@ -293,12 +293,13 @@ def push_events_for_user(db_path, user_id, forecasts, prefs, location, tz_name):
 def _upsert_event(service, calendar_id, event_body):
     """Insert or restore an event by iCalUID.
 
-    Checks for existing events (including soft-deleted/cancelled) first,
-    so we can restore events that were previously deleted by a settings toggle.
+    For active events: patches in place.
+    For cancelled (soft-deleted) events: deletes the ghost then inserts fresh,
+    because patching status back to confirmed doesn't restore visibility.
     """
     ical_uid = event_body["iCalUID"]
 
-    # Check for existing event first (including soft-deleted)
+    # Check for existing event (including soft-deleted)
     existing = service.events().list(
         calendarId=calendar_id, iCalUID=ical_uid,
         showDeleted=True, maxResults=1
@@ -308,12 +309,26 @@ def _upsert_event(service, calendar_id, event_body):
     if items:
         event_id = items[0]["id"]
         old_status = items[0].get("status", "unknown")
-        patch_body = {k: v for k, v in event_body.items() if k != "iCalUID"}
-        patch_body["status"] = "confirmed"
-        service.events().patch(
-            calendarId=calendar_id, eventId=event_id, body=patch_body
-        ).execute()
-        logger.info("Patched event uid=%s old_status=%s summary=%s", ical_uid, old_status, event_body.get("summary", "")[:50])
+
+        if old_status == "cancelled":
+            # Cancelled events can't be reliably restored via patch.
+            # Delete the ghost, then insert fresh.
+            try:
+                service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
+            except HttpError as e:
+                if e.resp.status not in (404, 410):
+                    raise
+            # Insert fresh — use insert() not import_() to avoid iCalUID conflict
+            # with the just-deleted ghost
+            service.events().insert(calendarId=calendar_id, body=event_body).execute()
+            logger.info("Re-created event uid=%s (was cancelled) summary=%s", ical_uid, event_body.get("summary", "")[:50])
+        else:
+            patch_body = {k: v for k, v in event_body.items() if k != "iCalUID"}
+            patch_body["status"] = "confirmed"
+            service.events().patch(
+                calendarId=calendar_id, eventId=event_id, body=patch_body
+            ).execute()
+            logger.info("Patched event uid=%s summary=%s", ical_uid, event_body.get("summary", "")[:50])
     else:
         service.events().import_(calendarId=calendar_id, body=event_body).execute()
         logger.info("Inserted event uid=%s summary=%s", ical_uid, event_body.get("summary", "")[:50])

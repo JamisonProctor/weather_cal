@@ -304,8 +304,8 @@ class TestUpsertEvent:
         )
         service.events().import_.assert_not_called()
 
-    def test_restores_soft_deleted_event(self):
-        """Cancelled events found via showDeleted=True are patched back to confirmed."""
+    def test_recreates_cancelled_event(self):
+        """Cancelled events are deleted then re-inserted fresh (patch doesn't restore visibility)."""
         service = MagicMock()
         service.events().list().execute.return_value = {
             "items": [{"id": "evt_cancelled", "iCalUID": "uid@weathercal.app", "status": "cancelled"}]
@@ -314,11 +314,12 @@ class TestUpsertEvent:
         event_body = {"iCalUID": "uid@weathercal.app", "summary": "Sunny"}
         _upsert_event(service, "cal123", event_body)
 
-        service.events().patch.assert_called_with(
-            calendarId="cal123", eventId="evt_cancelled",
-            body={"summary": "Sunny", "status": "confirmed"}
-        )
-        service.events().import_.assert_not_called()
+        # Should delete the ghost first
+        service.events().delete.assert_called_with(calendarId="cal123", eventId="evt_cancelled")
+        # Then insert fresh
+        service.events().insert.assert_called_with(calendarId="cal123", body=event_body)
+        # Should NOT patch
+        service.events().patch.assert_not_called()
 
 
 # --- Cleanup beyond forecast window ---

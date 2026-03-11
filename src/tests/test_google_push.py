@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.integrations.google_push import (
+    _HIDDEN_EVENT_BODY,
     _cleanup_beyond_forecast,
     _cleanup_stale_events,
     _upsert_event,
@@ -186,7 +187,7 @@ class TestCleanupStaleEvents:
         service.events().list().execute.return_value = {"items": existing_items}
         return service
 
-    def test_deletes_stale_timed_events(self):
+    def test_hides_stale_timed_events(self):
         from zoneinfo import ZoneInfo
         tz = ZoneInfo("Europe/Berlin")
         stale_event = {
@@ -201,7 +202,9 @@ class TestCleanupStaleEvents:
                               expected_timed_uids={"current_uid@weathercal.app"},
                               tz=tz)
 
-        service.events().delete.assert_called_with(calendarId="cal123", eventId="evt_stale")
+        service.events().patch.assert_called_with(
+            calendarId="cal123", eventId="evt_stale", body=_HIDDEN_EVENT_BODY
+        )
 
     def test_preserves_current_timed_events(self):
         from zoneinfo import ZoneInfo
@@ -219,9 +222,9 @@ class TestCleanupStaleEvents:
                               expected_timed_uids={current_uid},
                               tz=tz)
 
-        service.events().delete.assert_not_called()
+        service.events().patch.assert_not_called()
 
-    def test_deletes_allday_when_disabled(self):
+    def test_hides_allday_when_disabled(self):
         from zoneinfo import ZoneInfo
         tz = ZoneInfo("Europe/Berlin")
         allday_event = {
@@ -237,7 +240,9 @@ class TestCleanupStaleEvents:
                               expected_timed_uids=set(),
                               tz=tz)
 
-        service.events().delete.assert_called_with(calendarId="cal123", eventId="evt_allday")
+        service.events().patch.assert_called_with(
+            calendarId="cal123", eventId="evt_allday", body=_HIDDEN_EVENT_BODY
+        )
 
     def test_preserves_allday_when_enabled(self):
         from zoneinfo import ZoneInfo
@@ -255,7 +260,7 @@ class TestCleanupStaleEvents:
                               expected_timed_uids=set(),
                               tz=tz)
 
-        service.events().delete.assert_not_called()
+        service.events().patch.assert_not_called()
 
     def test_handles_list_api_error(self):
         from googleapiclient.errors import HttpError
@@ -366,3 +371,66 @@ class TestCleanupBeyondForecast:
 
         _cleanup_beyond_forecast(service, "cal123", {"2026-03-11"}, tz)
         service.events().delete.assert_not_called()
+
+
+# --- Hide → restore roundtrip ---
+
+class TestHiddenEventRoundtrip:
+    """Verify that hiding via cleanup and restoring via upsert works end-to-end."""
+
+    def test_hidden_event_restored_by_upsert(self):
+        """An event hidden by _cleanup_stale_events is restored by _upsert_event."""
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("Europe/Berlin")
+        uid = "roundtrip_uid@weathercal.app"
+
+        # Step 1: event exists, cleanup hides it (not in expected set)
+        existing_event = {
+            "id": "evt_rt",
+            "iCalUID": uid,
+            "start": {"date": "2026-03-11"},
+        }
+        service = MagicMock()
+        service.events().list().execute.return_value = {"items": [existing_event]}
+
+        _cleanup_stale_events(service, "cal123", "2026-03-11",
+                              expected_allday_uids=set(),
+                              expected_timed_uids=set(),
+                              tz=tz)
+
+        service.events().patch.assert_called_with(
+            calendarId="cal123", eventId="evt_rt", body=_HIDDEN_EVENT_BODY
+        )
+
+        # Step 2: event is now hidden but still confirmed — upsert restores it
+        hidden_event = {
+            "id": "evt_rt",
+            "iCalUID": uid,
+            "status": "confirmed",
+            "summary": "",
+        }
+        service.reset_mock()
+        service.events().list().execute.return_value = {"items": [hidden_event]}
+
+        restore_body = {
+            "iCalUID": uid,
+            "summary": "Sunny 22°C",
+            "description": "Nice day",
+            "start": {"date": "2026-03-11"},
+            "end": {"date": "2026-03-12"},
+        }
+        _upsert_event(service, "cal123", restore_body)
+
+        # Should patch with real content (not delete+insert, not update)
+        service.events().patch.assert_called_with(
+            calendarId="cal123", eventId="evt_rt",
+            body={
+                "summary": "Sunny 22°C",
+                "description": "Nice day",
+                "start": {"date": "2026-03-11"},
+                "end": {"date": "2026-03-12"},
+                "status": "confirmed",
+            }
+        )
+        service.events().import_.assert_not_called()
+        service.events().update.assert_not_called()

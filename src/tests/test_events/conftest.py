@@ -1,0 +1,84 @@
+"""Shared test fixtures for event tests."""
+
+import sqlite3
+import uuid
+from datetime import datetime, timedelta
+from types import SimpleNamespace
+
+import pytest
+
+from src.tests.conftest import future_iso
+
+
+@pytest.fixture
+def insert_event(db_path):
+    """Factory fixture: insert event into SQLite with defaults + **overrides."""
+    def _insert(**overrides):
+        future = datetime.now() + timedelta(days=7)
+        defaults = dict(
+            id=str(uuid.uuid4()),
+            title="Test Event",
+            start_time=future.isoformat(),
+            end_time=(future + timedelta(hours=2)).isoformat(),
+            location="Munich",
+            description="A test event",
+            source_url="https://example.com/event",
+            external_key=str(uuid.uuid4()),
+            category="concert",
+            is_paid=0,
+            is_calendar_candidate=1,
+            created_at=datetime.now().isoformat(),
+        )
+        defaults.update(overrides)
+        conn = sqlite3.connect(db_path)
+        conn.execute(
+            """INSERT INTO events
+               (id, title, start_time, end_time, location, description,
+                source_url, external_key, category, is_paid, is_calendar_candidate, created_at)
+               VALUES (:id, :title, :start_time, :end_time, :location, :description,
+                       :source_url, :external_key, :category, :is_paid, :is_calendar_candidate, :created_at)""",
+            defaults,
+        )
+        conn.commit()
+        conn.close()
+    return _insert
+
+
+@pytest.fixture
+def make_event_dict():
+    """Factory fixture: create event dict for store_events()."""
+    def _make(**overrides):
+        defaults = dict(
+            title="Test Event",
+            start_time=future_iso(7),
+            end_time=future_iso(7),
+            location="Munich",
+            description="A test event",
+            source_url="https://example.com/event",
+            category="concert",
+            is_paid=False,
+        )
+        defaults.update(overrides)
+        return defaults
+    return _make
+
+
+@pytest.fixture
+def make_event():
+    """Factory fixture: create SimpleNamespace event object for ICS tests."""
+    def _make(**overrides):
+        defaults = dict(
+            id="test-uuid-1",
+            title="Open Air Concert",
+            start_time="2026-03-15T18:00:00+01:00",
+            end_time="2026-03-15T21:00:00+01:00",
+            location="Olympiapark, Munich",
+            description="Free concert in the park",
+            source_url="https://example.com/concert",
+            external_key="abc123def456",
+            category="concert",
+            is_paid=False,
+        )
+        defaults.update(overrides)
+        return SimpleNamespace(**defaults)
+    return _make

@@ -28,6 +28,7 @@ pyasn1_modules==0.4.2
 Pygments==2.19.2
 pyparsing==3.2.3
 pytest==8.4.1
+pytest-cov==6.1.1
 python-dotenv==1.1.1
 python-jose[cryptography]>=3.3.0
 python-multipart>=0.0.9

@@ -722,6 +722,7 @@ def test_google_auth_callback_stores_tokens(client, db_path, monkeypatch):
     from unittest.mock import MagicMock, patch
     from datetime import datetime, timedelta, timezone
     from jose import jwt as _jwt
+    from src.web.auth import SECRET_KEY
 
     monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-client-id")
     monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-client-secret")
@@ -730,7 +731,7 @@ def test_google_auth_callback_stores_tokens(client, db_path, monkeypatch):
 
     state = _jwt.encode(
         {"user_id": user_id, "purpose": "google_oauth"},
-        "change-me-in-production",
+        SECRET_KEY,
         algorithm="HS256",
     )
 

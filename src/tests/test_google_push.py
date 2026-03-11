@@ -8,6 +8,7 @@ from src.services.forecast_store import ForecastStore
 from src.web.db import create_feedback_table, create_user_preferences_table
 from src.events.db import create_event_tables
 from src.integrations.google_push import (
+    _cleanup_stale_events,
     create_google_tokens_table,
     delete_google_calendar,
     delete_google_tokens,
@@ -184,3 +185,101 @@ def test_delete_google_calendar_handles_404(db_path, monkeypatch):
     with patch("src.integrations.google_push.refresh_and_persist", return_value=cred), \
          patch("src.integrations.google_push.build_google_service", return_value=mock_service):
         delete_google_calendar(db_path, user_id)  # should not raise
+
+
+# --- Stale event cleanup ---
+
+class TestCleanupStaleEvents:
+    """Tests for _cleanup_stale_events."""
+
+    def _mock_service(self, existing_items):
+        service = MagicMock()
+        service.events().list().execute.return_value = {"items": existing_items}
+        return service
+
+    def test_deletes_stale_timed_events(self):
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("Europe/Berlin")
+        stale_event = {
+            "id": "evt_stale",
+            "iCalUID": "stale_uid@weathercal.app",
+            "start": {"dateTime": "2026-03-11T08:00:00+01:00"},
+        }
+        service = self._mock_service([stale_event])
+
+        _cleanup_stale_events(service, "cal123", "2026-03-11",
+                              expected_allday_uids=set(),
+                              expected_timed_uids={"current_uid@weathercal.app"},
+                              tz=tz)
+
+        service.events().delete.assert_called_with(calendarId="cal123", eventId="evt_stale")
+
+    def test_preserves_current_timed_events(self):
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("Europe/Berlin")
+        current_uid = "current_uid@weathercal.app"
+        current_event = {
+            "id": "evt_current",
+            "iCalUID": current_uid,
+            "start": {"dateTime": "2026-03-11T08:00:00+01:00"},
+        }
+        service = self._mock_service([current_event])
+
+        _cleanup_stale_events(service, "cal123", "2026-03-11",
+                              expected_allday_uids=set(),
+                              expected_timed_uids={current_uid},
+                              tz=tz)
+
+        service.events().delete.assert_not_called()
+
+    def test_deletes_allday_when_disabled(self):
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("Europe/Berlin")
+        allday_event = {
+            "id": "evt_allday",
+            "iCalUID": "allday_uid@weathercal.app",
+            "start": {"date": "2026-03-11"},
+        }
+        service = self._mock_service([allday_event])
+
+        # Empty expected_allday_uids = all-day events disabled
+        _cleanup_stale_events(service, "cal123", "2026-03-11",
+                              expected_allday_uids=set(),
+                              expected_timed_uids=set(),
+                              tz=tz)
+
+        service.events().delete.assert_called_with(calendarId="cal123", eventId="evt_allday")
+
+    def test_preserves_allday_when_enabled(self):
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("Europe/Berlin")
+        allday_uid = "allday_uid@weathercal.app"
+        allday_event = {
+            "id": "evt_allday",
+            "iCalUID": allday_uid,
+            "start": {"date": "2026-03-11"},
+        }
+        service = self._mock_service([allday_event])
+
+        _cleanup_stale_events(service, "cal123", "2026-03-11",
+                              expected_allday_uids={allday_uid},
+                              expected_timed_uids=set(),
+                              tz=tz)
+
+        service.events().delete.assert_not_called()
+
+    def test_handles_list_api_error(self):
+        from googleapiclient.errors import HttpError
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("Europe/Berlin")
+
+        service = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status = 500
+        service.events().list().execute.side_effect = HttpError(mock_resp, b"Server Error")
+
+        # Should not raise
+        _cleanup_stale_events(service, "cal123", "2026-03-11",
+                              expected_allday_uids=set(),
+                              expected_timed_uids=set(),
+                              tz=tz)

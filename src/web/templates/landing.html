@@ -579,18 +579,18 @@
     var ticking = false;
 
     // Generate clouds on a grid for even coverage with limited overlap
-    var COLS = isMobile ? 12 : 20;
-    var ROWS = isMobile ? 12 : 20;
-    var cellW = 130 / COLS;   // 130% total width (-15% to 115%)
-    var cellH = 130 / ROWS;
+    var COLS = isMobile ? 10 : 17;
+    var ROWS = isMobile ? 10 : 17;
+    var cellW = 120 / COLS;   // 120% total width (-10% to 110%)
+    var cellH = 120 / ROWS;
     var frag = document.createDocumentFragment();
     for (var row = 0; row < ROWS; row++) {
       for (var col = 0; col < COLS; col++) {
         var span = document.createElement('span');
         span.className = 'emoji-particle zone-hero';
-        // Place within cell with jitter, offset by -15% for edge bleed
-        var top = -15 + row * cellH + Math.random() * cellH * 0.7;
-        var left = -15 + col * cellW + Math.random() * cellW * 0.7;
+        // Place within cell with jitter, offset by -10% for edge bleed
+        var top = -10 + row * cellH + Math.random() * cellH * 0.7;
+        var left = -10 + col * cellW + Math.random() * cellW * 0.7;
         var size = 8 + Math.random() * 14;        // 8-22rem
         var speed = 0.4 + Math.random() * 0.3;    // 0.4-0.7
         // Direction: radiate outward from center

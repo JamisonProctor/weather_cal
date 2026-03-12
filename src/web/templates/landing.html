@@ -446,7 +446,6 @@
 
   <!-- CTA band -->
   <div class="lp-cta-band">
-    <h2>See the weather before you feel it</h2>
     {% if is_authenticated %}
     <a href="/settings" class="lp-cta">Go to settings</a>
     {% else %}
@@ -460,33 +459,28 @@
     <div class="lp-faq">
 
       <details>
-        <summary>What is WeatherCal?</summary>
-        <div class="faq-answer">WeatherCal delivers a 14-day weather forecast directly into your calendar app as events. Each day shows an emoji summary of morning and afternoon conditions — no app to open, no website to check.</div>
+        <summary>How does it work?</summary>
+        <div class="faq-answer">Sign up, choose your city, and pick how you want to receive your forecast. For Apple Calendar, Outlook, and most other apps, you'll get a personal ICS feed URL — tap it or paste it into your calendar's "subscribe" option and forecasts appear automatically. For Google Calendar, you can connect your account directly and we'll create a dedicated "WeatherCal" calendar with your forecast events.</div>
       </details>
 
       <details>
-        <summary>How do I add it to my calendar?</summary>
-        <div class="faq-answer">After signing up and choosing your city, you'll get a personal feed URL. Tap it on your phone or paste it into your calendar app's "subscribe" option. Your calendar will automatically pull in new forecasts.</div>
+        <summary>Can WeatherCal see my other calendar events?</summary>
+        <div class="faq-answer">No. When you connect Google Calendar, we create a separate "WeatherCal" calendar and only have access to that one calendar. We cannot see, read, or modify anything else in your account.</div>
       </details>
 
       <details>
         <summary>Which calendar apps are supported?</summary>
-        <div class="faq-answer">WeatherCal works with any app that supports ICS calendar subscriptions — including Apple Calendar, Google Calendar, Outlook, and most others. For Google Calendar on Android, we also offer a direct Google sync option.</div>
+        <div class="faq-answer">Any app that supports ICS calendar subscriptions — Apple Calendar, Google Calendar, Outlook, and most others. For Google Calendar, we also offer a direct sync option that pushes events automatically.</div>
+      </details>
+
+      <details>
+        <summary>How accurate are the forecasts?</summary>
+        <div class="faq-answer">We use Open-Meteo, which combines data from national weather services worldwide. Forecasts are most accurate for the next 3–5 days and update every morning with the latest data.</div>
       </details>
 
       <details>
         <summary>How often does the forecast update?</summary>
         <div class="faq-answer">Forecasts are refreshed every morning. Your calendar app will pick up the latest data automatically — most apps check every few hours.</div>
-      </details>
-
-      <details>
-        <summary>Can I change my location?</summary>
-        <div class="faq-answer">Yes — go to Settings and update your city at any time. Your forecast feed will switch to the new location on the next refresh.</div>
-      </details>
-
-      <details>
-        <summary>How do I change temperature units?</summary>
-        <div class="faq-answer">In Settings, you can switch between Celsius and Fahrenheit. The change applies to all your forecast events.</div>
       </details>
 
       <details>

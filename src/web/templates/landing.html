@@ -588,15 +588,16 @@
 
     // Generate drifting background clouds (below hero)
     var driftClouds = [];
-    var driftCount = isMobile ? 20 : 35;
+    var driftCount = isMobile ? 30 : 50;
     var driftFrag = document.createDocumentFragment();
     for (var i = 0; i < driftCount; i++) {
       var dc = document.createElement('span');
       dc.className = 'emoji-particle zone-drift';
-      var dcTop = 50 + Math.random() * 200;       // 50%-250% of viewport
+      var dcTop = 40 + Math.random() * 220;       // 40%-260% of viewport
       var dcLeft = -30 + Math.random() * 110;      // -30% to 80%
-      var dcSize = 4 + Math.random() * 4;           // 4-8rem
-      var dcSpeed = 0.4 + Math.random() * 0.5;      // faster parallax variation
+      var dcSize = 3 + Math.random() * 5;           // 3-8rem
+      // Speed proportional to size: bigger clouds drift faster (closer = faster parallax)
+      var dcSpeed = 0.1 + (dcSize - 3) * 0.12;      // 0.1 at 3rem, ~0.7 at 8rem
       dc.style.cssText = 'top:' + dcTop.toFixed(1) + '%;left:' + dcLeft.toFixed(1) + '%;font-size:' + dcSize.toFixed(1) + 'rem;opacity:0';
       dc.textContent = '\u2601\uFE0F';
       driftClouds.push({ el: dc, speed: dcSpeed });

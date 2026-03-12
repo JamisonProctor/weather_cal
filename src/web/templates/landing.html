@@ -379,8 +379,7 @@
     <a href="/" class="brand">WeatherCal 🌤️</a>
     <div>
       {% if is_authenticated %}
-        <a href="/settings" class="nav-link" style="margin-right:12px">Settings</a>
-        <form method="post" action="/logout" style="display:inline;margin:0"><button class="logout-btn" type="submit">Logout</button></form>
+        <a href="/settings" class="nav-link">Settings</a>
       {% else %}
         <a href="/login" class="nav-link">Sign in</a>
       {% endif %}
@@ -392,9 +391,6 @@
     <div class="lp-hero-content" id="lp-hero-content">
       <div class="lp-hero-brand">WeatherCal 🌤️</div>
       <h1>A weather forecast, directly in your calendar.</h1>
-      {% if not is_authenticated %}
-      <a href="/signup" class="lp-cta">Get started free</a>
-      {% endif %}
     </div>
   </section>
 

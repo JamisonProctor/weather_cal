@@ -597,26 +597,24 @@
       // Mobile: 5 clouds — positions fixed, speed randomized below
       { top: 5,  left: 5,  size: 12, fromLeft: false, entry: 0 },
       { top: 35, left: 50, size: 10, fromLeft: false, entry: 0 },
-      { top: 60, left: -25, size: 14, fromLeft: true, entry: 200 },
-      { top: 80, left: -25, size: 11, fromLeft: true, entry: 600 },
-      { top: 20, left: -25, size: 9,  fromLeft: true, entry: 1000 }
+      { top: 60, left: -25, size: 14, fromLeft: true, entry: 100 },
+      { top: 80, left: -25, size: 11, fromLeft: true, entry: 300 },
+      { top: 20, left: -25, size: 9,  fromLeft: true, entry: 500 }
     ] : [
       // Desktop: 8 clouds — positions fixed, speed randomized below
       { top: 5,  left: 8,  size: 14, fromLeft: false, entry: 0 },
       { top: 30, left: 55, size: 11, fromLeft: false, entry: 0 },
       { top: 55, left: 30, size: 12, fromLeft: false, entry: 0 },
       { top: 75, left: -25, size: 15, fromLeft: true, entry: 0 },
-      { top: 18, left: -25, size: 10, fromLeft: true, entry: 400 },
-      { top: 45, left: -25, size: 13, fromLeft: true, entry: 800 },
-      { top: 88, left: -25, size: 9,  fromLeft: true, entry: 1200 },
-      { top: 65, left: -25, size: 11, fromLeft: true, entry: 1600 }
+      { top: 18, left: -25, size: 10, fromLeft: true, entry: 200 },
+      { top: 45, left: -25, size: 13, fromLeft: true, entry: 500 },
+      { top: 88, left: -25, size: 9,  fromLeft: true, entry: 800 },
+      { top: 65, left: -25, size: 11, fromLeft: true, entry: 1100 }
     ];
-    // Randomize speeds with seeded PRNG — range 0.20 to 0.55
+    // Randomize speeds with seeded PRNG — tight range for natural feel
     for (var si = 0; si < driftDefs.length; si++) {
-      driftDefs[si].speed = 0.20 + seededRandom() * 0.35;
+      driftDefs[si].speed = 0.25 + seededRandom() * 0.20; // 0.25 to 0.45
     }
-    // 3rd cloud (index 2) should move faster
-    if (driftDefs.length > 2) driftDefs[2].speed = 0.50;
     var driftClouds = [];
     var driftFrag = document.createDocumentFragment();
     for (var i = 0; i < driftDefs.length; i++) {
@@ -696,17 +694,9 @@
           var cloudProgress = baseDriftScroll - dc.entryOffset;
           if (driftTrigger && cloudProgress > 0) {
             var driftOpacity = Math.min(0.35, cloudProgress / (vh * 0.3) * 0.35);
-            if (dc.fromLeft) {
-              // Enter from off-screen left
-              var driftX = cloudProgress * dc.speed;
-              dc.el.style.opacity = driftOpacity;
-              dc.el.style.transform = 'translate3d(' + driftX.toFixed(1) + 'px,0,0)';
-            } else {
-              // Already on-screen — just fade in, then drift right slowly
-              var driftX = cloudProgress * dc.speed * 0.3;
-              dc.el.style.opacity = driftOpacity;
-              dc.el.style.transform = 'translate3d(' + driftX.toFixed(1) + 'px,0,0)';
-            }
+            var driftX = cloudProgress * dc.speed;
+            dc.el.style.opacity = driftOpacity;
+            dc.el.style.transform = 'translate3d(' + driftX.toFixed(1) + 'px,0,0)';
           } else {
             dc.el.style.opacity = 0;
             dc.el.style.transform = 'translate3d(0,0,0)';

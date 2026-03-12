@@ -591,35 +591,35 @@
     emojiLayer.appendChild(frag);
 
     // Generate drifting background clouds
-    // First batch: fade in at random on-screen positions
-    // Later batch: enter from the left as user scrolls further
+    // Hardcoded positions to guarantee no overlap and intentional placement
+    // top/left in %, size in rem, speed multiplier, fromLeft = enters from off-screen
+    var driftDefs = isMobile ? [
+      // Mobile: 5 clouds
+      { top: 5,  left: 5,  size: 12, speed: 0.25, fromLeft: false, entry: 0 },    // upper-left fade-in
+      { top: 35, left: 50, size: 10, speed: 0.40, fromLeft: false, entry: 0 },    // mid-right fade-in
+      { top: 60, left: -25, size: 14, speed: 0.30, fromLeft: true, entry: 200 },  // from left
+      { top: 80, left: -25, size: 11, speed: 0.50, fromLeft: true, entry: 600 },  // from left
+      { top: 20, left: -25, size: 9,  speed: 0.55, fromLeft: true, entry: 1000 }  // from left
+    ] : [
+      // Desktop: 8 clouds
+      { top: 5,  left: 8,  size: 14, speed: 0.20, fromLeft: false, entry: 0 },    // upper-left fade-in
+      { top: 30, left: 55, size: 11, speed: 0.45, fromLeft: false, entry: 0 },    // mid-right fade-in
+      { top: 55, left: 30, size: 12, speed: 0.35, fromLeft: false, entry: 0 },    // center fade-in
+      { top: 75, left: -25, size: 15, speed: 0.30, fromLeft: true, entry: 0 },    // from left immediately
+      { top: 18, left: -25, size: 10, speed: 0.55, fromLeft: true, entry: 400 },  // from left
+      { top: 45, left: -25, size: 13, speed: 0.25, fromLeft: true, entry: 800 },  // from left
+      { top: 88, left: -25, size: 9,  speed: 0.50, fromLeft: true, entry: 1200 }, // from left
+      { top: 65, left: -25, size: 11, speed: 0.40, fromLeft: true, entry: 1600 }  // from left
+    ];
     var driftClouds = [];
-    var driftCount = isMobile ? 5 : 8;
-    var fadeInCount = isMobile ? 2 : 3; // first N appear on-screen
     var driftFrag = document.createDocumentFragment();
-    // Assign vertical slots to prevent overlap — each cloud gets its own band
-    var slotH = 80 / driftCount; // divide 10%-90% into equal bands
-    for (var i = 0; i < driftCount; i++) {
+    for (var i = 0; i < driftDefs.length; i++) {
+      var def = driftDefs[i];
       var dc = document.createElement('span');
       dc.className = 'emoji-particle zone-drift';
-      var dcSize = 9 + seededRandom() * 15;              // 9-24rem
-      var dcSpeed = 0.15 + seededRandom() * 0.45;        // 0.15 to 0.60 (no ultra-slow)
-      // Vertical: each cloud in its own band, jittered slightly within
-      var dcTop = 10 + i * slotH + seededRandom() * (slotH * 0.3);
-      var dcLeft;
-      var dcEntryOffset;
-      if (i < fadeInCount) {
-        // On-screen clouds: random horizontal position, fade in at trigger
-        dcLeft = 10 + seededRandom() * 60;               // 10%-70% across screen
-        dcEntryOffset = 0;
-      } else {
-        // Left-entry clouds: start off-screen, staggered scroll offsets
-        dcLeft = -25;
-        dcEntryOffset = (i - fadeInCount) * 400 + seededRandom() * 300;
-      }
-      dc.style.cssText = 'top:' + dcTop.toFixed(1) + '%;left:' + dcLeft.toFixed(1) + '%;font-size:' + dcSize.toFixed(1) + 'rem;opacity:0';
+      dc.style.cssText = 'top:' + def.top + '%;left:' + def.left + '%;font-size:' + def.size + 'rem;opacity:0';
       dc.textContent = '\u2601\uFE0F';
-      driftClouds.push({ el: dc, speed: dcSpeed, entryOffset: dcEntryOffset, fromLeft: i >= fadeInCount });
+      driftClouds.push({ el: dc, speed: def.speed, entryOffset: def.entry, fromLeft: def.fromLeft });
       driftFrag.appendChild(dc);
     }
     emojiLayer.appendChild(driftFrag);

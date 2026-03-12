@@ -92,9 +92,9 @@
     .lp-hero {
       position: relative;
       z-index: 1;
-      height: 200vh;
+      height: 150vh;
       min-height: 600px;
-      max-height: 2000px;
+      max-height: 1500px;
       background: transparent;
       display: flex;
       align-items: center;
@@ -627,9 +627,10 @@
           el.style.transform = 'translate3d(' + (dx * move) + 'px,' + (dy * move) + 'px,0)';
         });
 
-        // Hero content: fade in 0-30%, pin 30-35%, scroll up + fade out 35-65%
+        // Hero content: fade in 0-30%, pin 30-35%, scroll up + quick fade out
         var pinEnd = heroHeight * 0.35;
-        var fadeOutEnd = heroHeight * 0.65;
+        var vh = window.innerHeight;
+        var fadeOutDist = vh * 0.25; // gone within 25vh of scrolling
         if (scrollY < heroHeight * 0.3) {
           // Fade in
           heroContent.style.opacity = scrollY / (heroHeight * 0.3);
@@ -644,19 +645,15 @@
           heroContent.style.top = '50%';
           heroContent.style.left = '50%';
           heroContent.style.transform = 'translate(-50%, -50%)';
-        } else if (scrollY < fadeOutEnd) {
-          // Scroll up at 1:1 with page and fade out
-          var fadeOut = 1 - (scrollY - pinEnd) / (fadeOutEnd - pinEnd);
+        } else {
+          // Scroll up at 1:1 with page, fade out quickly
+          var scrollOffset = scrollY - pinEnd;
+          var fadeOut = Math.max(0, 1 - scrollOffset / fadeOutDist);
           heroContent.style.opacity = fadeOut;
           heroContent.style.position = 'fixed';
           heroContent.style.left = '50%';
-          var scrollOffset = scrollY - pinEnd;
           heroContent.style.top = 'calc(50% - ' + scrollOffset + 'px)';
           heroContent.style.transform = 'translate(-50%, -50%)';
-        } else {
-          // Fully hidden
-          heroContent.style.opacity = 0;
-          heroContent.style.position = 'fixed';
         }
 
         // Nav transition

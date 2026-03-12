@@ -687,8 +687,8 @@
 
         // Drifting background clouds
         var phoneRect = firstPhone ? firstPhone.getBoundingClientRect() : null;
-        var driftTrigger = phoneRect ? phoneRect.top <= vh * 0.5 : scrollY > heroHeight;
-        var baseDriftScroll = driftTrigger ? (phoneRect ? (vh * 0.5 - phoneRect.top) : scrollY - heroHeight) : 0;
+        var driftTrigger = phoneRect ? phoneRect.top <= vh * 0.25 : scrollY > heroHeight;
+        var baseDriftScroll = driftTrigger ? (phoneRect ? (vh * 0.25 - phoneRect.top) : scrollY - heroHeight) : 0;
         for (var di = 0; di < driftClouds.length; di++) {
           var dc = driftClouds[di];
           var cloudProgress = baseDriftScroll - dc.entryOffset;

@@ -261,6 +261,31 @@ class TestCleanupStaleEvents:
 
         service.events().delete.assert_not_called()
 
+    def test_skips_allday_from_adjacent_date(self):
+        """All-day events from adjacent dates (returned due to timezone overlap) must not be deleted."""
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("Europe/Berlin")
+        # Google returns Mar 12's all-day event when querying Mar 13 due to UTC offset
+        prev_day_allday = {
+            "id": "evt_prev_allday",
+            "iCalUID": "prev_allday_uid@weathercal.app",
+            "start": {"date": "2026-03-12"},
+        }
+        current_allday = {
+            "id": "evt_current_allday",
+            "iCalUID": "current_allday_uid@weathercal.app",
+            "start": {"date": "2026-03-13"},
+        }
+        service = self._mock_service([prev_day_allday, current_allday])
+
+        _cleanup_stale_events(service, "cal123", "2026-03-13",
+                              expected_allday_uids={"current_allday_uid@weathercal.app"},
+                              expected_timed_uids=set(),
+                              tz=tz)
+
+        # prev_day_allday should be skipped (wrong date), not deleted
+        service.events().delete.assert_not_called()
+
     def test_handles_list_api_error(self):
         from googleapiclient.errors import HttpError
         from zoneinfo import ZoneInfo
@@ -372,6 +397,26 @@ class TestCleanupBeyondForecast:
 
         _cleanup_beyond_forecast(service, "cal123", {"2026-03-11"}, tz)
         service.events().delete.assert_not_called()
+
+    def test_skips_allday_from_last_forecast_date(self):
+        """Last forecast day's all-day event appears in beyond-window query due to timezone overlap."""
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("Europe/Berlin")
+        service = MagicMock()
+        service.events().list().execute.return_value = {
+            "items": [
+                # Last forecast day's all-day event bleeds into scan window
+                {"id": "evt_last_allday", "iCalUID": "last@weathercal.app", "start": {"date": "2026-03-24"}},
+                # Genuinely stale event beyond window
+                {"id": "evt_stale", "iCalUID": "stale@weathercal.app", "start": {"date": "2026-03-26"}},
+            ]
+        }
+
+        forecast_dates = {"2026-03-11", "2026-03-12", "2026-03-24"}
+        _cleanup_beyond_forecast(service, "cal123", forecast_dates, tz)
+
+        # Should only delete the stale event, not the last forecast day's all-day
+        service.events().delete.assert_called_once_with(calendarId="cal123", eventId="evt_stale")
 
 
 # --- @weathercal.app filter in cleanup ---

@@ -351,6 +351,13 @@ def _cleanup_stale_events(service, calendar_id, date_str,
             is_timed = "dateTime" in event.get("start", {})
             is_allday = "date" in event.get("start", {}) and "dateTime" not in event.get("start", {})
 
+            # Skip all-day events that belong to a different date — timezone
+            # offsets cause Google's time-range query to return adjacent days'
+            # all-day events (e.g. querying for Mar 13 in Europe/Berlin returns
+            # the Mar 12 all-day event because timeMin in UTC is Mar 12 23:00).
+            if is_allday and event.get("start", {}).get("date") != date_str:
+                continue
+
             should_delete = False
             if is_timed and ical_uid not in expected_timed_uids:
                 should_delete = True
@@ -393,6 +400,13 @@ def _cleanup_beyond_forecast(service, calendar_id, forecast_dates, tz):
         ical_uid = event.get("iCalUID", "")
         if not ical_uid or "@weathercal.app" not in ical_uid:
             continue
+        # Skip all-day events that belong to a forecast date — timezone offsets
+        # cause the last forecast day's all-day event to appear in this query.
+        start = event.get("start", {})
+        if "date" in start and "dateTime" not in start:
+            event_date = start["date"]
+            if event_date in forecast_dates:
+                continue
         try:
             service.events().delete(
                 calendarId=calendar_id, eventId=event["id"]

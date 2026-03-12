@@ -327,6 +327,144 @@ def test_get_coordinates_missing_timezone_defaults(monkeypatch):
     assert tz == "Europe/Berlin"  # default fallback
 
 
+# --- fetch_forecasts_batch tests ---
+
+def test_fetch_forecasts_batch_multiple_locations(monkeypatch):
+    """Batch fetch with 2 locations returns array response."""
+    batch_response = [
+        {
+            "hourly": {
+                "time": ["2025-08-02T12:00"],
+                "temperature_2m": [22],
+                "weathercode": [1],
+                "precipitation_probability": [0],
+                "precipitation": [0],
+                "windspeed_10m": [5],
+            }
+        },
+        {
+            "hourly": {
+                "time": ["2025-08-02T12:00"],
+                "temperature_2m": [18],
+                "weathercode": [2],
+                "precipitation_probability": [10],
+                "precipitation": [0.5],
+                "windspeed_10m": [8],
+            }
+        },
+    ]
+    monkeypatch.setattr("requests.get", lambda *a, **k: MockResponse(batch_response))
+
+    locations = [
+        {"location": "Munich", "lat": 48.13, "lon": 11.58, "timezone": "Europe/Berlin"},
+        {"location": "Berlin", "lat": 52.52, "lon": 13.41, "timezone": "Europe/Berlin"},
+    ]
+    result = ForecastService.fetch_forecasts_batch(locations, forecast_days=2)
+
+    assert "Munich" in result
+    assert "Berlin" in result
+    assert len(result["Munich"]) == 1
+    assert result["Munich"][0].high == 22
+    assert result["Berlin"][0].high == 18
+
+
+def test_fetch_forecasts_batch_single_location(monkeypatch):
+    """Single location returns object (not array) response."""
+    single_response = {
+        "hourly": {
+            "time": ["2025-08-02T12:00"],
+            "temperature_2m": [25],
+            "weathercode": [1],
+            "precipitation_probability": [5],
+            "precipitation": [0],
+            "windspeed_10m": [3],
+        }
+    }
+    monkeypatch.setattr("requests.get", lambda *a, **k: MockResponse(single_response))
+
+    locations = [
+        {"location": "Munich", "lat": 48.13, "lon": 11.58, "timezone": "Europe/Berlin"},
+    ]
+    result = ForecastService.fetch_forecasts_batch(locations, forecast_days=2)
+
+    assert "Munich" in result
+    assert len(result["Munich"]) == 1
+    assert result["Munich"][0].high == 25
+
+
+def test_fetch_forecasts_batch_with_date_range(monkeypatch):
+    """Batch fetch with start_date/end_date passes params correctly."""
+    captured_params = {}
+
+    def mock_get(*args, **kwargs):
+        captured_params.update(kwargs.get("params", {}))
+        return MockResponse({
+            "hourly": {
+                "time": ["2025-08-05T12:00"],
+                "temperature_2m": [20],
+                "weathercode": [1],
+                "precipitation_probability": [0],
+                "precipitation": [0],
+                "windspeed_10m": [4],
+            }
+        })
+
+    monkeypatch.setattr("requests.get", mock_get)
+
+    locations = [
+        {"location": "Munich", "lat": 48.13, "lon": 11.58, "timezone": "Europe/Berlin"},
+    ]
+    ForecastService.fetch_forecasts_batch(
+        locations, start_date="2025-08-05", end_date="2025-08-07"
+    )
+
+    assert captured_params["start_date"] == "2025-08-05"
+    assert captured_params["end_date"] == "2025-08-07"
+    assert "forecast_days" not in captured_params
+
+
+def test_fetch_forecasts_batch_empty_locations():
+    result = ForecastService.fetch_forecasts_batch([])
+    assert result == {}
+
+
+def test_fetch_forecasts_batch_fallback_on_failure(monkeypatch):
+    """When batch call fails, falls back to individual fetches."""
+    call_count = {"batch": 0, "individual": 0}
+
+    def mock_get(*args, **kwargs):
+        params = kwargs.get("params", {})
+        if "," in str(params.get("latitude", "")):
+            call_count["batch"] += 1
+            raise requests.exceptions.ConnectionError("batch failed")
+        call_count["individual"] += 1
+        return MockResponse({
+            "hourly": {
+                "time": ["2025-08-02T12:00"],
+                "temperature_2m": [20],
+                "weathercode": [1],
+                "precipitation_probability": [0],
+                "precipitation": [0],
+                "windspeed_10m": [5],
+            }
+        })
+
+    monkeypatch.setattr("requests.get", mock_get)
+    monkeypatch.setattr("src.services.forecast_service.time.sleep", lambda s: None)
+    monkeypatch.setattr(ForecastService, "MAX_ATTEMPTS", 1)
+
+    locations = [
+        {"location": "Munich", "lat": 48.13, "lon": 11.58, "timezone": "Europe/Berlin"},
+        {"location": "Berlin", "lat": 52.52, "lon": 13.41, "timezone": "Europe/Berlin"},
+    ]
+    result = ForecastService.fetch_forecasts_batch(locations, forecast_days=2)
+
+    assert call_count["batch"] == 1
+    assert call_count["individual"] == 2
+    assert "Munich" in result
+    assert "Berlin" in result
+
+
 def test_request_json_does_not_retry_client_error(monkeypatch):
     class ErrorResponse:
         status_code = 400

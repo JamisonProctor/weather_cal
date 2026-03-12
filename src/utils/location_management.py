@@ -1,6 +1,8 @@
 import os
 import sqlite3
 import logging
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 logger = logging.getLogger(__name__)
 
@@ -46,3 +48,45 @@ def get_locations():
         logger.warning("No locations found in DB. Falling back to DEFAULT_LOCATION from environment.")
         locations = [{"location": default_location, "lat": None, "lon": None, "timezone": None}]
     return locations
+
+
+def group_locations_by_tz_offset(locations: list = None) -> dict[int, list[dict]]:
+    """Group locations by their current UTC offset (rounded to nearest hour).
+
+    Returns a dict mapping offset_hours -> list of location dicts.
+    E.g. {1: [munich, paris], 9: [tokyo]}
+    """
+    if locations is None:
+        locations = get_locations()
+
+    groups: dict[int, list[dict]] = {}
+    now = datetime.now(timezone.utc)
+
+    for loc in locations:
+        tz_name = loc.get("timezone")
+        if not tz_name:
+            offset_hours = 0
+        else:
+            try:
+                tz = ZoneInfo(tz_name)
+                offset_seconds = now.astimezone(tz).utcoffset().total_seconds()
+                offset_hours = round(offset_seconds / 3600)
+            except (KeyError, AttributeError):
+                logger.warning("Unknown timezone %s for %s, defaulting to UTC", tz_name, loc.get("location"))
+                offset_hours = 0
+
+        groups.setdefault(offset_hours, []).append(loc)
+
+    return groups
+
+
+def local_to_utc(local_time: str, utc_offset_hours: int) -> str:
+    """Convert a local time string like '05:30' to UTC given an offset.
+
+    Returns a time string like '04:30'. Wraps around midnight.
+    """
+    parts = local_time.split(":")
+    hour = int(parts[0]) - utc_offset_hours
+    minute = int(parts[1])
+    hour = hour % 24
+    return f"{hour:02d}:{minute:02d}"

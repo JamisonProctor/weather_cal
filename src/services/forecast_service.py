@@ -2,7 +2,7 @@ import os
 import logging
 import time
 
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 from dotenv import load_dotenv
 import requests
@@ -192,3 +192,158 @@ class ForecastService:
             ))
             logger.info(f"Created forecast for {date}: high={high}, low={low}")
         return forecasts
+
+    @classmethod
+    def _parse_hourly_to_forecasts(
+        cls, hourly: dict, location: str, tz: str, start_hour: int, end_hour: int
+    ) -> List[Forecast]:
+        """Parse an hourly data block into a list of Forecast objects."""
+        times = hourly["time"]
+        temps = hourly["temperature_2m"]
+        codes = hourly["weathercode"]
+        rain_probs = hourly.get("precipitation_probability", [0] * len(times))
+        precip = hourly.get("precipitation", [0] * len(times))
+        winds = hourly.get("windspeed_10m", [0] * len(times))
+
+        daily_data = {}
+        for idx, t in enumerate(times):
+            dt = datetime.fromisoformat(t)
+            date_str = dt.date().isoformat()
+            if start_hour <= dt.hour <= end_hour:
+                if date_str not in daily_data:
+                    daily_data[date_str] = {"times": [], "temps": [], "codes": [], "rain": [], "precipitation": [], "winds": []}
+                daily_data[date_str]["times"].append(t)
+                daily_data[date_str]["temps"].append(temps[idx] if idx < len(temps) else None)
+                daily_data[date_str]["codes"].append(codes[idx] if idx < len(codes) else None)
+                daily_data[date_str]["rain"].append(rain_probs[idx] if idx < len(rain_probs) else None)
+                daily_data[date_str]["precipitation"].append(precip[idx] if idx < len(precip) else None)
+                daily_data[date_str]["winds"].append(winds[idx] if idx < len(winds) else None)
+
+        forecasts = []
+        for date, vals in daily_data.items():
+            high = max(vals["temps"])
+            low = min(vals["temps"])
+            forecasts.append(Forecast(
+                date=date,
+                location=location,
+                high=high,
+                low=low,
+                summary="",
+                times=vals["times"],
+                temps=vals["temps"],
+                codes=vals["codes"],
+                rain=vals["rain"],
+                precipitation=vals["precipitation"],
+                winds=vals["winds"],
+                description=None,
+                timezone=tz,
+            ))
+        return forecasts
+
+    @classmethod
+    def fetch_forecasts_batch(
+        cls,
+        locations: list[dict],
+        forecast_days: Optional[int] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        start_hour: int = 6,
+        end_hour: int = 22,
+    ) -> dict[str, List[Forecast]]:
+        """Fetch forecasts for multiple locations in a single API call.
+
+        Open-Meteo supports comma-separated lat/lon for batch requests.
+        Returns a dict mapping location name -> list of Forecast objects.
+        Falls back to individual requests if the batch call fails.
+        """
+        if not locations:
+            return {}
+
+        lats = ",".join(str(loc["lat"]) for loc in locations)
+        lons = ",".join(str(loc["lon"]) for loc in locations)
+
+        params = {
+            "latitude": lats,
+            "longitude": lons,
+            "hourly": "temperature_2m,weathercode,precipitation_probability,precipitation,windspeed_10m",
+        }
+
+        if start_date and end_date:
+            params["start_date"] = start_date
+            params["end_date"] = end_date
+        elif forecast_days:
+            params["forecast_days"] = forecast_days
+        else:
+            params["forecast_days"] = 7
+
+        # Use first location's timezone for the API call (all in same tz group)
+        tz = locations[0].get("timezone") or "Europe/Berlin"
+        params["timezone"] = tz
+
+        try:
+            data = cls._request_json_with_retry(
+                cls.OPEN_METEO_URL,
+                params=params,
+                context=f"batch forecast ({len(locations)} locations)",
+            )
+        except Exception:
+            logger.warning("Batch fetch failed, falling back to individual requests")
+            return cls._fetch_batch_fallback(locations, forecast_days, start_date, end_date, start_hour, end_hour)
+
+        result = {}
+
+        if len(locations) == 1:
+            # Single location: response is a plain object, not an array
+            loc = locations[0]
+            loc_tz = loc.get("timezone") or tz
+            result[loc["location"]] = cls._parse_hourly_to_forecasts(
+                data["hourly"], loc["location"], loc_tz, start_hour, end_hour
+            )
+        else:
+            # Multiple locations: response is an array
+            for i, loc in enumerate(locations):
+                try:
+                    loc_data = data[i]
+                    loc_tz = loc.get("timezone") or tz
+                    result[loc["location"]] = cls._parse_hourly_to_forecasts(
+                        loc_data["hourly"], loc["location"], loc_tz, start_hour, end_hour
+                    )
+                except (IndexError, KeyError):
+                    logger.error("Failed to parse batch response for %s", loc["location"])
+                    result[loc["location"]] = []
+
+        return result
+
+    @classmethod
+    def _fetch_batch_fallback(
+        cls,
+        locations: list[dict],
+        forecast_days: Optional[int],
+        start_date: Optional[str],
+        end_date: Optional[str],
+        start_hour: int,
+        end_hour: int,
+    ) -> dict[str, List[Forecast]]:
+        """Fetch each location individually as fallback when batch fails."""
+        result = {}
+        for loc in locations:
+            try:
+                kwargs = {
+                    "location": loc["location"],
+                    "lat": loc["lat"],
+                    "lon": loc["lon"],
+                    "timezone": loc.get("timezone"),
+                    "start_hour": start_hour,
+                    "end_hour": end_hour,
+                }
+                if forecast_days:
+                    kwargs["forecast_days"] = forecast_days
+                forecasts = cls.fetch_forecasts(**kwargs)
+                # Filter by date range if start_date/end_date were specified
+                if start_date and end_date:
+                    forecasts = [f for f in forecasts if start_date <= f.date <= end_date]
+                result[loc["location"]] = forecasts
+            except Exception:
+                logger.exception("Fallback fetch failed for %s", loc["location"])
+                result[loc["location"]] = []
+        return result

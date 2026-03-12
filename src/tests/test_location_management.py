@@ -4,7 +4,12 @@ import sqlite3
 import pytest
 
 from src.services.forecast_store import ForecastStore
-from src.utils.location_management import get_locations, load_locations_from_db
+from src.utils.location_management import (
+    get_locations,
+    group_locations_by_tz_offset,
+    load_locations_from_db,
+    local_to_utc,
+)
 
 
 def _insert_user(db_path, email, is_active=1):
@@ -69,3 +74,76 @@ def test_get_locations_raises_when_no_locations(monkeypatch, tmp_path):
     monkeypatch.delenv("DEFAULT_LOCATION", raising=False)
     with pytest.raises(EnvironmentError, match="No locations available"):
         get_locations()
+
+
+# --- group_locations_by_tz_offset tests ---
+
+def test_group_locations_same_timezone():
+    locs = [
+        {"location": "Munich", "lat": 48.13, "lon": 11.58, "timezone": "Europe/Berlin"},
+        {"location": "Paris", "lat": 48.85, "lon": 2.35, "timezone": "Europe/Paris"},
+    ]
+    groups = group_locations_by_tz_offset(locs)
+    # Berlin and Paris share the same UTC offset
+    assert len(groups) == 1
+    offset = list(groups.keys())[0]
+    assert len(groups[offset]) == 2
+
+
+def test_group_locations_different_timezones():
+    locs = [
+        {"location": "Munich", "lat": 48.13, "lon": 11.58, "timezone": "Europe/Berlin"},
+        {"location": "Tokyo", "lat": 35.68, "lon": 139.69, "timezone": "Asia/Tokyo"},
+    ]
+    groups = group_locations_by_tz_offset(locs)
+    assert len(groups) == 2
+
+
+def test_group_locations_empty_list():
+    groups = group_locations_by_tz_offset([])
+    assert groups == {}
+
+
+def test_group_locations_missing_timezone():
+    locs = [
+        {"location": "Unknown", "lat": 0.0, "lon": 0.0, "timezone": None},
+    ]
+    groups = group_locations_by_tz_offset(locs)
+    assert 0 in groups
+    assert len(groups[0]) == 1
+
+
+def test_group_locations_invalid_timezone():
+    locs = [
+        {"location": "BadTZ", "lat": 0.0, "lon": 0.0, "timezone": "Not/A/Timezone"},
+    ]
+    groups = group_locations_by_tz_offset(locs)
+    assert 0 in groups
+
+
+# --- local_to_utc tests ---
+
+def test_local_to_utc_positive_offset():
+    assert local_to_utc("05:30", 1) == "04:30"
+
+
+def test_local_to_utc_negative_offset():
+    assert local_to_utc("05:30", -5) == "10:30"
+
+
+def test_local_to_utc_zero_offset():
+    assert local_to_utc("12:00", 0) == "12:00"
+
+
+def test_local_to_utc_wrap_around_midnight():
+    # 02:00 local with offset +9 = 17:00 previous day UTC
+    assert local_to_utc("02:00", 9) == "17:00"
+
+
+def test_local_to_utc_wrap_forward():
+    # 22:00 local with offset -5 = 03:00 next day UTC
+    assert local_to_utc("22:00", -5) == "03:00"
+
+
+def test_local_to_utc_large_positive_offset():
+    assert local_to_utc("01:00", 12) == "13:00"

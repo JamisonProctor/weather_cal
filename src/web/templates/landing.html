@@ -6,6 +6,15 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌤️</text></svg>">
   <title>WeatherCal — Weather forecasts, in your calendar</title>
   <meta name="description" content="Subscribe once. Emoji-rich weather forecasts appear as calendar events — updated daily. Works with Apple Calendar, Google Calendar, and Outlook.">
+  <meta property="og:title" content="WeatherCal — Weather forecasts, in your calendar">
+  <meta property="og:description" content="Subscribe once. Emoji-rich 14-day weather forecasts appear as calendar events. Works with Apple Calendar, Google Calendar, and Outlook.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://weathercal.app">
+  <meta property="og:image" content="https://weathercal.app/static/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="WeatherCal — Weather forecasts, in your calendar">
+  <meta name="twitter:description" content="14-day emoji weather forecasts as calendar events. Free.">
+  <meta name="twitter:image" content="https://weathercal.app/static/og-image.png">
   <style>
     *, *::before, *::after { box-sizing: border-box; }
 
@@ -325,8 +334,11 @@
     }
     .lp-footer-brand {
       font-weight: 700;
-      color: var(--lp-text);
-      margin-bottom: 12px;
+      color: var(--lp-accent);
+      font-size: 1.1rem;
+      text-decoration: none;
+      margin-bottom: 20px;
+      display: block;
     }
     .lp-footer-links {
       display: flex;
@@ -509,11 +521,11 @@
 
   <!-- Footer -->
   <footer class="lp-footer">
-    <div class="lp-footer-brand">WeatherCal 🌤️</div>
+    <a href="/" class="lp-footer-brand">WeatherCal 🌤️</a>
     <div class="lp-footer-links">
-      <a href="/impressum">Impressum</a>
-      <a href="/terms">Terms</a>
       <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/impressum">Impressum</a>
       <a href="{% if is_authenticated %}/settings#feedback{% else %}/login{% endif %}">Feedback</a>
     </div>
   </footer>

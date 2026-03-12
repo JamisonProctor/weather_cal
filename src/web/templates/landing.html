@@ -90,7 +90,7 @@
     }
     @keyframes cloud-drift {
       from { transform: translate3d(0, 0, 0); }
-      to { transform: translate3d(calc(100vw + 20%), 0, 0); }
+      to { transform: translate3d(140vw, 0, 0); }
     }
     /* --- Hero --- */
     .lp-hero {
@@ -579,21 +579,21 @@
     // Negative delay = starts mid-animation (already on-screen)
     // Vertical bands sized to prevent overlap at largest cloud size in each band
     var driftDefs = isMobile ? [
-      // top%, size(rem), duration(s), delay(s) — negative = start on-screen
-      { top: 5,  size: 11, duration: 50, delay: -20 },
-      { top: 25, size: 8,  duration: 60, delay: -35 },
-      { top: 45, size: 15, duration: 42, delay: 0 },
-      { top: 68, size: 9,  duration: 55, delay: -10 },
-      { top: 85, size: 12, duration: 48, delay: -40 }
+      // top%, size(rem), duration(s), delay(s) — negative = start partway through
+      { top: 5,  size: 11, duration: 50, delay: -5 },   // left side
+      { top: 25, size: 8,  duration: 60, delay: -20 },   // left-center
+      { top: 45, size: 15, duration: 42, delay: 0 },     // entering from left
+      { top: 68, size: 9,  duration: 55, delay: -30 },   // center
+      { top: 85, size: 12, duration: 48, delay: -12 }    // left side
     ] : [
-      { top: 3,  size: 14, duration: 55, delay: -25 },
-      { top: 16, size: 8,  duration: 70, delay: -50 },
-      { top: 28, size: 18, duration: 45, delay: 0 },
-      { top: 42, size: 10, duration: 65, delay: -35 },
-      { top: 55, size: 20, duration: 50, delay: -15 },
-      { top: 70, size: 9,  duration: 72, delay: -45 },
-      { top: 82, size: 16, duration: 48, delay: -5 },
-      { top: 93, size: 7,  duration: 62, delay: -55 }
+      { top: 3,  size: 14, duration: 55, delay: -3 },    // far left
+      { top: 16, size: 8,  duration: 70, delay: -22 },   // left-center
+      { top: 28, size: 18, duration: 48, delay: -35 },   // center-right
+      { top: 42, size: 10, duration: 65, delay: -8 },    // left
+      { top: 55, size: 20, duration: 52, delay: -28 },   // center
+      { top: 70, size: 9,  duration: 72, delay: -15 },   // left-center
+      { top: 82, size: 16, duration: 46, delay: -40 },   // right
+      { top: 93, size: 7,  duration: 62, delay: -5 }     // far left
     ];
     // Randomize durations slightly with seeded PRNG
     for (var si = 0; si < driftDefs.length; si++) {

@@ -79,7 +79,7 @@
       z-index: 0;
       pointer-events: none;
       overflow: hidden;
-      background: #f5f5f5;
+      background: linear-gradient(135deg, #FFF8E1, #FFF3E0);
     }
     .emoji-particle {
       position: absolute;
@@ -92,9 +92,9 @@
     .lp-hero {
       position: relative;
       z-index: 1;
-      height: 100vh;
+      height: 200vh;
       min-height: 600px;
-      max-height: 1000px;
+      max-height: 2000px;
       background: transparent;
       display: flex;
       align-items: center;
@@ -395,7 +395,7 @@
   <section class="lp-hero" id="lp-hero">
     <div class="lp-hero-content" id="lp-hero-content">
       <div class="lp-hero-brand">WeatherCal 🌤️</div>
-      <h1>Is a weather forecast directly in your calendar app.</h1>
+      <h1>It's a weather forecast directly in your calendar app.</h1>
       {% if not is_authenticated %}
       <a href="/signup" class="lp-cta">Get started free</a>
       {% endif %}
@@ -577,27 +577,33 @@
     var isMobile = window.innerWidth < 768;
     var ticking = false;
 
-    // Generate ~370 hero clouds dynamically
-    var CLOUD_COUNT = isMobile ? 60 : 120;
+    // Generate clouds on a grid for even coverage with limited overlap
+    var COLS = isMobile ? 8 : 14;
+    var ROWS = isMobile ? 8 : 14;
+    var cellW = 120 / COLS;   // 120% total width (-10% to 110%)
+    var cellH = 120 / ROWS;
     var frag = document.createDocumentFragment();
-    for (var i = 0; i < CLOUD_COUNT; i++) {
-      var span = document.createElement('span');
-      span.className = 'emoji-particle zone-hero';
-      var top = (Math.random() * 110 - 10);   // -10% to 100%
-      var left = (Math.random() * 110 - 10);   // -10% to 100%
-      var size = 7 + Math.random() * 9;         // 7-16rem
-      var speed = 0.4 + Math.random() * 0.3;    // 0.4-0.7
-      // Direction: radiate outward from center
-      var cx = left - 50, cy = top - 50;
-      var len = Math.sqrt(cx * cx + cy * cy) || 1;
-      var dx = (cx / len) + (Math.random() - 0.5) * 0.4;
-      var dy = (cy / len) + (Math.random() - 0.5) * 0.4;
-      span.style.cssText = 'top:' + top + '%;left:' + left + '%;font-size:' + size.toFixed(1) + 'rem';
-      span.dataset.speed = speed.toFixed(2);
-      span.dataset.dx = dx.toFixed(2);
-      span.dataset.dy = dy.toFixed(2);
-      span.textContent = Math.random() < 0.95 ? '\u2601\uFE0F' : '\u26C8\uFE0F';
-      frag.appendChild(span);
+    for (var row = 0; row < ROWS; row++) {
+      for (var col = 0; col < COLS; col++) {
+        var span = document.createElement('span');
+        span.className = 'emoji-particle zone-hero';
+        // Place within cell with jitter, offset by -10% for edge bleed
+        var top = -10 + row * cellH + Math.random() * cellH * 0.7;
+        var left = -10 + col * cellW + Math.random() * cellW * 0.7;
+        var size = 7 + Math.random() * 9;         // 7-16rem
+        var speed = 0.4 + Math.random() * 0.3;    // 0.4-0.7
+        // Direction: radiate outward from center
+        var cx = left - 50, cy = top - 50;
+        var len = Math.sqrt(cx * cx + cy * cy) || 1;
+        var dx = (cx / len) + (Math.random() - 0.5) * 0.4;
+        var dy = (cy / len) + (Math.random() - 0.5) * 0.4;
+        span.style.cssText = 'top:' + top.toFixed(1) + '%;left:' + left.toFixed(1) + '%;font-size:' + size.toFixed(1) + 'rem';
+        span.dataset.speed = speed.toFixed(2);
+        span.dataset.dx = dx.toFixed(2);
+        span.dataset.dy = dy.toFixed(2);
+        span.textContent = Math.random() < 0.95 ? '\u2601\uFE0F' : '\u26C8\uFE0F';
+        frag.appendChild(span);
+      }
     }
     emojiLayer.appendChild(frag);
 
@@ -620,12 +626,13 @@
           el.style.transform = 'translate3d(' + (dx * move) + 'px,' + (dy * move) + 'px,0)';
         });
 
-        // Hero content: fade from 0 to 1, pinned until fully revealed
-        var progress = Math.min(scrollY / (heroHeight * 0.5), 1);
-        heroContent.style.opacity = progress;
+        // Hero content: fade in over first 30% of hero scroll, pin until 70%
+        var fadeProgress = Math.min(scrollY / (heroHeight * 0.3), 1);
+        heroContent.style.opacity = fadeProgress;
 
-        if (progress < 1) {
-          // Pin in center while still fading in
+        var pinEnd = heroHeight * 0.7;
+        if (scrollY < pinEnd) {
+          // Pin in center while clouds are still dispersing
           heroContent.style.position = 'fixed';
           heroContent.style.top = '50%';
           heroContent.style.left = '50%';

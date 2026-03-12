@@ -244,8 +244,8 @@
       text-align: center;
       padding: 16px;
     }
-    .wt-bg-default { background: var(--lp-bg); }
-    .wt-bg-alt { background: var(--lp-bg-alt); }
+    .wt-bg-default { position: relative; z-index: 1; background: var(--lp-bg); }
+    .wt-bg-alt { position: relative; z-index: 1; background: var(--lp-bg); }
 
     /* --- CTA band --- */
     .lp-cta-band {
@@ -588,15 +588,15 @@
 
     // Generate drifting background clouds (below hero)
     var driftClouds = [];
-    var driftCount = isMobile ? 10 : 18;
+    var driftCount = isMobile ? 20 : 35;
     var driftFrag = document.createDocumentFragment();
     for (var i = 0; i < driftCount; i++) {
       var dc = document.createElement('span');
       dc.className = 'emoji-particle zone-drift';
-      var dcTop = 60 + Math.random() * 160;       // 60%-220% of viewport
-      var dcLeft = -20 + Math.random() * 100;      // -20% to 80%
-      var dcSize = 2 + Math.random() * 2;           // 2-4rem
-      var dcSpeed = 0.15 + Math.random() * 0.25;    // parallax variation
+      var dcTop = 50 + Math.random() * 200;       // 50%-250% of viewport
+      var dcLeft = -30 + Math.random() * 110;      // -30% to 80%
+      var dcSize = 4 + Math.random() * 4;           // 4-8rem
+      var dcSpeed = 0.4 + Math.random() * 0.5;      // faster parallax variation
       dc.style.cssText = 'top:' + dcTop.toFixed(1) + '%;left:' + dcLeft.toFixed(1) + '%;font-size:' + dcSize.toFixed(1) + 'rem;opacity:0';
       dc.textContent = '\u2601\uFE0F';
       driftClouds.push({ el: dc, speed: dcSpeed });
@@ -668,7 +668,7 @@
           if (scrollY > driftStart) {
             var driftProgress = scrollY - driftStart;
             var driftOpacity = Math.min(0.4, driftProgress / driftFadeRange * 0.4);
-            var driftX = driftProgress * dc.speed * 0.3;
+            var driftX = driftProgress * dc.speed * 0.8;
             dc.el.style.opacity = driftOpacity;
             dc.el.style.transform = 'translate3d(' + driftX.toFixed(1) + 'px,0,0)';
           } else {

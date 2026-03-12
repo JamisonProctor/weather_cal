@@ -699,16 +699,18 @@
           }
         }
 
-        // Sun emoji — appears near the end, drifts to center and stops
+        // Sun emoji — starts at halfway after hero, crosses full screen
         var docHeight = document.documentElement.scrollHeight;
         var maxScroll = docHeight - vh;
-        var sunStart = maxScroll * 0.7;  // sun begins at 70% of total scroll
-        var sunEnd = maxScroll * 0.95;   // reaches center by 95%
+        var contentStart = heroHeight; // where content begins
+        var contentLen = maxScroll - contentStart;
+        var sunStart = contentStart + contentLen * 0.5; // halfway through content
+        var sunEnd = maxScroll;
         if (scrollY > sunStart) {
           var sunProgress = Math.min(1, (scrollY - sunStart) / (sunEnd - sunStart));
           var sunOpacity = Math.min(0.5, sunProgress * 0.5);
-          // Move from left:-20% to center (50%) based on progress
-          var sunX = sunProgress * (window.innerWidth * 0.7);
+          // Cross the entire screen width: from left:-20% to right edge
+          var sunX = sunProgress * (window.innerWidth * 1.2);
           sunEl.style.opacity = sunOpacity;
           sunEl.style.transform = 'translate3d(' + sunX.toFixed(1) + 'px,0,0)';
         } else {

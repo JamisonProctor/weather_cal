@@ -23,15 +23,6 @@ logger = logging.getLogger(__name__)
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.app.created"]
 
-# Body used to hide events without deleting them. Keeps status "confirmed"
-# so _upsert_event can patch real content back in without fighting cancelled ghosts.
-_HIDDEN_EVENT_BODY = {
-    "summary": "",
-    "description": "",
-    "transparency": "transparent",
-    "status": "confirmed",
-}
-
 
 def create_google_tokens_table(db_path: str) -> None:
     conn = _conn(db_path)
@@ -320,7 +311,6 @@ def _upsert_event(service, calendar_id, event_body):
         old_status = items[0].get("status", "unknown")
 
         if old_status == "cancelled":
-            # Legacy path: cancelled ghosts from before hide-instead-of-delete.
             # Cancelled events can't be restored via patch() — API returns 200
             # but Google Calendar UI doesn't show them. Full update() works.
             update_body = {k: v for k, v in event_body.items() if k != "iCalUID"}
@@ -343,10 +333,10 @@ def _upsert_event(service, calendar_id, event_body):
 
 def _cleanup_stale_events(service, calendar_id, date_str,
                           expected_allday_uids, expected_timed_uids, tz):
-    """Hide events for a date whose iCalUID is not in the expected sets.
+    """Delete WeatherCal events for a date whose iCalUID is not in the expected sets.
 
-    Instead of deleting (which creates cancelled ghosts that are hard to
-    restore), we patch them to be invisible while keeping status "confirmed".
+    Only deletes events with @weathercal.app UIDs to avoid touching
+    user-created events in the same calendar.
     """
     from datetime import date as date_type
 
@@ -367,24 +357,25 @@ def _cleanup_stale_events(service, calendar_id, date_str,
             ical_uid = event.get("iCalUID", "")
             if not ical_uid:
                 continue
+            if "@weathercal.app" not in ical_uid:
+                continue
 
             is_timed = "dateTime" in event.get("start", {})
             is_allday = "date" in event.get("start", {}) and "dateTime" not in event.get("start", {})
 
-            should_hide = False
+            should_delete = False
             if is_timed and ical_uid not in expected_timed_uids:
-                should_hide = True
+                should_delete = True
             elif is_allday and ical_uid not in expected_allday_uids:
-                should_hide = True
+                should_delete = True
 
-            if should_hide:
+            if should_delete:
                 try:
-                    service.events().patch(
+                    service.events().delete(
                         calendarId=calendar_id, eventId=event["id"],
-                        body=_HIDDEN_EVENT_BODY,
                     ).execute()
                 except HttpError:
-                    logger.warning("Failed to hide stale event %s", event["id"], exc_info=True)
+                    logger.warning("Failed to delete stale event %s", event["id"], exc_info=True)
     except HttpError:
         logger.warning("Failed to list events for cleanup on %s", date_str, exc_info=True)
 

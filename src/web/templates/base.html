@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌤️</text></svg>">
   <title>{% block title %}WeatherCal{% endblock %}</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -47,7 +47,7 @@
 <body>
   <div class="{% block body_class %}layout-narrow{% endblock %}">
     <nav>
-      <a href="{% if is_authenticated %}/settings{% else %}/{% endif %}" class="brand">WeatherCal ☀️</a>
+      <a href="{% if is_authenticated %}/settings{% else %}/{% endif %}" class="brand">WeatherCal 🌤️</a>
       <div class="nav-right">{% block nav_right %}{% if is_authenticated %}<form method="post" action="/logout" style="margin:0"><button class="logout-btn" type="submit">Logout</button></form>{% else %}<a href="/login" class="nav-link">Sign in</a>{% endif %}{% endblock %}</div>
     </nav>
     {% block content %}{% endblock %}

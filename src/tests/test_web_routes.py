@@ -938,3 +938,36 @@ def test_settings_post_no_gcal_push_when_not_connected(client, db_path, auth_coo
 
     assert resp.status_code == 303
     mock_push.assert_not_called()
+
+
+# --- Landing page ---
+
+def test_landing_returns_200_with_brand(client):
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "WeatherCal" in resp.text
+    assert "\U0001f324" in resp.text  # 🌤️
+
+
+def test_landing_contains_sections(client):
+    resp = client.get("/")
+    assert "How it works" in resp.text
+    assert "Questions?" in resp.text
+
+
+def test_landing_unauthenticated_cta_links_signup(client):
+    resp = client.get("/")
+    assert "/signup" in resp.text
+    assert "Get started free" in resp.text
+
+
+def test_landing_authenticated_cta_links_settings(client, auth_cookies):
+    _, cookies = auth_cookies(email="landing@example.com")
+    resp = client.get("/", cookies=cookies)
+    assert "/settings" in resp.text
+    assert "Go to settings" in resp.text
+
+
+def test_static_files_served(client):
+    resp = client.get("/static/screenshots/.gitkeep")
+    assert resp.status_code == 200

@@ -8,6 +8,7 @@ from fastapi import BackgroundTasks, FastAPI, Form, Query, Request
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
+from starlette.staticfiles import StaticFiles
 
 from src.integrations.google_push import (
     create_google_tokens_table,
@@ -795,3 +796,6 @@ async def privacy(request: Request):
 @app.get("/terms", response_class=HTMLResponse)
 async def terms(request: Request):
     return _template("terms.html", request)
+
+
+app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")

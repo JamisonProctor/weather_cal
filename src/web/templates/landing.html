@@ -1,34 +1,620 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌤️</text></svg>">
+  <title>WeatherCal — Weather forecasts, in your calendar</title>
+  <meta name="description" content="Subscribe once. Emoji-rich weather forecasts appear as calendar events — updated daily. Works with Apple Calendar, Google Calendar, and Outlook.">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
 
-{% block title %}Welcome to WeatherCal{% endblock %}
+    :root {
+      --lp-bg: #FFFBF6;
+      --lp-bg-alt: #FFF3E0;
+      --lp-text: #3E2723;
+      --lp-text-muted: #795548;
+      --lp-accent: #E65100;
+      --lp-accent-hover: #BF360C;
+      --lp-hero-bg: #FFF8E1;
+    }
 
-{% block body_class %}layout-medium{% endblock %}
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      color: var(--lp-text);
+      margin: 0;
+      padding: 0;
+      background: var(--lp-bg);
+      -webkit-font-smoothing: antialiased;
+    }
 
-{% block extra_style %}
-<style>
-  h1 { font-size: 2.4rem; margin-bottom: 0.5rem; }
-  p.lead { font-size: 1.15rem; color: #333; margin-bottom: 2rem; }
-  ul.features { list-style: none; padding: 0; margin: 0; }
-  ul.features li { display: flex; gap: 12px; margin: 16px 0; font-size: 1.05rem; color: #333; }
-  ul.features li .icon { flex-shrink: 0; width: 1.5em; }
-  .cta { display: inline-block; margin-top: 36px; padding: 14px 32px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600; }
-  .cta:hover { background: #1d4ed8; }
-</style>
-{% endblock %}
+    /* --- Nav --- */
+    .lp-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .lp-nav .brand {
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-decoration: none;
+      color: #fff;
+      transition: color 0.3s;
+    }
+    .lp-nav .nav-link {
+      color: rgba(255,255,255,0.85);
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: color 0.3s;
+    }
+    .lp-nav .nav-link:hover { color: #fff; }
+    .lp-nav.lp-nav-scrolled {
+      background: var(--lp-bg);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .lp-nav.lp-nav-scrolled .brand { color: var(--lp-accent); }
+    .lp-nav.lp-nav-scrolled .nav-link { color: var(--lp-text-muted); }
+    .lp-nav.lp-nav-scrolled .nav-link:hover { color: var(--lp-text); }
+    .lp-nav .logout-btn {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.85);
+      cursor: pointer;
+      font-size: 0.95rem;
+      padding: 0;
+      transition: color 0.3s;
+    }
+    .lp-nav .logout-btn:hover { color: #fff; }
+    .lp-nav.lp-nav-scrolled .logout-btn { color: var(--lp-text-muted); }
+    .lp-nav.lp-nav-scrolled .logout-btn:hover { color: var(--lp-text); }
 
-{% block content %}
-  <h1>Welcome to WeatherCal</h1>
-  <p class="lead">A weather forecast in your calendar app.</p>
-  <ul class="features">
-    <li><span class="icon">☀️</span><span><strong>Emoji-first forecasts</strong> — morning and afternoon conditions as all-day calendar events, readable at a glance</span></li>
-    <li><span class="icon">⚠️</span><span><strong>Warnings where you'll actually see them</strong> — rain ☂️, wind 🌬️, cold 🥶, and snow ☃️ flag right in the event title</span></li>
-    <li><span class="icon">🕐</span><span><strong>Timed warning events</strong> — when rain or wind is coming, a precise block event (e.g. "☂️ Rain Warning 10am–2pm") lands in your calendar so you know exactly when to pack an umbrella</span></li>
-    <li><span class="icon">📋</span><span><strong>Hourly detail on demand</strong> — tap any event to see a full hour-by-hour breakdown with per-hour weather</span></li>
-    <li><span class="icon">📅</span><span><strong>Works everywhere</strong> — Apple Calendar, Google Calendar, Outlook — subscribe once, updated every morning</span></li>
-  </ul>
-  {% if is_authenticated %}
-  <a href="/settings" class="cta">Go to settings</a>
-  {% else %}
-  <a href="/signup" class="cta">Get started</a>
-  {% endif %}
-{% endblock %}
+    /* --- Hero --- */
+    .lp-hero {
+      position: relative;
+      height: 100vh;
+      min-height: 600px;
+      max-height: 1000px;
+      background: var(--lp-hero-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .lp-hero-content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      padding: 0 24px;
+      opacity: 0.3;
+    }
+    .lp-hero-content h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      margin: 0 0 16px;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+    }
+    .lp-hero-content .lead {
+      font-size: clamp(1rem, 2.5vw, 1.25rem);
+      color: var(--lp-text-muted);
+      margin: 0 0 32px;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.5;
+    }
+    .cloud {
+      position: absolute;
+      z-index: 1;
+      user-select: none;
+      pointer-events: none;
+      will-change: transform;
+      line-height: 1;
+    }
+
+    /* --- CTA button --- */
+    .lp-cta {
+      display: inline-block;
+      padding: 14px 32px;
+      background: var(--lp-accent);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .lp-cta:hover { background: var(--lp-accent-hover); }
+
+    /* --- Sections --- */
+    .lp-section {
+      padding: 80px 24px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .lp-section-alt {
+      background: var(--lp-bg-alt);
+    }
+    .lp-section-alt .lp-section {
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+    .lp-section-wrap {
+      padding: 80px 0;
+    }
+    .lp-section h2 {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      text-align: center;
+      margin: 0 0 48px;
+      letter-spacing: -0.01em;
+    }
+
+    /* --- How it works --- */
+    .lp-steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .lp-step {
+      text-align: center;
+    }
+    .lp-step-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+    .lp-step h3 {
+      font-size: 1.05rem;
+      margin: 0 0 8px;
+    }
+    .lp-step p {
+      font-size: 0.95rem;
+      color: var(--lp-text-muted);
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    /* --- Feature cards --- */
+    .lp-features {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .lp-feature {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .lp-feature-icon {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+    }
+    .lp-feature h3 {
+      font-size: 1rem;
+      margin: 0 0 6px;
+    }
+    .lp-feature p {
+      font-size: 0.9rem;
+      color: var(--lp-text-muted);
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    /* --- Screenshots --- */
+    .lp-screenshots {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .lp-phone-frame {
+      width: 280px;
+      height: 500px;
+      border-radius: 24px;
+      border: 2px dashed var(--lp-text-muted);
+      background: var(--lp-hero-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+    .lp-phone-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 22px;
+    }
+    .lp-phone-placeholder {
+      color: var(--lp-text-muted);
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 16px;
+    }
+
+    /* --- Compatibility --- */
+    .lp-compat {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      flex-wrap: wrap;
+      font-size: 1.05rem;
+    }
+    .lp-compat-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--lp-text-muted);
+    }
+    .lp-compat-icon {
+      font-size: 1.5rem;
+    }
+
+    /* --- FAQ --- */
+    .lp-faq {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .lp-faq details {
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+    .lp-faq details:first-of-type {
+      border-top: 1px solid rgba(0,0,0,0.08);
+    }
+    .lp-faq summary {
+      padding: 16px 0;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1rem;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .lp-faq summary::-webkit-details-marker { display: none; }
+    .lp-faq summary::after {
+      content: "+";
+      font-size: 1.3rem;
+      color: var(--lp-text-muted);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+      margin-left: 16px;
+    }
+    .lp-faq details[open] summary::after {
+      content: "\2212";
+    }
+    .lp-faq .faq-answer {
+      padding: 0 0 16px;
+      font-size: 0.95rem;
+      color: var(--lp-text-muted);
+      line-height: 1.6;
+    }
+
+    /* --- Final CTA --- */
+    .lp-final-cta {
+      text-align: center;
+      padding: 80px 24px;
+    }
+    .lp-final-cta h2 {
+      font-size: clamp(1.4rem, 3vw, 1.8rem);
+      margin: 0 0 24px;
+    }
+
+    /* --- Footer --- */
+    .lp-footer {
+      text-align: center;
+      padding: 32px 24px;
+      border-top: 1px solid rgba(0,0,0,0.06);
+      font-size: 0.85rem;
+      color: var(--lp-text-muted);
+    }
+    .lp-footer-brand {
+      font-weight: 700;
+      color: var(--lp-text);
+      margin-bottom: 12px;
+    }
+    .lp-footer-links {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .lp-footer-links a {
+      color: var(--lp-text-muted);
+      text-decoration: none;
+    }
+    .lp-footer-links a:hover {
+      color: var(--lp-accent);
+    }
+
+    /* --- Responsive --- */
+    @media (max-width: 1024px) {
+      .lp-features { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .lp-steps { grid-template-columns: 1fr; gap: 24px; }
+      .lp-features { grid-template-columns: 1fr; }
+      .lp-phone-frame { width: 240px; height: 420px; }
+    }
+    @media (max-width: 640px) {
+      .lp-hero { min-height: 500px; }
+      .lp-section { padding: 56px 20px; }
+      .lp-compat { gap: 20px; }
+    }
+
+    /* --- Reduced motion --- */
+    @media (prefers-reduced-motion: reduce) {
+      .lp-hero-content { opacity: 1 !important; }
+      .cloud { display: none; }
+      .lp-nav { background: var(--lp-bg) !important; box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important; }
+      .lp-nav .brand { color: var(--lp-accent) !important; }
+      .lp-nav .nav-link { color: var(--lp-text-muted) !important; }
+      .lp-nav .logout-btn { color: var(--lp-text-muted) !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav class="lp-nav" id="lp-nav">
+    <a href="/" class="brand">WeatherCal 🌤️</a>
+    <div>
+      {% if is_authenticated %}
+        <a href="/settings" class="nav-link" style="margin-right:12px">Settings</a>
+        <form method="post" action="/logout" style="display:inline;margin:0"><button class="logout-btn" type="submit">Logout</button></form>
+      {% else %}
+        <a href="/login" class="nav-link">Sign in</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="lp-hero" id="lp-hero">
+    <span class="cloud" style="top:12%;left:8%;font-size:4rem" data-speed="0.3" data-dx="-1" data-dy="-0.5">☁️</span>
+    <span class="cloud" style="top:20%;left:75%;font-size:3rem" data-speed="0.5" data-dx="1" data-dy="-0.3">☁️</span>
+    <span class="cloud" style="top:35%;left:15%;font-size:2.5rem" data-speed="0.4" data-dx="-1" data-dy="0.2">☁️</span>
+    <span class="cloud" style="top:55%;left:82%;font-size:3.5rem" data-speed="0.35" data-dx="1" data-dy="0.4">☁️</span>
+    <span class="cloud" style="top:70%;left:5%;font-size:2rem" data-speed="0.45" data-dx="-1" data-dy="0.6">☁️</span>
+    <span class="cloud" style="top:15%;left:45%;font-size:5rem" data-speed="0.25" data-dx="0.2" data-dy="-1">☁️</span>
+    <span class="cloud" style="top:65%;left:55%;font-size:2.8rem" data-speed="0.5" data-dx="0.8" data-dy="0.6">☁️</span>
+    <span class="cloud" style="top:40%;left:90%;font-size:3.2rem" data-speed="0.3" data-dx="1" data-dy="0">☁️</span>
+    <span class="cloud" style="top:80%;left:35%;font-size:2.2rem" data-speed="0.4" data-dx="-0.3" data-dy="1">☁️</span>
+    <span class="cloud" style="top:25%;left:28%;font-size:3.8rem" data-speed="0.35" data-dx="-0.7" data-dy="-0.7">☁️</span>
+    <span class="cloud" style="top:50%;left:40%;font-size:2.5rem" data-speed="0.45" data-dx="0.5" data-dy="0.5">☁️</span>
+    <span class="cloud" style="top:10%;left:60%;font-size:4.5rem" data-speed="0.3" data-dx="0.6" data-dy="-0.8">☁️</span>
+    <span class="cloud cloud-mobile-hide" style="top:45%;left:20%;font-size:2rem" data-speed="0.5" data-dx="-0.9" data-dy="0.1">☁️</span>
+    <span class="cloud cloud-mobile-hide" style="top:75%;left:70%;font-size:3rem" data-speed="0.35" data-dx="0.7" data-dy="0.7">☁️</span>
+    <span class="cloud cloud-mobile-hide" style="top:30%;left:65%;font-size:2.3rem" data-speed="0.4" data-dx="0.9" data-dy="-0.4">☁️</span>
+    <span class="cloud cloud-mobile-hide" style="top:60%;left:10%;font-size:3.5rem" data-speed="0.3" data-dx="-1" data-dy="0.3">☁️</span>
+    <span class="cloud cloud-mobile-hide" style="top:85%;left:50%;font-size:2rem" data-speed="0.45" data-dx="0.1" data-dy="1">☁️</span>
+    <span class="cloud cloud-mobile-hide" style="top:5%;left:35%;font-size:2.8rem" data-speed="0.5" data-dx="-0.4" data-dy="-1">☁️</span>
+
+    <div class="lp-hero-content" id="lp-hero-content">
+      <h1>Weather forecasts, in your calendar.</h1>
+      <p class="lead">No app to open. Subscribe once. Emoji-rich forecasts appear as calendar events.</p>
+      {% if is_authenticated %}
+      <a href="/settings" class="lp-cta">Go to settings</a>
+      {% else %}
+      <a href="/signup" class="lp-cta">Get started free</a>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="lp-section">
+    <h2>How it works</h2>
+    <ul class="lp-steps">
+      <li class="lp-step">
+        <div class="lp-step-icon">📍</div>
+        <h3>Sign up &amp; pick your city</h3>
+        <p>Create a free account and tell us where you are.</p>
+      </li>
+      <li class="lp-step">
+        <div class="lp-step-icon">📅</div>
+        <h3>Subscribe in your calendar app</h3>
+        <p>One tap to add your personal weather feed.</p>
+      </li>
+      <li class="lp-step">
+        <div class="lp-step-icon">🌤️</div>
+        <h3>Forecasts appear as events</h3>
+        <p>Updated daily. 14-day outlook, always in sync.</p>
+      </li>
+    </ul>
+  </section>
+
+  <!-- Features -->
+  <div class="lp-section-alt">
+    <div class="lp-section lp-section-wrap">
+      <h2>What you get</h2>
+      <ul class="lp-features">
+        <li class="lp-feature">
+          <div class="lp-feature-icon">☀️</div>
+          <h3>Emoji-first forecasts</h3>
+          <p>Morning and afternoon conditions at a glance — right in your calendar.</p>
+        </li>
+        <li class="lp-feature">
+          <div class="lp-feature-icon">⚠️</div>
+          <h3>Warnings you'll actually see</h3>
+          <p>Rain, wind, cold, and snow flagged in event titles so you never miss them.</p>
+        </li>
+        <li class="lp-feature">
+          <div class="lp-feature-icon">🕐</div>
+          <h3>Timed warning events</h3>
+          <p>Precise blocks like "Rain 10am–2pm" land in your calendar so you know exactly when.</p>
+        </li>
+        <li class="lp-feature">
+          <div class="lp-feature-icon">📋</div>
+          <h3>Hourly detail on demand</h3>
+          <p>Tap any event for a full hour-by-hour breakdown with temps, rain, and wind.</p>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Screenshots -->
+  <section class="lp-section">
+    <h2>See it in action</h2>
+    <div class="lp-screenshots">
+      <div class="lp-phone-frame">
+        <div class="lp-phone-placeholder">Screenshot coming soon<br><small>iPhone week view</small></div>
+      </div>
+      <div class="lp-phone-frame">
+        <div class="lp-phone-placeholder">Screenshot coming soon<br><small>Day view with warning</small></div>
+      </div>
+      <div class="lp-phone-frame">
+        <div class="lp-phone-placeholder">Screenshot coming soon<br><small>Google Calendar</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Compatibility -->
+  <div class="lp-section-alt">
+    <div class="lp-section lp-section-wrap">
+      <h2>Works with your calendar</h2>
+      <div class="lp-compat">
+        <div class="lp-compat-item"><span class="lp-compat-icon">🍎</span> Apple Calendar</div>
+        <div class="lp-compat-item"><span class="lp-compat-icon">📆</span> Google Calendar</div>
+        <div class="lp-compat-item"><span class="lp-compat-icon">📧</span> Outlook</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <section class="lp-section">
+    <h2>Questions?</h2>
+    <div class="lp-faq">
+
+      <details>
+        <summary>What is WeatherCal?</summary>
+        <div class="faq-answer">WeatherCal delivers a 14-day weather forecast directly into your calendar app as events. Each day shows an emoji summary of morning and afternoon conditions — no app to open, no website to check.</div>
+      </details>
+
+      <details>
+        <summary>How do I add it to my calendar?</summary>
+        <div class="faq-answer">After signing up and choosing your city, you'll get a personal feed URL. Tap it on your phone or paste it into your calendar app's "subscribe" option. Your calendar will automatically pull in new forecasts.</div>
+      </details>
+
+      <details>
+        <summary>Which calendar apps are supported?</summary>
+        <div class="faq-answer">WeatherCal works with any app that supports ICS calendar subscriptions — including Apple Calendar, Google Calendar, Outlook, and most others. For Google Calendar on Android, we also offer a direct Google sync option.</div>
+      </details>
+
+      <details>
+        <summary>How often does the forecast update?</summary>
+        <div class="faq-answer">Forecasts are refreshed every morning. Your calendar app will pick up the latest data automatically — most apps check every few hours.</div>
+      </details>
+
+      <details>
+        <summary>Can I change my location?</summary>
+        <div class="faq-answer">Yes — go to Settings and update your city at any time. Your forecast feed will switch to the new location on the next refresh.</div>
+      </details>
+
+      <details>
+        <summary>How do I change temperature units?</summary>
+        <div class="faq-answer">In Settings, you can switch between Celsius and Fahrenheit. The change applies to all your forecast events.</div>
+      </details>
+
+      <details>
+        <summary>Is my data private?</summary>
+        <div class="faq-answer">Yes. We store only what's needed to generate your forecast: your email, location, and preferences. We don't sell data or show ads. See our <a href="/privacy" style="color:var(--lp-accent)">Privacy Policy</a> for details.</div>
+      </details>
+
+      <details>
+        <summary>Is it free?</summary>
+        <div class="faq-answer">Yes, WeatherCal is completely free.</div>
+      </details>
+
+    </div>
+  </section>
+
+  <!-- Final CTA -->
+  <div class="lp-final-cta">
+    <h2>Ready to see the weather in your calendar?</h2>
+    {% if is_authenticated %}
+    <a href="/settings" class="lp-cta">Go to settings</a>
+    {% else %}
+    <a href="/signup" class="lp-cta">Get started free</a>
+    {% endif %}
+  </div>
+
+  <!-- Footer -->
+  <footer class="lp-footer">
+    <div class="lp-footer-brand">WeatherCal 🌤️</div>
+    <div class="lp-footer-links">
+      <a href="/impressum">Impressum</a>
+      <a href="/terms">Terms</a>
+      <a href="/privacy">Privacy</a>
+      <a href="{% if is_authenticated %}/settings#feedback{% else %}/login{% endif %}">Feedback</a>
+    </div>
+  </footer>
+
+  <!-- Parallax + Nav scroll JS -->
+  <script>
+  (function() {
+    var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return;
+
+    var hero = document.getElementById('lp-hero');
+    var heroContent = document.getElementById('lp-hero-content');
+    var nav = document.getElementById('lp-nav');
+    var clouds = document.querySelectorAll('.cloud');
+    var isMobile = window.innerWidth < 768;
+    var ticking = false;
+
+    // Hide extra clouds on mobile
+    if (isMobile) {
+      document.querySelectorAll('.cloud-mobile-hide').forEach(function(el) {
+        el.style.display = 'none';
+      });
+    }
+
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function() {
+        var scrollY = window.scrollY;
+        var heroHeight = hero.offsetHeight;
+        var intensity = isMobile ? 0.5 : 1;
+
+        // Clouds parallax
+        clouds.forEach(function(cloud) {
+          var speed = parseFloat(cloud.dataset.speed) || 0.3;
+          var dx = parseFloat(cloud.dataset.dx) || 0;
+          var dy = parseFloat(cloud.dataset.dy) || 0;
+          var move = scrollY * speed * intensity;
+          cloud.style.transform = 'translate3d(' + (dx * move) + 'px,' + (dy * move) + 'px,0)';
+        });
+
+        // Hero content reveal
+        var progress = Math.min(scrollY / (heroHeight * 0.5), 1);
+        heroContent.style.opacity = 0.3 + progress * 0.7;
+
+        // Nav transition
+        if (scrollY > heroHeight - 60) {
+          nav.classList.add('lp-nav-scrolled');
+        } else {
+          nav.classList.remove('lp-nav-scrolled');
+        }
+
+        ticking = false;
+      });
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+  </script>
+</body>
+</html>

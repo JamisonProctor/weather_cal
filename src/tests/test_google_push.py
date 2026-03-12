@@ -291,9 +291,11 @@ class TestUpsertEvent:
         _upsert_event(service, "cal123", event_body)
 
         service.events().import_.assert_called_with(calendarId="cal123", body=event_body)
+        service.events().update.assert_not_called()
         service.events().patch.assert_not_called()
 
-    def test_patches_existing_event(self):
+    def test_updates_existing_event(self):
+        """All existing events use update() (PUT) for full replacement."""
         service = MagicMock()
         service.events().list().execute.return_value = {
             "items": [{"id": "evt_existing", "iCalUID": "uid@weathercal.app"}]
@@ -302,14 +304,15 @@ class TestUpsertEvent:
         event_body = {"iCalUID": "uid@weathercal.app", "summary": "Sunny"}
         _upsert_event(service, "cal123", event_body)
 
-        service.events().patch.assert_called_with(
+        service.events().update.assert_called_with(
             calendarId="cal123", eventId="evt_existing",
             body={"summary": "Sunny", "status": "confirmed"}
         )
+        service.events().patch.assert_not_called()
         service.events().import_.assert_not_called()
 
     def test_restores_cancelled_event_via_update(self):
-        """Cancelled events are restored via full update() — patch() doesn't restore visibility."""
+        """Cancelled events use the same update() path as confirmed events."""
         service = MagicMock()
         service.events().list().execute.return_value = {
             "items": [{"id": "evt_cancelled", "iCalUID": "uid@weathercal.app", "status": "cancelled"}]
@@ -318,7 +321,6 @@ class TestUpsertEvent:
         event_body = {"iCalUID": "uid@weathercal.app", "summary": "Sunny"}
         _upsert_event(service, "cal123", event_body)
 
-        # Should use update() not patch()
         service.events().update.assert_called_with(
             calendarId="cal123", eventId="evt_cancelled",
             body={"summary": "Sunny", "status": "confirmed"}

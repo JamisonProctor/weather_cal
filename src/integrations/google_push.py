@@ -291,11 +291,11 @@ def push_events_for_user(db_path, user_id, forecasts, prefs, location, tz_name):
 
 
 def _upsert_event(service, calendar_id, event_body):
-    """Insert or restore an event by iCalUID.
+    """Insert or update an event by iCalUID.
 
-    For active events: patches in place.
-    For cancelled (soft-deleted) events: deletes the ghost then inserts fresh,
-    because patching status back to confirmed doesn't restore visibility.
+    Uses update() (HTTP PUT) for all existing events — full replacement ensures
+    changes propagate to all clients, including iCal. patch() can silently
+    succeed without syncing visibility changes for corrupted/cancelled events.
     """
     ical_uid = event_body["iCalUID"]
 
@@ -308,24 +308,12 @@ def _upsert_event(service, calendar_id, event_body):
 
     if items:
         event_id = items[0]["id"]
-        old_status = items[0].get("status", "unknown")
-
-        if old_status == "cancelled":
-            # Cancelled events can't be restored via patch() — API returns 200
-            # but Google Calendar UI doesn't show them. Full update() works.
-            update_body = {k: v for k, v in event_body.items() if k != "iCalUID"}
-            update_body["status"] = "confirmed"
-            service.events().update(
-                calendarId=calendar_id, eventId=event_id, body=update_body
-            ).execute()
-            logger.info("Restored event uid=%s (was cancelled) summary=%s", ical_uid, event_body.get("summary", "")[:50])
-        else:
-            patch_body = {k: v for k, v in event_body.items() if k != "iCalUID"}
-            patch_body["status"] = "confirmed"
-            service.events().patch(
-                calendarId=calendar_id, eventId=event_id, body=patch_body
-            ).execute()
-            logger.info("Patched event uid=%s summary=%s", ical_uid, event_body.get("summary", "")[:50])
+        update_body = {k: v for k, v in event_body.items() if k != "iCalUID"}
+        update_body["status"] = "confirmed"
+        service.events().update(
+            calendarId=calendar_id, eventId=event_id, body=update_body
+        ).execute()
+        logger.info("Updated event uid=%s summary=%s", ical_uid, event_body.get("summary", "")[:50])
     else:
         service.events().import_(calendarId=calendar_id, body=event_body).execute()
         logger.info("Inserted event uid=%s summary=%s", ical_uid, event_body.get("summary", "")[:50])

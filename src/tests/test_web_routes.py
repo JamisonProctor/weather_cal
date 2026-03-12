@@ -1109,6 +1109,68 @@ def test_admin_shows_utm_source(client, db_path, monkeypatch, auth_cookies):
 # --- OG tags ---
 
 
+def test_google_auth_callback_logs_google_connected_funnel_event(client, db_path, monkeypatch, auth_cookies):
+    from unittest.mock import MagicMock, patch
+    from datetime import datetime, timedelta, timezone
+    from jose import jwt as _jwt
+    from src.web.auth import SECRET_KEY
+
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-client-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-client-secret")
+
+    user_id, cookies = auth_cookies(email="gcfunnel@example.com")
+
+    state = _jwt.encode(
+        {"user_id": user_id, "purpose": "google_oauth"},
+        SECRET_KEY,
+        algorithm="HS256",
+    )
+
+    mock_flow = MagicMock()
+    mock_creds = MagicMock()
+    mock_creds.token = "access_token_123"
+    mock_creds.refresh_token = "refresh_token_123"
+    mock_creds.expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+    mock_flow.credentials = mock_creds
+
+    with patch("src.web.app.get_oauth_flow", return_value=mock_flow), \
+         patch("src.web.app.build_google_service", return_value=MagicMock()), \
+         patch("src.web.app.create_weathercal_calendar", return_value="cal@group.calendar.google.com"), \
+         patch("src.web.app._google_push_initial"):
+        client.get(f"/auth/google/callback?code=test_code&state={state}", cookies=cookies)
+
+    conn = sqlite3.connect(db_path)
+    row = conn.execute(
+        "SELECT event_name FROM funnel_events WHERE user_id = ? AND event_name = 'google_connected'",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+    assert row is not None
+
+
+# --- Signup validation preserves UTM ---
+
+
+def test_signup_validation_error_preserves_utm_params(client):
+    resp = client.post(
+        "/signup",
+        data={
+            "email": "short@example.com",
+            "password": "short",
+            "utm_source": "twitter",
+            "utm_medium": "social",
+            "utm_campaign": "launch",
+        },
+    )
+    assert resp.status_code == 422
+    assert 'value="twitter"' in resp.text
+    assert 'value="social"' in resp.text
+    assert 'value="launch"' in resp.text
+
+
+# --- OG tags ---
+
+
 def test_landing_has_og_tags(client):
     resp = client.get("/")
     assert resp.status_code == 200

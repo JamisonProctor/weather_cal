@@ -465,6 +465,52 @@ def test_fetch_forecasts_batch_fallback_on_failure(monkeypatch):
     assert "Berlin" in result
 
 
+def test_parse_hourly_filters_by_start_end_hour():
+    """Hours outside start_hour..end_hour are excluded from forecasts."""
+    hourly = {
+        "time": [
+            "2025-08-02T04:00",  # hour 4 — before start_hour 6
+            "2025-08-02T05:00",  # hour 5 — before start_hour 6
+            "2025-08-02T06:00",  # hour 6 — included
+            "2025-08-02T12:00",  # hour 12 — included
+            "2025-08-02T22:00",  # hour 22 — included (equals end_hour)
+            "2025-08-02T23:00",  # hour 23 — after end_hour 22
+        ],
+        "temperature_2m": [2, 4, 10, 25, 15, 8],
+        "weathercode": [0, 0, 1, 1, 1, 0],
+        "precipitation_probability": [0, 0, 0, 0, 0, 0],
+        "precipitation": [0, 0, 0, 0, 0, 0],
+        "windspeed_10m": [5, 5, 5, 5, 5, 5],
+    }
+    forecasts = ForecastService._parse_hourly_to_forecasts(
+        hourly, "Munich", "Europe/Berlin", start_hour=6, end_hour=22,
+    )
+    assert len(forecasts) == 1
+    f = forecasts[0]
+    # high/low should only reflect hours 6, 12, 22 (not 4, 5, 23)
+    assert f.high == 25
+    assert f.low == 10
+    assert len(f.times) == 3
+
+
+def test_parse_hourly_multiple_days():
+    """Hourly data spanning two days produces two Forecast objects."""
+    hourly = {
+        "time": ["2025-08-02T12:00", "2025-08-03T12:00"],
+        "temperature_2m": [20, 30],
+        "weathercode": [1, 2],
+        "precipitation_probability": [0, 10],
+        "precipitation": [0, 1],
+        "windspeed_10m": [5, 8],
+    }
+    forecasts = ForecastService._parse_hourly_to_forecasts(
+        hourly, "Munich", "Europe/Berlin", start_hour=6, end_hour=22,
+    )
+    assert len(forecasts) == 2
+    dates = {f.date for f in forecasts}
+    assert dates == {"2025-08-02", "2025-08-03"}
+
+
 def test_request_json_does_not_retry_client_error(monkeypatch):
     class ErrorResponse:
         status_code = 400

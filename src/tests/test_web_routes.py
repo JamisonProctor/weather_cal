@@ -1178,3 +1178,97 @@ def test_landing_has_og_tags(client):
     assert 'og:description' in resp.text
     assert 'og:image' in resp.text
     assert 'twitter:card' in resp.text
+
+
+# --- Admin analytics extensions ---
+
+
+def test_admin_shows_timeseries_section(client, db_path, monkeypatch, auth_cookies):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    _, cookies = auth_cookies(email="admin@example.com")
+    resp = client.get("/admin", cookies=cookies)
+    assert resp.status_code == 200
+    assert "Funnel over time" in resp.text
+    assert "30 days" in resp.text
+
+
+def test_admin_accepts_days_param(client, db_path, monkeypatch, auth_cookies):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    _, cookies = auth_cookies(email="admin@example.com")
+    resp = client.get("/admin?days=7", cookies=cookies)
+    assert resp.status_code == 200
+    assert "Funnel over time" in resp.text
+
+
+def test_admin_shows_source_breakdown(client, db_path, monkeypatch, auth_cookies):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    uid, cookies = auth_cookies(email="admin@example.com")
+    from src.web.db import log_funnel_event
+    log_funnel_event(db_path, uid, "signup_completed")
+    resp = client.get("/admin", cookies=cookies)
+    assert resp.status_code == 200
+    assert "Funnel by source" in resp.text
+
+
+def test_admin_shows_page_view_cards(client, db_path, monkeypatch, auth_cookies):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    _, cookies = auth_cookies(email="admin@example.com")
+    # Visit landing to generate a page view
+    client.get("/")
+    resp = client.get("/admin", cookies=cookies)
+    assert resp.status_code == 200
+    assert "Landing views" in resp.text
+    assert "Signup views" in resp.text
+
+
+def test_landing_increments_page_views(client, db_path):
+    client.get("/")
+    client.get("/")
+    from src.web.db import get_page_view_stats
+    stats = get_page_view_stats(db_path)
+    assert stats["today"].get("/", 0) >= 2
+
+
+def test_signup_increments_page_views(client, db_path):
+    client.get("/signup")
+    from src.web.db import get_page_view_stats
+    stats = get_page_view_stats(db_path)
+    assert stats["today"].get("/signup", 0) >= 1
+
+
+def test_csv_export_requires_auth(client):
+    resp = client.get("/admin/export.csv")
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/login"
+
+
+def test_csv_export_forbidden_for_non_admin(client, db_path, monkeypatch, auth_cookies):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    _, cookies = auth_cookies(email="nonadmin@example.com")
+    resp = client.get("/admin/export.csv", cookies=cookies)
+    assert resp.status_code == 403
+
+
+def test_csv_export_returns_csv_with_data(client, db_path, monkeypatch, auth_cookies):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    _, cookies = auth_cookies(email="admin@example.com")
+    # Create a second user so there's data to export
+    uid2 = create_user(db_path, "csvuser@example.com", "password123456", utm_source="reddit")
+    set_user_location(db_path, uid2, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    create_feed_token(db_path, uid2)
+    resp = client.get("/admin/export.csv", cookies=cookies)
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    assert "Content-Disposition" in resp.headers
+    lines = resp.text.strip().split("\n")
+    assert "Email" in lines[0]
+    assert "Location" in lines[0]
+    assert len(lines) >= 3  # header + at least 2 users
+
+
+def test_admin_shows_export_csv_link(client, db_path, monkeypatch, auth_cookies):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    _, cookies = auth_cookies(email="admin@example.com")
+    resp = client.get("/admin", cookies=cookies)
+    assert resp.status_code == 200
+    assert "/admin/export.csv" in resp.text

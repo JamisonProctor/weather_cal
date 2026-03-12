@@ -41,15 +41,20 @@ from src.web.db import (
     delete_user_account,
     export_user_data,
     get_admin_stats,
+    get_admin_users_for_export,
     get_feedback,
     get_feed_token_by_user,
+    get_funnel_by_source,
     get_funnel_stats,
+    get_funnel_timeseries,
     get_last_forecast_update,
+    get_page_view_stats,
     get_rows_by_token,
     get_user_by_email,
     get_user_by_id,
     get_user_locations,
     get_user_preferences,
+    increment_page_view,
     increment_settings_clicks,
     log_feed_poll,
     log_funnel_event,
@@ -158,11 +163,13 @@ async def health():
 
 @app.get("/", response_class=HTMLResponse)
 async def landing(request: Request):
+    increment_page_view(DB_PATH, "/")
     return _template("landing.html", request)
 
 
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_get(request: Request):
+    increment_page_view(DB_PATH, "/signup")
     return _template("signup.html", request, {
         "error": None,
         "utm_source": request.query_params.get("utm_source", ""),
@@ -799,14 +806,61 @@ async def feed_events(token: str):
 
 
 @app.get("/admin", response_class=HTMLResponse)
-async def admin(request: Request):
+async def admin(request: Request, days: int = Query(default=30)):
     user_id = _require_login(request)
     if not _is_admin(user_id):
         return Response(content="Forbidden", status_code=403)
     stats = get_admin_stats(DB_PATH)
     feedback = get_feedback(DB_PATH)
     funnel = get_funnel_stats(DB_PATH)
-    return _template("admin.html", request, {"stats": stats, "feedback": feedback, "funnel": funnel})
+    timeseries = get_funnel_timeseries(DB_PATH, days)
+    funnel_by_source = get_funnel_by_source(DB_PATH)
+    page_views = get_page_view_stats(DB_PATH)
+    return _template("admin.html", request, {
+        "stats": stats,
+        "feedback": feedback,
+        "funnel": funnel,
+        "timeseries": timeseries,
+        "days": days,
+        "funnel_by_source": funnel_by_source,
+        "page_views": page_views,
+    })
+
+
+@app.get("/admin/export.csv")
+async def admin_export_csv(request: Request):
+    user_id = _require_login(request)
+    if not _is_admin(user_id):
+        return Response(content="Forbidden", status_code=403)
+
+    import csv
+    import io
+
+    users = get_admin_users_for_export(DB_PATH)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "Email", "Location", "Source", "Signed up", "Last poll",
+        "Last 24h", "Calendar app", "Google", "Prefs changed", "Settings clicks",
+    ])
+    for u in users:
+        writer.writerow([
+            u["email"],
+            u["location"],
+            u["utm_source"] or "",
+            u["created_at"],
+            u["last_polled_at"],
+            u["polls_last_24h"],
+            u["calendar_app"],
+            u["google_status"] or "",
+            "Yes" if u["changed_prefs"] else "No",
+            u["settings_clicks"],
+        ])
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="admin-users.csv"'},
+    )
 
 
 @app.get("/impressum", response_class=HTMLResponse)

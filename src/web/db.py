@@ -707,6 +707,101 @@ def _get_per_user_stats(cur, now) -> list[dict]:
     return users
 
 
+def get_funnel_timeseries(db_path: str, days: int = 30) -> list[dict]:
+    """Return daily funnel counts for the last N days."""
+    conn = _conn(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            WITH RECURSIVE dates(d) AS (
+                SELECT date(?, '-' || ? || ' days')
+                UNION ALL
+                SELECT date(d, '+1 day') FROM dates WHERE d < date(?)
+            )
+            SELECT
+                dates.d AS date,
+                COALESCE(SUM(CASE WHEN fe.event_name = 'signup_completed' THEN 1 ELSE 0 END), 0) AS signups,
+                COALESCE(SUM(CASE WHEN fe.event_name = 'location_set' THEN 1 ELSE 0 END), 0) AS location_set,
+                COALESCE(SUM(CASE WHEN fe.event_name = 'feed_subscribed' THEN 1 ELSE 0 END), 0) AS feed_subscribed,
+                COALESCE(SUM(CASE WHEN fe.event_name = 'google_connected' THEN 1 ELSE 0 END), 0) AS google_connected
+            FROM dates
+            LEFT JOIN funnel_events fe ON date(fe.created_at) = dates.d
+            GROUP BY dates.d
+            ORDER BY dates.d
+            """,
+            (datetime.now().date().isoformat(), days - 1, datetime.now().date().isoformat()),
+        )
+        return [dict(r) for r in cur.fetchall()]
+    finally:
+        conn.close()
+
+
+def get_funnel_by_source(db_path: str) -> list[dict]:
+    """Return funnel counts grouped by utm_source."""
+    conn = _conn(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT
+                COALESCE(u.utm_source, 'direct') AS source,
+                COALESCE(SUM(CASE WHEN fe.event_name = 'signup_completed' THEN 1 ELSE 0 END), 0) AS signups,
+                COALESCE(SUM(CASE WHEN fe.event_name = 'location_set' THEN 1 ELSE 0 END), 0) AS location_set,
+                COALESCE(SUM(CASE WHEN fe.event_name = 'feed_subscribed' THEN 1 ELSE 0 END), 0) AS feed_subscribed,
+                COALESCE(SUM(CASE WHEN fe.event_name = 'google_connected' THEN 1 ELSE 0 END), 0) AS google_connected
+            FROM funnel_events fe
+            JOIN users u ON fe.user_id = u.id
+            GROUP BY COALESCE(u.utm_source, 'direct')
+            ORDER BY signups DESC
+            """
+        )
+        return [dict(r) for r in cur.fetchall()]
+    finally:
+        conn.close()
+
+
+def increment_page_view(db_path: str, path: str) -> None:
+    """Increment the page view counter for a path on today's date."""
+    today = datetime.now().date().isoformat()
+    conn = _conn(db_path)
+    try:
+        conn.execute(
+            """INSERT INTO page_views (path, view_date, count) VALUES (?, ?, 1)
+               ON CONFLICT(path, view_date) DO UPDATE SET count = count + 1""",
+            (path, today),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_page_view_stats(db_path: str) -> dict:
+    """Return page view stats: {total: {path: count}, today: {path: count}}."""
+    today = datetime.now().date().isoformat()
+    conn = _conn(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT path, SUM(count) FROM page_views GROUP BY path")
+        total = {r[0]: r[1] for r in cur.fetchall()}
+        cur.execute("SELECT path, count FROM page_views WHERE view_date = ?", (today,))
+        today_counts = {r[0]: r[1] for r in cur.fetchall()}
+        return {"total": total, "today": today_counts}
+    finally:
+        conn.close()
+
+
+def get_admin_users_for_export(db_path: str) -> list[dict]:
+    """Return per-user stats list for CSV export (same data as admin table)."""
+    conn = _conn(db_path)
+    try:
+        cur = conn.cursor()
+        now = datetime.now()
+        return _get_per_user_stats(cur, now)
+    finally:
+        conn.close()
+
+
 def get_admin_stats(db_path: str) -> dict:
     """Return aggregated analytics for the admin dashboard."""
     conn = _conn(db_path)

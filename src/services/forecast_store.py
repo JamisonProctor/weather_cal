@@ -118,6 +118,14 @@ class ForecastStore:
             )
         """)
         cur.execute("CREATE INDEX IF NOT EXISTS idx_funnel_user ON funnel_events (user_id)")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS page_views (
+                path      TEXT NOT NULL,
+                view_date TEXT NOT NULL,
+                count     INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (path, view_date)
+            )
+        """)
         conn.commit()
         conn.close()
 

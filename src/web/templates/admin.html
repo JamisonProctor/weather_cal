@@ -18,6 +18,7 @@
   .stat-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px 22px; min-width: 140px; }
   .stat-card .label { font-size: 0.78rem; color: #6b7280; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
   .stat-card .value { font-size: 1.8rem; font-weight: 700; color: #111; }
+  .stat-card .sub { font-size: 0.75rem; color: #9ca3af; margin-top: 2px; }
 
   h2 { font-size: 1.05rem; color: #374151; margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6; }
 
@@ -34,6 +35,17 @@
   .dot-warn { background: #ef4444; }
 
   .empty { color: #9ca3af; font-style: italic; }
+
+  .day-selector { margin-bottom: 12px; font-size: 0.85rem; }
+  .day-selector a { color: #2563eb; text-decoration: none; margin-right: 12px; }
+  .day-selector a.active { font-weight: 700; text-decoration: underline; }
+
+  .row-zero td { color: #d1d5db; }
+
+  .section-header { display: flex; align-items: center; gap: 12px; }
+  .section-header h2 { flex: 1; }
+  .export-link { font-size: 0.85rem; color: #2563eb; text-decoration: none; white-space: nowrap; }
+  .export-link:hover { text-decoration: underline; }
 </style>
 {% endblock %}
 
@@ -65,9 +77,22 @@
       <div class="label">Feedback</div>
       <div class="value">{{ feedback|length }}</div>
     </div>
+    <div class="stat-card">
+      <div class="label">Landing views</div>
+      <div class="value">{{ page_views.today.get('/', 0) }}</div>
+      <div class="sub">{{ page_views.total.get('/', 0) }} all-time</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Signup views</div>
+      <div class="value">{{ page_views.today.get('/signup', 0) }}</div>
+      <div class="sub">{{ page_views.total.get('/signup', 0) }} all-time</div>
+    </div>
   </div>
 
-  <h2>Users</h2>
+  <div class="section-header">
+    <h2>Users</h2>
+    <a href="/admin/export.csv" class="export-link">Export CSV</a>
+  </div>
 
   {% if stats.users %}
   <div class="table-wrap">
@@ -138,6 +163,67 @@
       <div class="value">{{ funnel.google_connected }} <small style="font-size:0.7rem;color:#6b7280">{{ funnel.pct_google }}%</small></div>
     </div>
   </div>
+
+  <h2>Funnel over time</h2>
+  <div class="day-selector">
+    <a href="?days=7" {% if days == 7 %}class="active"{% endif %}>7 days</a>
+    <a href="?days=30" {% if days == 30 %}class="active"{% endif %}>30 days</a>
+    <a href="?days=90" {% if days == 90 %}class="active"{% endif %}>90 days</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Signups</th>
+          <th>Location Set</th>
+          <th>Feed Subscribed</th>
+          <th>Google Connected</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in timeseries %}
+        <tr {% if row.signups == 0 and row.location_set == 0 and row.feed_subscribed == 0 and row.google_connected == 0 %}class="row-zero"{% endif %}>
+          <td style="white-space:nowrap">{{ row.date }}</td>
+          <td>{{ row.signups }}</td>
+          <td>{{ row.location_set }}</td>
+          <td>{{ row.feed_subscribed }}</td>
+          <td>{{ row.google_connected }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Funnel by source</h2>
+  {% if funnel_by_source %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>Signups</th>
+          <th>Location Set</th>
+          <th>Feed Subscribed</th>
+          <th>Google Connected</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in funnel_by_source %}
+        <tr>
+          <td>{{ row.source }}</td>
+          <td>{{ row.signups }}</td>
+          <td>{{ row.location_set }}</td>
+          <td>{{ row.feed_subscribed }}</td>
+          <td>{{ row.google_connected }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty">No funnel data by source yet.</p>
+  {% endif %}
 
   <h2>Feedback</h2>
 

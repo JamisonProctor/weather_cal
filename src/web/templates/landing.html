@@ -428,7 +428,7 @@
   <div class="wt-bg-alt">
     <div class="lp-walkthrough">
       <div class="lp-walkthrough-text">
-        <div class="wt-icon">⏰</div>
+        <div class="wt-icon">⚠️</div>
         <h3>Warnings exactly when they matter</h3>
         <p>Rain 10am–2pm lands as a timed block between your meetings. Your calendar notifies you each morning — a weather briefing you never have to ask for.</p>
       </div>
@@ -581,9 +581,11 @@
       { top: 60, left: -25, size: 14, fromLeft: true, entry: 100 },
       { top: 80, left: -25, size: 11, fromLeft: true, entry: 300 },
       { top: 20, left: -25, size: 9,  fromLeft: true, entry: 500 },
-      { top: 45, left: -25, size: 11, fromLeft: true, entry: 800 }
+      { top: 45, left: -25, size: 11, fromLeft: true, entry: 800 },
+      { top: 70, left: -25, size: 12, fromLeft: true, entry: 1100 },
+      { top: 15, left: -25, size: 10, fromLeft: true, entry: 1400 }
     ] : [
-      // Desktop: 8 clouds — positions fixed, speed randomized below
+      // Desktop: clouds — positions fixed, speed randomized below
       { top: 5,  left: 8,  size: 14, fromLeft: false, entry: 0 },
       { top: 30, left: 55, size: 11, fromLeft: false, entry: 0 },
       { top: 55, left: 30, size: 12, fromLeft: false, entry: 0 },
@@ -593,7 +595,10 @@
       { top: 88, left: -25, size: 9,  fromLeft: true, entry: 800 },
       { top: 65, left: -25, size: 11, fromLeft: true, entry: 1100 },
       { top: 35, left: -25, size: 12, fromLeft: true, entry: 1500 },
-      { top: 82, left: -25, size: 10, fromLeft: true, entry: 1900 }
+      { top: 82, left: -25, size: 10, fromLeft: true, entry: 1900 },
+      { top: 15, left: -25, size: 11, fromLeft: true, entry: 2300 },
+      { top: 55, left: -25, size: 13, fromLeft: true, entry: 2700 },
+      { top: 78, left: -25, size: 10, fromLeft: true, entry: 3100 }
     ];
     // Randomize speeds with seeded PRNG — tight range for natural feel
     for (var si = 0; si < driftDefs.length; si++) {
@@ -611,6 +616,13 @@
       driftFrag.appendChild(dc);
     }
     emojiLayer.appendChild(driftFrag);
+
+    // Sun emoji — drifts to center and stops at the end
+    var sunEl = document.createElement('span');
+    sunEl.className = 'emoji-particle zone-drift';
+    sunEl.style.cssText = 'top:50%;left:-20%;font-size:' + (isMobile ? '6' : '8') + 'rem;opacity:0';
+    sunEl.textContent = '\u2600\uFE0F';
+    emojiLayer.appendChild(sunEl);
 
     var heroEmojis = document.querySelectorAll('.zone-hero');
     var firstPhone = document.querySelector('.lp-phone-frame');
@@ -685,6 +697,23 @@
             dc.el.style.opacity = 0;
             dc.el.style.transform = 'translate3d(0,0,0)';
           }
+        }
+
+        // Sun emoji — appears near the end, drifts to center and stops
+        var docHeight = document.documentElement.scrollHeight;
+        var maxScroll = docHeight - vh;
+        var sunStart = maxScroll * 0.7;  // sun begins at 70% of total scroll
+        var sunEnd = maxScroll * 0.95;   // reaches center by 95%
+        if (scrollY > sunStart) {
+          var sunProgress = Math.min(1, (scrollY - sunStart) / (sunEnd - sunStart));
+          var sunOpacity = Math.min(0.5, sunProgress * 0.5);
+          // Move from left:-20% to center (50%) based on progress
+          var sunX = sunProgress * (window.innerWidth * 0.7);
+          sunEl.style.opacity = sunOpacity;
+          sunEl.style.transform = 'translate3d(' + sunX.toFixed(1) + 'px,0,0)';
+        } else {
+          sunEl.style.opacity = 0;
+          sunEl.style.transform = 'translate3d(0,0,0)';
         }
 
         ticking = false;

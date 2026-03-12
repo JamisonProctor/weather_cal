@@ -590,23 +590,36 @@
     }
     emojiLayer.appendChild(frag);
 
-    // Generate drifting background clouds — staggered entry from left as user scrolls
+    // Generate drifting background clouds
+    // First batch: fade in at random on-screen positions
+    // Later batch: enter from the left as user scrolls further
     var driftClouds = [];
     var driftCount = isMobile ? 5 : 8;
+    var fadeInCount = isMobile ? 2 : 3; // first N appear on-screen
     var driftFrag = document.createDocumentFragment();
+    // Assign vertical slots to prevent overlap — each cloud gets its own band
+    var slotH = 80 / driftCount; // divide 10%-90% into equal bands
     for (var i = 0; i < driftCount; i++) {
       var dc = document.createElement('span');
       dc.className = 'emoji-particle zone-drift';
-      // Vertical position spread evenly with jitter to avoid overlap
-      var dcTop = 10 + (i / driftCount) * 75 + seededRandom() * 10;
-      var dcSize = 9 + seededRandom() * 15;              // 9-24rem (3x previous)
-      // Wide speed range for obvious variety: slow crawlers to fast movers
-      var dcSpeed = 0.03 + seededRandom() * 0.47;        // 0.03 to 0.50
-      // Each cloud enters at a different scroll offset — staggered left entry
-      var dcEntryOffset = i * 300 + seededRandom() * 200; // px of scroll before this cloud starts moving
-      dc.style.cssText = 'top:' + dcTop.toFixed(1) + '%;left:-25%;font-size:' + dcSize.toFixed(1) + 'rem;opacity:0';
+      var dcSize = 9 + seededRandom() * 15;              // 9-24rem
+      var dcSpeed = 0.15 + seededRandom() * 0.45;        // 0.15 to 0.60 (no ultra-slow)
+      // Vertical: each cloud in its own band, jittered slightly within
+      var dcTop = 10 + i * slotH + seededRandom() * (slotH * 0.3);
+      var dcLeft;
+      var dcEntryOffset;
+      if (i < fadeInCount) {
+        // On-screen clouds: random horizontal position, fade in at trigger
+        dcLeft = 10 + seededRandom() * 60;               // 10%-70% across screen
+        dcEntryOffset = 0;
+      } else {
+        // Left-entry clouds: start off-screen, staggered scroll offsets
+        dcLeft = -25;
+        dcEntryOffset = (i - fadeInCount) * 400 + seededRandom() * 300;
+      }
+      dc.style.cssText = 'top:' + dcTop.toFixed(1) + '%;left:' + dcLeft.toFixed(1) + '%;font-size:' + dcSize.toFixed(1) + 'rem;opacity:0';
       dc.textContent = '\u2601\uFE0F';
-      driftClouds.push({ el: dc, speed: dcSpeed, entryOffset: dcEntryOffset });
+      driftClouds.push({ el: dc, speed: dcSpeed, entryOffset: dcEntryOffset, fromLeft: i >= fadeInCount });
       driftFrag.appendChild(dc);
     }
     emojiLayer.appendChild(driftFrag);
@@ -668,7 +681,7 @@
           nav.classList.remove('lp-nav-scrolled');
         }
 
-        // Drifting background clouds — staggered entry from left, each with its own trigger
+        // Drifting background clouds
         var phoneRect = firstPhone ? firstPhone.getBoundingClientRect() : null;
         var driftTrigger = phoneRect ? phoneRect.top <= vh * 0.5 : scrollY > heroHeight;
         var baseDriftScroll = driftTrigger ? (phoneRect ? (vh * 0.5 - phoneRect.top) : scrollY - heroHeight) : 0;
@@ -677,9 +690,17 @@
           var cloudProgress = baseDriftScroll - dc.entryOffset;
           if (driftTrigger && cloudProgress > 0) {
             var driftOpacity = Math.min(0.35, cloudProgress / (vh * 0.3) * 0.35);
-            var driftX = cloudProgress * dc.speed;
-            dc.el.style.opacity = driftOpacity;
-            dc.el.style.transform = 'translate3d(' + driftX.toFixed(1) + 'px,0,0)';
+            if (dc.fromLeft) {
+              // Enter from off-screen left
+              var driftX = cloudProgress * dc.speed;
+              dc.el.style.opacity = driftOpacity;
+              dc.el.style.transform = 'translate3d(' + driftX.toFixed(1) + 'px,0,0)';
+            } else {
+              // Already on-screen — just fade in, then drift right slowly
+              var driftX = cloudProgress * dc.speed * 0.3;
+              dc.el.style.opacity = driftOpacity;
+              dc.el.style.transform = 'translate3d(' + driftX.toFixed(1) + 'px,0,0)';
+            }
           } else {
             dc.el.style.opacity = 0;
             dc.el.style.transform = 'translate3d(0,0,0)';

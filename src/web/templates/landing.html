@@ -88,6 +88,10 @@
       will-change: transform;
       line-height: 1;
     }
+    @keyframes cloud-drift {
+      from { transform: translate3d(0, 0, 0); }
+      to { transform: translate3d(calc(100vw + 20%), 0, 0); }
+    }
     /* --- Hero --- */
     .lp-hero {
       position: relative;
@@ -571,56 +575,48 @@
     }
     emojiLayer.appendChild(frag);
 
-    // Generate drifting background clouds
-    // Hardcoded positions to guarantee no overlap and intentional placement
-    // top/left in %, size in rem, speed multiplier, fromLeft = enters from off-screen
+    // Generate drifting background clouds — continuous CSS animation, not scroll-driven
+    // Each cloud drifts left-to-right independently, looping forever
     var driftDefs = isMobile ? [
-      // Mobile: 5 clouds — positions fixed, speed randomized below
-      { top: 5,  left: 5,  size: 12, fromLeft: false, entry: 0 },
-      { top: 35, left: 50, size: 10, fromLeft: false, entry: 0 },
-      { top: 60, left: -25, size: 14, fromLeft: true, entry: 100 },
-      { top: 80, left: -25, size: 11, fromLeft: true, entry: 300 },
-      { top: 20, left: -25, size: 9,  fromLeft: true, entry: 500 },
-      { top: 45, left: -25, size: 11, fromLeft: true, entry: 800 },
-      { top: 70, left: -25, size: 12, fromLeft: true, entry: 1100 },
-      { top: 15, left: -25, size: 10, fromLeft: true, entry: 1400 }
+      { top: 8,  size: 12, duration: 45, delay: 0 },
+      { top: 30, size: 10, duration: 55, delay: 8 },
+      { top: 55, size: 14, duration: 40, delay: 15 },
+      { top: 75, size: 11, duration: 50, delay: 3 },
+      { top: 20, size: 9,  duration: 60, delay: 20 }
     ] : [
-      // Desktop: clouds — positions fixed, speed randomized below
-      { top: 5,  left: 8,  size: 14, fromLeft: false, entry: 0 },
-      { top: 30, left: 55, size: 11, fromLeft: false, entry: 0 },
-      { top: 55, left: 30, size: 12, fromLeft: false, entry: 0 },
-      { top: 75, left: -25, size: 15, fromLeft: true, entry: 0 },
-      { top: 18, left: -25, size: 10, fromLeft: true, entry: 200 },
-      { top: 45, left: -25, size: 13, fromLeft: true, entry: 500 },
-      { top: 88, left: -25, size: 9,  fromLeft: true, entry: 800 },
-      { top: 65, left: -25, size: 11, fromLeft: true, entry: 1100 },
-      { top: 35, left: -25, size: 12, fromLeft: true, entry: 1500 },
-      { top: 82, left: -25, size: 10, fromLeft: true, entry: 1900 },
-      { top: 15, left: -25, size: 11, fromLeft: true, entry: 2300 },
-      { top: 55, left: -25, size: 13, fromLeft: true, entry: 2700 },
-      { top: 78, left: -25, size: 10, fromLeft: true, entry: 3100 }
+      { top: 5,  size: 14, duration: 50, delay: 0 },
+      { top: 25, size: 11, duration: 60, delay: 5 },
+      { top: 48, size: 12, duration: 45, delay: 12 },
+      { top: 70, size: 15, duration: 55, delay: 2 },
+      { top: 15, size: 10, duration: 65, delay: 18 },
+      { top: 40, size: 13, duration: 42, delay: 25 },
+      { top: 85, size: 9,  duration: 58, delay: 10 },
+      { top: 60, size: 11, duration: 48, delay: 30 }
     ];
-    // Randomize speeds with seeded PRNG — tight range for natural feel
+    // Randomize durations slightly with seeded PRNG
     for (var si = 0; si < driftDefs.length; si++) {
-      driftDefs[si].speed = 0.25 + seededRandom() * 0.20; // 0.25 to 0.45
+      driftDefs[si].duration += Math.floor(seededRandom() * 15 - 7); // +/- 7s jitter
     }
-    var driftClouds = [];
+    var driftEls = [];
     var driftFrag = document.createDocumentFragment();
     for (var i = 0; i < driftDefs.length; i++) {
       var def = driftDefs[i];
       var dc = document.createElement('span');
       dc.className = 'emoji-particle zone-drift';
-      dc.style.cssText = 'top:' + def.top + '%;left:' + def.left + '%;font-size:' + def.size + 'rem;opacity:0';
+      dc.style.cssText = 'top:' + def.top + '%;left:-20%;font-size:' + def.size + 'rem;opacity:0;'
+        + 'animation:cloud-drift ' + def.duration + 's linear ' + def.delay + 's infinite;'
+        + 'animation-play-state:paused;';
       dc.textContent = '\u2601\uFE0F';
-      driftClouds.push({ el: dc, speed: def.speed, entryOffset: def.entry, fromLeft: def.fromLeft });
+      driftEls.push(dc);
       driftFrag.appendChild(dc);
     }
     emojiLayer.appendChild(driftFrag);
+    var cloudsActive = false;
 
     // Sun emoji — arcs across the sky from left to right
     var sunEl = document.createElement('span');
     sunEl.className = 'emoji-particle zone-drift';
-    sunEl.style.cssText = 'top:85%;left:-10%;font-size:' + (isMobile ? '5' : '7') + 'rem;opacity:0';
+    sunEl.style.cssText = 'top:85%;left:-10%;font-size:' + (isMobile ? '6' : '9') + 'rem;opacity:0';
     sunEl.textContent = '\u2600\uFE0F';
     emojiLayer.appendChild(sunEl);
 
@@ -681,36 +677,32 @@
           nav.classList.remove('lp-nav-scrolled');
         }
 
-        // Drifting background clouds
+        // Drifting background clouds — activate CSS animations at trigger
         var phoneRect = firstPhone ? firstPhone.getBoundingClientRect() : null;
         var driftTrigger = phoneRect ? phoneRect.top <= vh * 0.75 : scrollY > heroHeight;
-        var baseDriftScroll = driftTrigger ? (phoneRect ? (vh * 0.75 - phoneRect.top) : scrollY - heroHeight) : 0;
-        for (var di = 0; di < driftClouds.length; di++) {
-          var dc = driftClouds[di];
-          var cloudProgress = baseDriftScroll - dc.entryOffset;
-          if (driftTrigger && cloudProgress > 0) {
-            var driftOpacity = Math.min(0.35, cloudProgress / (vh * 0.3) * 0.35);
-            var driftX = cloudProgress * dc.speed;
-            dc.el.style.opacity = driftOpacity;
-            dc.el.style.transform = 'translate3d(' + driftX.toFixed(1) + 'px,0,0)';
-          } else {
-            dc.el.style.opacity = 0;
-            dc.el.style.transform = 'translate3d(0,0,0)';
+        if (driftTrigger && !cloudsActive) {
+          cloudsActive = true;
+          for (var di = 0; di < driftEls.length; di++) {
+            driftEls[di].style.opacity = 0.3;
+            driftEls[di].style.animationPlayState = 'running';
+          }
+        } else if (!driftTrigger && cloudsActive) {
+          cloudsActive = false;
+          for (var di = 0; di < driftEls.length; di++) {
+            driftEls[di].style.opacity = 0;
+            driftEls[di].style.animationPlayState = 'paused';
           }
         }
 
         // Sun emoji — arcs across the sky, starts with clouds, sets at bottom
         var maxScroll = document.documentElement.scrollHeight - vh;
-        // Total scrollable distance from cloud trigger to page bottom
-        var sunTotalRange = maxScroll - (scrollY - baseDriftScroll);
-        if (driftTrigger && baseDriftScroll > 0 && sunTotalRange > 0) {
-          var sunProgress = Math.min(1, baseDriftScroll / sunTotalRange);
-          // Horizontal: traverse full screen width
+        var cloudTriggerScroll = driftTrigger ? (phoneRect ? (vh * 0.75 - phoneRect.top) : scrollY - heroHeight) : 0;
+        var sunTotalRange = maxScroll - (scrollY - cloudTriggerScroll);
+        if (driftTrigger && cloudTriggerScroll > 0 && sunTotalRange > 0) {
+          var sunProgress = Math.min(1, cloudTriggerScroll / sunTotalRange);
           var sunX = sunProgress * (window.innerWidth * 1.2);
-          // Vertical arc: parabola — rises to peak at midpoint, sets back down
           var peakHeight = vh * 0.7;
           var sunY = -4 * peakHeight * sunProgress * (1 - sunProgress);
-          // Opacity: fade in over first 15%, hold, fade out over last 15%
           var sunOpacity = sunProgress < 0.15 ? (sunProgress / 0.15) * 0.45
             : sunProgress > 0.85 ? ((1 - sunProgress) / 0.15) * 0.45
             : 0.45;

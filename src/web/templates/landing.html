@@ -590,30 +590,24 @@
     }
     emojiLayer.appendChild(frag);
 
-    // Generate drifting background clouds — few, non-overlapping, random positions
+    // Generate drifting background clouds — staggered entry from left as user scrolls
     var driftClouds = [];
-    var driftCount = isMobile ? 3 : 5;
+    var driftCount = isMobile ? 5 : 8;
     var driftFrag = document.createDocumentFragment();
-    // Place on a grid to prevent overlap, then jitter within cells
-    var driftCols = Math.ceil(Math.sqrt(driftCount * 1.5));
-    var driftRows = Math.ceil(driftCount / driftCols);
-    var cellW = 100 / driftCols;
-    var cellH = 80 / driftRows; // spread across 10-90% vertical
-    var placed = 0;
-    for (var dr = 0; dr < driftRows && placed < driftCount; dr++) {
-      for (var dcol = 0; dcol < driftCols && placed < driftCount; dcol++) {
-        var dc = document.createElement('span');
-        dc.className = 'emoji-particle zone-drift';
-        var dcTop = 10 + dr * cellH + seededRandom() * cellH * 0.6;
-        var dcLeft = dcol * cellW + seededRandom() * cellW * 0.6;
-        var dcSize = 3 + seededRandom() * 5;             // 3-8rem
-        var dcSpeed = 0.05 + seededRandom() * 0.25;   // random, independent of size
-        dc.style.cssText = 'top:' + dcTop.toFixed(1) + '%;left:' + dcLeft.toFixed(1) + '%;font-size:' + dcSize.toFixed(1) + 'rem;opacity:0';
-        dc.textContent = '\u2601\uFE0F';
-        driftClouds.push({ el: dc, speed: dcSpeed });
-        driftFrag.appendChild(dc);
-        placed++;
-      }
+    for (var i = 0; i < driftCount; i++) {
+      var dc = document.createElement('span');
+      dc.className = 'emoji-particle zone-drift';
+      // Vertical position spread evenly with jitter to avoid overlap
+      var dcTop = 10 + (i / driftCount) * 75 + seededRandom() * 10;
+      var dcSize = 9 + seededRandom() * 15;              // 9-24rem (3x previous)
+      // Wide speed range for obvious variety: slow crawlers to fast movers
+      var dcSpeed = 0.03 + seededRandom() * 0.47;        // 0.03 to 0.50
+      // Each cloud enters at a different scroll offset — staggered left entry
+      var dcEntryOffset = i * 300 + seededRandom() * 200; // px of scroll before this cloud starts moving
+      dc.style.cssText = 'top:' + dcTop.toFixed(1) + '%;left:-25%;font-size:' + dcSize.toFixed(1) + 'rem;opacity:0';
+      dc.textContent = '\u2601\uFE0F';
+      driftClouds.push({ el: dc, speed: dcSpeed, entryOffset: dcEntryOffset });
+      driftFrag.appendChild(dc);
     }
     emojiLayer.appendChild(driftFrag);
 
@@ -674,16 +668,16 @@
           nav.classList.remove('lp-nav-scrolled');
         }
 
-        // Drifting background clouds — fade in at phone trigger, drift left-to-right, stay visible
+        // Drifting background clouds — staggered entry from left, each with its own trigger
         var phoneRect = firstPhone ? firstPhone.getBoundingClientRect() : null;
-        var phoneTopAtMid = phoneRect ? phoneRect.top <= vh * 0.5 : scrollY > heroHeight;
-        var driftFadeRange = vh * 0.3;
+        var driftTrigger = phoneRect ? phoneRect.top <= vh * 0.5 : scrollY > heroHeight;
+        var baseDriftScroll = driftTrigger ? (phoneRect ? (vh * 0.5 - phoneRect.top) : scrollY - heroHeight) : 0;
         for (var di = 0; di < driftClouds.length; di++) {
           var dc = driftClouds[di];
-          if (phoneTopAtMid) {
-            var triggerScroll = phoneRect ? (vh * 0.5 - phoneRect.top) : 0;
-            var driftOpacity = Math.min(0.35, Math.max(0, triggerScroll / driftFadeRange * 0.35));
-            var driftX = scrollY * dc.speed;
+          var cloudProgress = baseDriftScroll - dc.entryOffset;
+          if (driftTrigger && cloudProgress > 0) {
+            var driftOpacity = Math.min(0.35, cloudProgress / (vh * 0.3) * 0.35);
+            var driftX = cloudProgress * dc.speed;
             dc.el.style.opacity = driftOpacity;
             dc.el.style.transform = 'translate3d(' + driftX.toFixed(1) + 'px,0,0)';
           } else {

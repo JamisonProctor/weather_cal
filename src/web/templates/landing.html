@@ -10,8 +10,8 @@
     *, *::before, *::after { box-sizing: border-box; }
 
     :root {
-      --lp-bg: #FFFBF6;
-      --lp-bg-alt: #FFFBF6;
+      --lp-bg: #FFF8E1;
+      --lp-bg-alt: #FFF8E1;
       --lp-text: #3E2723;
       --lp-text-muted: #795548;
       --lp-accent: #E65100;
@@ -24,7 +24,7 @@
       color: var(--lp-text);
       margin: 0;
       padding: 0;
-      background: var(--lp-bg);
+      background: #FFF8E1;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -55,7 +55,7 @@
     }
     .lp-nav .nav-link:hover { color: var(--lp-text); }
     .lp-nav.lp-nav-scrolled {
-      background: var(--lp-bg);
+      background: rgba(255, 248, 225, 0.95);
       box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     }
     .lp-nav .logout-btn {
@@ -156,12 +156,10 @@
       padding: 80px 24px;
       max-width: 960px;
       margin: 0 auto;
-      background: var(--lp-bg);
     }
     .lp-section-alt {
       position: relative;
       z-index: 1;
-      background: var(--lp-bg-alt);
     }
     .lp-section-alt .lp-section-inner {
       padding: 80px 24px;
@@ -244,8 +242,8 @@
       text-align: center;
       padding: 16px;
     }
-    .wt-bg-default { position: relative; z-index: 1; background: var(--lp-bg); }
-    .wt-bg-alt { position: relative; z-index: 1; background: var(--lp-bg); }
+    .wt-bg-default { position: relative; z-index: 1; }
+    .wt-bg-alt { position: relative; z-index: 1; }
 
     /* --- CTA band --- */
     .lp-cta-band {
@@ -253,7 +251,6 @@
       z-index: 1;
       text-align: center;
       padding: 64px 24px;
-      background: var(--lp-bg);
     }
     .lp-cta-band h2 {
       font-size: clamp(1.3rem, 3vw, 1.6rem);
@@ -306,7 +303,6 @@
       z-index: 1;
       text-align: center;
       padding: 80px 24px;
-      background: var(--lp-bg);
     }
     .lp-final-cta h2 {
       font-size: clamp(1.4rem, 3vw, 1.8rem);
@@ -322,7 +318,6 @@
       border-top: 1px solid rgba(0,0,0,0.06);
       font-size: 0.85rem;
       color: var(--lp-text-muted);
-      background: var(--lp-bg);
     }
     .lp-footer-brand {
       font-weight: 700;
@@ -586,21 +581,23 @@
     }
     emojiLayer.appendChild(frag);
 
-    // Generate drifting background clouds (below hero)
+    // Generate drifting background clouds — positioned within viewport, parallax on scroll
     var driftClouds = [];
     var driftCount = isMobile ? 30 : 50;
     var driftFrag = document.createDocumentFragment();
     for (var i = 0; i < driftCount; i++) {
       var dc = document.createElement('span');
       dc.className = 'emoji-particle zone-drift';
-      var dcTop = 40 + Math.random() * 220;       // 40%-260% of viewport
-      var dcLeft = -30 + Math.random() * 110;      // -30% to 80%
-      var dcSize = 3 + Math.random() * 5;           // 3-8rem
+      var dcTop = 5 + Math.random() * 90;            // 5%-95% of viewport (visible range)
+      var dcLeft = -15 + Math.random() * 25;          // -15% to 10% (most start off-screen left)
+      var dcSize = 3 + Math.random() * 5;             // 3-8rem
       // Speed proportional to size: bigger clouds drift faster (closer = faster parallax)
-      var dcSpeed = 0.1 + (dcSize - 3) * 0.12;      // 0.1 at 3rem, ~0.7 at 8rem
+      var dcSpeed = 0.1 + (dcSize - 3) * 0.12;       // 0.1 at 3rem, ~0.7 at 8rem
+      // Parallax factor: smaller clouds (distant) move slower vertically
+      var dcParallaxY = 0.05 + (dcSize - 3) * 0.09;  // 0.05 at 3rem, ~0.5 at 8rem
       dc.style.cssText = 'top:' + dcTop.toFixed(1) + '%;left:' + dcLeft.toFixed(1) + '%;font-size:' + dcSize.toFixed(1) + 'rem;opacity:0';
       dc.textContent = '\u2601\uFE0F';
-      driftClouds.push({ el: dc, speed: dcSpeed });
+      driftClouds.push({ el: dc, speed: dcSpeed, parallaxY: dcParallaxY });
       driftFrag.appendChild(dc);
     }
     emojiLayer.appendChild(driftFrag);
@@ -661,7 +658,7 @@
           nav.classList.remove('lp-nav-scrolled');
         }
 
-        // Drifting background clouds — scroll-driven horizontal movement
+        // Drifting background clouds — scroll-driven horizontal + vertical parallax
         var driftStart = heroHeight * 0.3;
         var driftFadeRange = vh * 0.4;
         for (var di = 0; di < driftClouds.length; di++) {
@@ -670,11 +667,12 @@
             var driftProgress = scrollY - driftStart;
             var driftOpacity = Math.min(0.4, driftProgress / driftFadeRange * 0.4);
             var driftX = driftProgress * dc.speed * 0.8;
+            var driftY = -scrollY * dc.parallaxY;
             dc.el.style.opacity = driftOpacity;
-            dc.el.style.transform = 'translate3d(' + driftX.toFixed(1) + 'px,0,0)';
+            dc.el.style.transform = 'translate3d(' + driftX.toFixed(1) + 'px,' + driftY.toFixed(1) + 'px,0)';
           } else {
             dc.el.style.opacity = 0;
-            dc.el.style.transform = 'translate3d(0,0,0)';
+            dc.el.style.transform = 'translate3d(0,' + (-scrollY * dc.parallaxY).toFixed(1) + 'px,0)';
           }
         }
 

@@ -627,23 +627,31 @@
           el.style.transform = 'translate3d(' + (dx * move) + 'px,' + (dy * move) + 'px,0)';
         });
 
-        // Hero content: fade in over first 30% of hero scroll, pin until 70%
-        var fadeProgress = Math.min(scrollY / (heroHeight * 0.3), 1);
-        heroContent.style.opacity = fadeProgress;
-
+        // Hero content: fade in 0-30%, pin 30-70%, fade out + scroll 70-100%
         var pinEnd = heroHeight * 0.7;
-        if (scrollY < pinEnd) {
+        if (scrollY < heroHeight * 0.3) {
+          // Fade in
+          heroContent.style.opacity = scrollY / (heroHeight * 0.3);
+          heroContent.style.position = 'fixed';
+          heroContent.style.top = '50%';
+          heroContent.style.left = '50%';
+          heroContent.style.transform = 'translate(-50%, -50%)';
+        } else if (scrollY < pinEnd) {
           // Pin in center while clouds are still dispersing
+          heroContent.style.opacity = 1;
           heroContent.style.position = 'fixed';
           heroContent.style.top = '50%';
           heroContent.style.left = '50%';
           heroContent.style.transform = 'translate(-50%, -50%)';
         } else {
-          // Release — scroll normally
-          heroContent.style.position = 'relative';
-          heroContent.style.top = '';
-          heroContent.style.left = '';
-          heroContent.style.transform = '';
+          // Fade out and scroll up with content
+          var fadeOut = 1 - Math.min((scrollY - pinEnd) / (heroHeight * 0.3), 1);
+          heroContent.style.opacity = fadeOut;
+          heroContent.style.position = 'fixed';
+          heroContent.style.top = '50%';
+          heroContent.style.left = '50%';
+          var scrollOffset = scrollY - pinEnd;
+          heroContent.style.transform = 'translate(-50%, calc(-50% - ' + scrollOffset + 'px))';
         }
 
         // Nav transition

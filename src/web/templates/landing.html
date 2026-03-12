@@ -575,27 +575,29 @@
     }
     emojiLayer.appendChild(frag);
 
-    // Generate drifting background clouds — continuous CSS animation, not scroll-driven
-    // Each cloud drifts left-to-right independently, looping forever
+    // Generate drifting background clouds — continuous CSS animation
+    // Negative delay = starts mid-animation (already on-screen)
+    // Vertical bands sized to prevent overlap at largest cloud size in each band
     var driftDefs = isMobile ? [
-      { top: 8,  size: 12, duration: 45, delay: 0 },
-      { top: 30, size: 10, duration: 55, delay: 8 },
-      { top: 55, size: 14, duration: 40, delay: 15 },
-      { top: 75, size: 11, duration: 50, delay: 3 },
-      { top: 20, size: 9,  duration: 60, delay: 20 }
+      // top%, size(rem), duration(s), delay(s) — negative = start on-screen
+      { top: 5,  size: 11, duration: 50, delay: -20 },
+      { top: 25, size: 8,  duration: 60, delay: -35 },
+      { top: 45, size: 15, duration: 42, delay: 0 },
+      { top: 68, size: 9,  duration: 55, delay: -10 },
+      { top: 85, size: 12, duration: 48, delay: -40 }
     ] : [
-      { top: 5,  size: 14, duration: 50, delay: 0 },
-      { top: 25, size: 11, duration: 60, delay: 5 },
-      { top: 48, size: 12, duration: 45, delay: 12 },
-      { top: 70, size: 15, duration: 55, delay: 2 },
-      { top: 15, size: 10, duration: 65, delay: 18 },
-      { top: 40, size: 13, duration: 42, delay: 25 },
-      { top: 85, size: 9,  duration: 58, delay: 10 },
-      { top: 60, size: 11, duration: 48, delay: 30 }
+      { top: 3,  size: 14, duration: 55, delay: -25 },
+      { top: 16, size: 8,  duration: 70, delay: -50 },
+      { top: 28, size: 18, duration: 45, delay: 0 },
+      { top: 42, size: 10, duration: 65, delay: -35 },
+      { top: 55, size: 20, duration: 50, delay: -15 },
+      { top: 70, size: 9,  duration: 72, delay: -45 },
+      { top: 82, size: 16, duration: 48, delay: -5 },
+      { top: 93, size: 7,  duration: 62, delay: -55 }
     ];
     // Randomize durations slightly with seeded PRNG
     for (var si = 0; si < driftDefs.length; si++) {
-      driftDefs[si].duration += Math.floor(seededRandom() * 15 - 7); // +/- 7s jitter
+      driftDefs[si].duration += Math.floor(seededRandom() * 15 - 7);
     }
     var driftEls = [];
     var driftFrag = document.createDocumentFragment();
@@ -680,18 +682,22 @@
         // Drifting background clouds — activate CSS animations at trigger
         var phoneRect = firstPhone ? firstPhone.getBoundingClientRect() : null;
         var driftTrigger = phoneRect ? phoneRect.top <= vh * 0.75 : scrollY > heroHeight;
+        // Fade clouds in/out gradually based on how far past trigger
+        var cloudFadeProgress = driftTrigger ? (phoneRect ? (vh * 0.75 - phoneRect.top) : scrollY - heroHeight) : 0;
+        var cloudOpacity = Math.min(0.3, Math.max(0, cloudFadeProgress / (vh * 0.3) * 0.3));
         if (driftTrigger && !cloudsActive) {
           cloudsActive = true;
           for (var di = 0; di < driftEls.length; di++) {
-            driftEls[di].style.opacity = 0.3;
             driftEls[di].style.animationPlayState = 'running';
           }
         } else if (!driftTrigger && cloudsActive) {
           cloudsActive = false;
           for (var di = 0; di < driftEls.length; di++) {
-            driftEls[di].style.opacity = 0;
             driftEls[di].style.animationPlayState = 'paused';
           }
+        }
+        for (var di = 0; di < driftEls.length; di++) {
+          driftEls[di].style.opacity = cloudOpacity;
         }
 
         // Sun emoji — arcs across the sky, starts with clouds, sets at bottom

@@ -581,28 +581,36 @@
     }
     emojiLayer.appendChild(frag);
 
-    // Generate drifting background clouds — positioned within viewport, parallax on scroll
+    // Generate drifting background clouds — few, non-overlapping, random positions
     var driftClouds = [];
-    var driftCount = isMobile ? 30 : 50;
+    var driftCount = isMobile ? 3 : 5;
     var driftFrag = document.createDocumentFragment();
-    for (var i = 0; i < driftCount; i++) {
-      var dc = document.createElement('span');
-      dc.className = 'emoji-particle zone-drift';
-      var dcTop = 5 + Math.random() * 90;            // 5%-95% of viewport (visible range)
-      var dcLeft = -15 + Math.random() * 25;          // -15% to 10% (most start off-screen left)
-      var dcSize = 3 + Math.random() * 5;             // 3-8rem
-      // Speed proportional to size: bigger clouds drift faster (closer = faster parallax)
-      var dcSpeed = 0.1 + (dcSize - 3) * 0.12;       // 0.1 at 3rem, ~0.7 at 8rem
-      // Parallax factor: smaller clouds (distant) move slower vertically
-      var dcParallaxY = 0.05 + (dcSize - 3) * 0.09;  // 0.05 at 3rem, ~0.5 at 8rem
-      dc.style.cssText = 'top:' + dcTop.toFixed(1) + '%;left:' + dcLeft.toFixed(1) + '%;font-size:' + dcSize.toFixed(1) + 'rem;opacity:0';
-      dc.textContent = '\u2601\uFE0F';
-      driftClouds.push({ el: dc, speed: dcSpeed, parallaxY: dcParallaxY });
-      driftFrag.appendChild(dc);
+    // Place on a grid to prevent overlap, then jitter within cells
+    var driftCols = Math.ceil(Math.sqrt(driftCount * 1.5));
+    var driftRows = Math.ceil(driftCount / driftCols);
+    var cellW = 100 / driftCols;
+    var cellH = 80 / driftRows; // spread across 10-90% vertical
+    var placed = 0;
+    for (var dr = 0; dr < driftRows && placed < driftCount; dr++) {
+      for (var dcol = 0; dcol < driftCols && placed < driftCount; dcol++) {
+        var dc = document.createElement('span');
+        dc.className = 'emoji-particle zone-drift';
+        var dcTop = 10 + dr * cellH + Math.random() * cellH * 0.6;
+        var dcLeft = dcol * cellW + Math.random() * cellW * 0.6;
+        var dcSize = 3 + Math.random() * 5;             // 3-8rem
+        var dcSpeed = 0.1 + (dcSize - 3) * 0.12;
+        var dcParallaxY = 0.05 + (dcSize - 3) * 0.09;
+        dc.style.cssText = 'top:' + dcTop.toFixed(1) + '%;left:' + dcLeft.toFixed(1) + '%;font-size:' + dcSize.toFixed(1) + 'rem;opacity:0';
+        dc.textContent = '\u2601\uFE0F';
+        driftClouds.push({ el: dc, speed: dcSpeed, parallaxY: dcParallaxY });
+        driftFrag.appendChild(dc);
+        placed++;
+      }
     }
     emojiLayer.appendChild(driftFrag);
 
     var heroEmojis = document.querySelectorAll('.zone-hero');
+    var firstPhone = document.querySelector('.lp-phone-frame');
 
     function onScroll() {
       if (ticking) return;
@@ -658,18 +666,19 @@
           nav.classList.remove('lp-nav-scrolled');
         }
 
-        // Drifting background clouds — scroll-driven horizontal + vertical parallax
-        var driftStart = heroHeight * 0.3;
+        // Drifting background clouds — fade in when first phone frame top hits 50% viewport
+        var phoneRect = firstPhone ? firstPhone.getBoundingClientRect() : null;
+        var phoneTopAtMid = phoneRect ? phoneRect.top <= vh * 0.5 : scrollY > heroHeight;
         var driftFadeRange = vh * 0.4;
         for (var di = 0; di < driftClouds.length; di++) {
           var dc = driftClouds[di];
-          if (scrollY > driftStart) {
-            var driftProgress = scrollY - driftStart;
-            var driftOpacity = Math.min(0.4, driftProgress / driftFadeRange * 0.4);
-            var driftX = driftProgress * dc.speed * 0.8;
+          if (phoneTopAtMid) {
+            // Calculate how far past the trigger we are
+            var triggerScroll = phoneRect ? (vh * 0.5 - phoneRect.top) : 0;
+            var driftOpacity = Math.min(0.4, Math.max(0, triggerScroll / driftFadeRange * 0.4));
             var driftY = -scrollY * dc.parallaxY;
             dc.el.style.opacity = driftOpacity;
-            dc.el.style.transform = 'translate3d(' + driftX.toFixed(1) + 'px,' + driftY.toFixed(1) + 'px,0)';
+            dc.el.style.transform = 'translate3d(0,' + driftY.toFixed(1) + 'px,0)';
           } else {
             dc.el.style.opacity = 0;
             dc.el.style.transform = 'translate3d(0,' + (-scrollY * dc.parallaxY).toFixed(1) + 'px,0)';

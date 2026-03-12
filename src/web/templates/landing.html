@@ -598,11 +598,10 @@
         var dcTop = 10 + dr * cellH + Math.random() * cellH * 0.6;
         var dcLeft = dcol * cellW + Math.random() * cellW * 0.6;
         var dcSize = 3 + Math.random() * 5;             // 3-8rem
-        var dcSpeed = 0.1 + (dcSize - 3) * 0.12;
-        var dcParallaxY = 0.05 + (dcSize - 3) * 0.09;
+        var dcSpeed = 0.05 + Math.random() * 0.25;   // random, independent of size
         dc.style.cssText = 'top:' + dcTop.toFixed(1) + '%;left:' + dcLeft.toFixed(1) + '%;font-size:' + dcSize.toFixed(1) + 'rem;opacity:0';
         dc.textContent = '\u2601\uFE0F';
-        driftClouds.push({ el: dc, speed: dcSpeed, parallaxY: dcParallaxY });
+        driftClouds.push({ el: dc, speed: dcSpeed });
         driftFrag.appendChild(dc);
         placed++;
       }
@@ -666,22 +665,21 @@
           nav.classList.remove('lp-nav-scrolled');
         }
 
-        // Drifting background clouds — fade in when first phone frame top hits 50% viewport
+        // Drifting background clouds — fade in at phone trigger, drift left-to-right, stay visible
         var phoneRect = firstPhone ? firstPhone.getBoundingClientRect() : null;
         var phoneTopAtMid = phoneRect ? phoneRect.top <= vh * 0.5 : scrollY > heroHeight;
-        var driftFadeRange = vh * 0.4;
+        var driftFadeRange = vh * 0.3;
         for (var di = 0; di < driftClouds.length; di++) {
           var dc = driftClouds[di];
           if (phoneTopAtMid) {
-            // Calculate how far past the trigger we are
             var triggerScroll = phoneRect ? (vh * 0.5 - phoneRect.top) : 0;
-            var driftOpacity = Math.min(0.4, Math.max(0, triggerScroll / driftFadeRange * 0.4));
-            var driftY = -scrollY * dc.parallaxY;
+            var driftOpacity = Math.min(0.35, Math.max(0, triggerScroll / driftFadeRange * 0.35));
+            var driftX = scrollY * dc.speed;
             dc.el.style.opacity = driftOpacity;
-            dc.el.style.transform = 'translate3d(0,' + driftY.toFixed(1) + 'px,0)';
+            dc.el.style.transform = 'translate3d(' + driftX.toFixed(1) + 'px,0,0)';
           } else {
             dc.el.style.opacity = 0;
-            dc.el.style.transform = 'translate3d(0,' + (-scrollY * dc.parallaxY).toFixed(1) + 'px,0)';
+            dc.el.style.transform = 'translate3d(0,0,0)';
           }
         }
 

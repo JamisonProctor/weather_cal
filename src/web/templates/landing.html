@@ -79,6 +79,7 @@
       z-index: 0;
       pointer-events: none;
       overflow: hidden;
+      background: linear-gradient(135deg, #FFF8E1, #FFF3E0);
     }
     .emoji-particle {
       position: absolute;
@@ -98,7 +99,7 @@
       height: 100vh;
       min-height: 600px;
       max-height: 1000px;
-      background: linear-gradient(135deg, #FFF8E1, #FFF3E0);
+      background: transparent;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -376,42 +377,47 @@
 
   <!-- Fixed emoji layer -->
   <div class="emoji-layer" id="emoji-layer">
-    <!-- Hero zone: storm clouds covering the viewport -->
-    <span class="emoji-particle zone-hero" style="top:2%;left:3%;font-size:10rem" data-speed="0.6" data-dx="-1" data-dy="-0.4">☁️</span>
-    <span class="emoji-particle zone-hero" style="top:0%;left:25%;font-size:12rem" data-speed="0.5" data-dx="0.3" data-dy="-1">⛈️</span>
-    <span class="emoji-particle zone-hero" style="top:5%;left:55%;font-size:9rem" data-speed="0.7" data-dx="1" data-dy="-0.3">☁️</span>
-    <span class="emoji-particle zone-hero" style="top:0%;left:80%;font-size:11rem" data-speed="0.45" data-dx="1" data-dy="-0.6">🌩️</span>
-    <span class="emoji-particle zone-hero" style="top:20%;left:-5%;font-size:10rem" data-speed="0.55" data-dx="-1" data-dy="0.2">⛈️</span>
-    <span class="emoji-particle zone-hero" style="top:18%;left:20%;font-size:8rem" data-speed="0.65" data-dx="-0.8" data-dy="-0.6">☁️</span>
-    <span class="emoji-particle zone-hero" style="top:15%;left:45%;font-size:11rem" data-speed="0.4" data-dx="0.2" data-dy="-1">☁️</span>
-    <span class="emoji-particle zone-hero" style="top:22%;left:70%;font-size:9rem" data-speed="0.6" data-dx="0.9" data-dy="0.3">☁️</span>
-    <span class="emoji-particle zone-hero" style="top:35%;left:5%;font-size:8rem" data-speed="0.5" data-dx="-1" data-dy="0.5">☁️</span>
-    <span class="emoji-particle zone-hero" style="top:32%;left:30%;font-size:10rem" data-speed="0.45" data-dx="-0.5" data-dy="-0.8">🌩️</span>
-    <span class="emoji-particle zone-hero" style="top:38%;left:60%;font-size:7rem" data-speed="0.7" data-dx="0.7" data-dy="0.4">⛈️</span>
-    <span class="emoji-particle zone-hero" style="top:30%;left:85%;font-size:9rem" data-speed="0.55" data-dx="1" data-dy="-0.2">☁️</span>
-    <span class="emoji-particle zone-hero" style="top:50%;left:0%;font-size:9rem" data-speed="0.5" data-dx="-1" data-dy="0.6">☁️</span>
-    <span class="emoji-particle zone-hero" style="top:48%;left:35%;font-size:8rem" data-speed="0.6" data-dx="0.4" data-dy="0.7">☁️</span>
-    <span class="emoji-particle zone-hero" style="top:52%;left:65%;font-size:10rem" data-speed="0.45" data-dx="0.8" data-dy="0.5">⛈️</span>
-    <span class="emoji-particle zone-hero" style="top:55%;left:90%;font-size:7rem" data-speed="0.7" data-dx="1" data-dy="0.3">☁️</span>
-    <span class="emoji-particle zone-hero" style="top:65%;left:10%;font-size:8rem" data-speed="0.55" data-dx="-0.9" data-dy="0.7">🌩️</span>
-    <span class="emoji-particle zone-hero" style="top:68%;left:50%;font-size:9rem" data-speed="0.5" data-dx="0.3" data-dy="1">☁️</span>
-    <span class="emoji-particle zone-hero" style="top:72%;left:78%;font-size:7rem" data-speed="0.6" data-dx="0.6" data-dy="0.8">☁️</span>
-    <span class="emoji-particle zone-hero" style="top:80%;left:25%;font-size:8rem" data-speed="0.45" data-dx="-0.4" data-dy="1">☁️</span>
-    <span class="emoji-particle zone-hero" style="top:82%;left:60%;font-size:6rem" data-speed="0.65" data-dx="0.5" data-dy="1">⛈️</span>
-    <span class="emoji-particle zone-hero" style="top:88%;left:5%;font-size:7rem" data-speed="0.5" data-dx="-1" data-dy="0.8">☁️</span>
-    <span class="emoji-particle zone-hero" style="top:90%;left:40%;font-size:8rem" data-speed="0.55" data-dx="0.1" data-dy="1">☁️</span>
-    <span class="emoji-particle zone-hero" style="top:85%;left:88%;font-size:6rem" data-speed="0.7" data-dx="1" data-dy="0.6">☁️</span>
-    <span class="emoji-particle zone-hero cloud-mobile-hide" style="top:42%;left:18%;font-size:7rem" data-speed="0.6" data-dx="-0.7" data-dy="0.3">☁️</span>
+    <!-- Hero zone: 5x5 grid of storm emojis (app emojis only) -->
+    <!-- Row 1 -->
+    <span class="emoji-particle zone-hero" style="top:0%;left:0%;font-size:10rem" data-speed="0.5" data-dx="-1" data-dy="-0.5">☁️</span>
+    <span class="emoji-particle zone-hero" style="top:0%;left:20%;font-size:10rem" data-speed="0.6" data-dx="-0.3" data-dy="-1">⛈️</span>
+    <span class="emoji-particle zone-hero" style="top:0%;left:40%;font-size:10rem" data-speed="0.45" data-dx="0.2" data-dy="-1">☁️</span>
+    <span class="emoji-particle zone-hero" style="top:0%;left:60%;font-size:10rem" data-speed="0.55" data-dx="0.5" data-dy="-0.8">🌧️</span>
+    <span class="emoji-particle zone-hero" style="top:0%;left:80%;font-size:10rem" data-speed="0.5" data-dx="1" data-dy="-0.5">☁️</span>
+    <!-- Row 2 -->
+    <span class="emoji-particle zone-hero" style="top:20%;left:0%;font-size:10rem" data-speed="0.55" data-dx="-1" data-dy="-0.3">🌫️</span>
+    <span class="emoji-particle zone-hero" style="top:20%;left:20%;font-size:10rem" data-speed="0.65" data-dx="-0.8" data-dy="-0.6">☁️</span>
+    <span class="emoji-particle zone-hero" style="top:20%;left:40%;font-size:10rem" data-speed="0.4" data-dx="0.2" data-dy="-1">☁️</span>
+    <span class="emoji-particle zone-hero" style="top:20%;left:60%;font-size:10rem" data-speed="0.6" data-dx="0.7" data-dy="-0.4">⛈️</span>
+    <span class="emoji-particle zone-hero" style="top:20%;left:80%;font-size:10rem" data-speed="0.5" data-dx="1" data-dy="0.3">☁️</span>
+    <!-- Row 3 -->
+    <span class="emoji-particle zone-hero" style="top:40%;left:0%;font-size:10rem" data-speed="0.5" data-dx="-1" data-dy="0.3">☁️</span>
+    <span class="emoji-particle zone-hero" style="top:40%;left:20%;font-size:10rem" data-speed="0.45" data-dx="-0.6" data-dy="0.5">🌦️</span>
+    <span class="emoji-particle zone-hero" style="top:40%;left:40%;font-size:10rem" data-speed="0.7" data-dx="0.4" data-dy="0.6">☁️</span>
+    <span class="emoji-particle zone-hero" style="top:40%;left:60%;font-size:10rem" data-speed="0.5" data-dx="0.8" data-dy="0.4">🌧️</span>
+    <span class="emoji-particle zone-hero" style="top:40%;left:80%;font-size:10rem" data-speed="0.55" data-dx="1" data-dy="0.5">☁️</span>
+    <!-- Row 4 -->
+    <span class="emoji-particle zone-hero" style="top:60%;left:0%;font-size:10rem" data-speed="0.6" data-dx="-1" data-dy="0.6">⛈️</span>
+    <span class="emoji-particle zone-hero" style="top:60%;left:20%;font-size:10rem" data-speed="0.5" data-dx="-0.5" data-dy="0.8">☁️</span>
+    <span class="emoji-particle zone-hero" style="top:60%;left:40%;font-size:10rem" data-speed="0.45" data-dx="0.3" data-dy="1">☁️</span>
+    <span class="emoji-particle zone-hero" style="top:60%;left:60%;font-size:10rem" data-speed="0.6" data-dx="0.6" data-dy="0.7">🌫️</span>
+    <span class="emoji-particle zone-hero" style="top:60%;left:80%;font-size:10rem" data-speed="0.5" data-dx="1" data-dy="0.8">☁️</span>
+    <!-- Row 5 -->
+    <span class="emoji-particle zone-hero" style="top:80%;left:0%;font-size:10rem" data-speed="0.5" data-dx="-1" data-dy="0.8">☁️</span>
+    <span class="emoji-particle zone-hero" style="top:80%;left:20%;font-size:10rem" data-speed="0.55" data-dx="-0.4" data-dy="1">🌧️</span>
+    <span class="emoji-particle zone-hero" style="top:80%;left:40%;font-size:10rem" data-speed="0.6" data-dx="0.1" data-dy="1">☁️</span>
+    <span class="emoji-particle zone-hero" style="top:80%;left:60%;font-size:10rem" data-speed="0.5" data-dx="0.5" data-dy="1">⛈️</span>
+    <span class="emoji-particle zone-hero cloud-mobile-hide" style="top:80%;left:80%;font-size:10rem" data-speed="0.65" data-dx="1" data-dy="0.6">☁️</span>
 
-    <!-- Features zone: clearing sky -->
-    <span class="emoji-particle zone-features" style="top:15%;left:8%;font-size:4rem" data-speed="0.15" data-dx="-0.3" data-dy="-0.2">☀️</span>
-    <span class="emoji-particle zone-features" style="top:30%;left:85%;font-size:3.5rem" data-speed="0.1" data-dx="0.2" data-dy="0.1">🌤️</span>
-    <span class="emoji-particle zone-features" style="top:50%;left:5%;font-size:5rem" data-speed="0.12" data-dx="-0.1" data-dy="0.2">🌈</span>
-    <span class="emoji-particle zone-features" style="top:45%;left:90%;font-size:3rem" data-speed="0.18" data-dx="0.3" data-dy="-0.1">☀️</span>
-    <span class="emoji-particle zone-features" style="top:65%;left:12%;font-size:4.5rem" data-speed="0.1" data-dx="-0.2" data-dy="0.15">🌤️</span>
-    <span class="emoji-particle zone-features" style="top:70%;left:80%;font-size:3.5rem" data-speed="0.15" data-dx="0.15" data-dy="0.1">☀️</span>
-    <span class="emoji-particle zone-features" style="top:85%;left:50%;font-size:4rem" data-speed="0.12" data-dx="0.1" data-dy="0.2">🌈</span>
-    <span class="emoji-particle zone-features" style="top:20%;left:45%;font-size:3rem" data-speed="0.1" data-dx="-0.1" data-dy="-0.15">🌤️</span>
+    <!-- Features zone: clearing sky (app emojis only) -->
+    <span class="emoji-particle zone-features" style="top:15%;left:10%;font-size:4rem" data-speed="0.15" data-dx="-0.3" data-dy="-0.2">☀️</span>
+    <span class="emoji-particle zone-features" style="top:15%;left:85%;font-size:3.5rem" data-speed="0.1" data-dx="0.2" data-dy="0.1">🌤️</span>
+    <span class="emoji-particle zone-features" style="top:40%;left:5%;font-size:4rem" data-speed="0.12" data-dx="-0.1" data-dy="0.2">⛅</span>
+    <span class="emoji-particle zone-features" style="top:40%;left:90%;font-size:3.5rem" data-speed="0.18" data-dx="0.3" data-dy="-0.1">☀️</span>
+    <span class="emoji-particle zone-features" style="top:65%;left:10%;font-size:4rem" data-speed="0.1" data-dx="-0.2" data-dy="0.15">🌤️</span>
+    <span class="emoji-particle zone-features" style="top:65%;left:85%;font-size:3.5rem" data-speed="0.15" data-dx="0.15" data-dy="0.1">☀️</span>
+    <span class="emoji-particle zone-features" style="top:85%;left:50%;font-size:4rem" data-speed="0.12" data-dx="0.1" data-dy="0.2">⛅</span>
+    <span class="emoji-particle zone-features" style="top:85%;left:25%;font-size:3.5rem" data-speed="0.1" data-dx="-0.1" data-dy="-0.15">🌤️</span>
   </div>
 
   <!-- Nav -->

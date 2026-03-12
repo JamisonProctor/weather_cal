@@ -617,10 +617,10 @@
     }
     emojiLayer.appendChild(driftFrag);
 
-    // Sun emoji — drifts to center and stops at the end
+    // Sun emoji — arcs across the sky from left to right
     var sunEl = document.createElement('span');
     sunEl.className = 'emoji-particle zone-drift';
-    sunEl.style.cssText = 'top:50%;left:-20%;font-size:' + (isMobile ? '6' : '8') + 'rem;opacity:0';
+    sunEl.style.cssText = 'top:85%;left:-10%;font-size:' + (isMobile ? '5' : '7') + 'rem;opacity:0';
     sunEl.textContent = '\u2600\uFE0F';
     emojiLayer.appendChild(sunEl);
 
@@ -699,20 +699,23 @@
           }
         }
 
-        // Sun emoji — starts at halfway after hero, crosses full screen
-        var docHeight = document.documentElement.scrollHeight;
-        var maxScroll = docHeight - vh;
-        var contentStart = heroHeight; // where content begins
-        var contentLen = maxScroll - contentStart;
-        var sunStart = contentStart + contentLen * 0.5; // halfway through content
-        var sunEnd = maxScroll;
-        if (scrollY > sunStart) {
-          var sunProgress = Math.min(1, (scrollY - sunStart) / (sunEnd - sunStart));
-          var sunOpacity = Math.min(0.5, sunProgress * 0.5);
-          // Cross the entire screen width: from left:-20% to right edge
+        // Sun emoji — arcs across the sky, starts with clouds, sets at bottom
+        var maxScroll = document.documentElement.scrollHeight - vh;
+        // Total scrollable distance from cloud trigger to page bottom
+        var sunTotalRange = maxScroll - (scrollY - baseDriftScroll);
+        if (driftTrigger && baseDriftScroll > 0 && sunTotalRange > 0) {
+          var sunProgress = Math.min(1, baseDriftScroll / sunTotalRange);
+          // Horizontal: traverse full screen width
           var sunX = sunProgress * (window.innerWidth * 1.2);
+          // Vertical arc: parabola — rises to peak at midpoint, sets back down
+          var peakHeight = vh * 0.7;
+          var sunY = -4 * peakHeight * sunProgress * (1 - sunProgress);
+          // Opacity: fade in over first 15%, hold, fade out over last 15%
+          var sunOpacity = sunProgress < 0.15 ? (sunProgress / 0.15) * 0.45
+            : sunProgress > 0.85 ? ((1 - sunProgress) / 0.15) * 0.45
+            : 0.45;
           sunEl.style.opacity = sunOpacity;
-          sunEl.style.transform = 'translate3d(' + sunX.toFixed(1) + 'px,0,0)';
+          sunEl.style.transform = 'translate3d(' + sunX.toFixed(1) + 'px,' + sunY.toFixed(1) + 'px,0)';
         } else {
           sunEl.style.opacity = 0;
           sunEl.style.transform = 'translate3d(0,0,0)';

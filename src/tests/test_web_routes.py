@@ -958,7 +958,7 @@ def test_landing_contains_sections(client):
 def test_landing_unauthenticated_cta_links_signup(client):
     resp = client.get("/")
     assert "/signup" in resp.text
-    assert "Get started free" in resp.text
+    assert "Try it out" in resp.text
 
 
 def test_landing_authenticated_cta_links_settings(client, auth_cookies):

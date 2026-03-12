@@ -11,15 +11,24 @@ from src.utils.db import get_connection as _conn
 logger = logging.getLogger(__name__)
 
 
-def create_user(db_path: str, email: str, password: str) -> int:
+def create_user(
+    db_path: str,
+    email: str,
+    password: str,
+    utm_source: str | None = None,
+    utm_medium: str | None = None,
+    utm_campaign: str | None = None,
+    referrer: str | None = None,
+) -> int:
     password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
     created_at = datetime.now().isoformat()
     conn = _conn(db_path)
     try:
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?)",
-            (email, password_hash, created_at),
+            """INSERT INTO users (email, password_hash, created_at, utm_source, utm_medium, utm_campaign, referrer)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (email, password_hash, created_at, utm_source, utm_medium, utm_campaign, referrer),
         )
         conn.commit()
         return cur.lastrowid
@@ -388,6 +397,48 @@ def delete_user_account(db_path: str, user_id: int) -> None:
         conn.close()
 
 
+def log_funnel_event(db_path: str, user_id: int, event_name: str) -> None:
+    """Record a funnel event (signup_completed, location_set, feed_subscribed, google_connected)."""
+    created_at = datetime.now().isoformat()
+    conn = _conn(db_path)
+    try:
+        conn.execute(
+            "INSERT INTO funnel_events (user_id, event_name, created_at) VALUES (?, ?, ?)",
+            (user_id, event_name, created_at),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_funnel_stats(db_path: str) -> dict:
+    """Return funnel counts: signups, location_set, feed_subscribed, google_connected."""
+    conn = _conn(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """SELECT event_name, COUNT(DISTINCT user_id) AS cnt
+               FROM funnel_events
+               GROUP BY event_name"""
+        )
+        counts = {r["event_name"]: r["cnt"] for r in cur.fetchall()}
+        signups = counts.get("signup_completed", 0)
+        location = counts.get("location_set", 0)
+        feed = counts.get("feed_subscribed", 0)
+        google = counts.get("google_connected", 0)
+        return {
+            "signup_completed": signups,
+            "location_set": location,
+            "feed_subscribed": feed,
+            "google_connected": google,
+            "pct_location": round(location / signups * 100) if signups else 0,
+            "pct_feed": round(feed / signups * 100) if signups else 0,
+            "pct_google": round(google / signups * 100) if signups else 0,
+        }
+    finally:
+        conn.close()
+
+
 def _detect_calendar_app(user_agent: str) -> str:
     """Identify the calendar app from a User-Agent string."""
     ua = user_agent.lower()
@@ -406,6 +457,18 @@ def _detect_calendar_app(user_agent: str) -> str:
     if not ua.strip():
         return "Unknown"
     return "Other"
+
+
+def _get_feed_poll_count(db_path: str, token: str) -> int:
+    """Return the current poll_count for a feed token."""
+    conn = _conn(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT COALESCE(poll_count, 0) FROM feed_tokens WHERE token = ?", (token,))
+        row = cur.fetchone()
+        return row[0] if row else 0
+    finally:
+        conn.close()
 
 
 def update_feed_poll(db_path: str, token: str, user_agent: str) -> None:
@@ -605,7 +668,8 @@ def _get_per_user_stats(cur, now) -> list[dict]:
                 (SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END
                  FROM user_preferences up
                  WHERE up.user_id = u.id AND ({_CHANGED_PREFS_SQL})) AS changed_prefs,
-                gt.status AS google_status
+                gt.status AS google_status,
+                u.utm_source
             FROM users u
             LEFT JOIN user_locations ul ON ul.user_id = u.id
             LEFT JOIN feed_tokens ft ON ft.user_id = u.id
@@ -638,6 +702,7 @@ def _get_per_user_stats(cur, now) -> list[dict]:
             "settings_clicks": r["settings_clicks"],
             "changed_prefs": bool(r["changed_prefs"]),
             "google_status": r["google_status"],
+            "utm_source": r["utm_source"],
         })
     return users
 

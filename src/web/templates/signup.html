@@ -27,6 +27,9 @@
   <div class="error">{{ error }}</div>
   {% endif %}
   <form method="post" action="/signup">
+    <input type="hidden" name="utm_source" value="{{ utm_source or '' }}">
+    <input type="hidden" name="utm_medium" value="{{ utm_medium or '' }}">
+    <input type="hidden" name="utm_campaign" value="{{ utm_campaign or '' }}">
     <label for="email">Email</label>
     <input type="email" id="email" name="email" required autocomplete="username" autofocus>
 

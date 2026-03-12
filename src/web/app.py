@@ -43,6 +43,7 @@ from src.web.db import (
     get_admin_stats,
     get_feedback,
     get_feed_token_by_user,
+    get_funnel_stats,
     get_last_forecast_update,
     get_rows_by_token,
     get_user_by_email,
@@ -51,6 +52,7 @@ from src.web.db import (
     get_user_preferences,
     increment_settings_clicks,
     log_feed_poll,
+    log_funnel_event,
     save_feedback,
     update_feed_poll,
     update_user_email,
@@ -161,7 +163,12 @@ async def landing(request: Request):
 
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_get(request: Request):
-    return _template("signup.html", request, {"error": None})
+    return _template("signup.html", request, {
+        "error": None,
+        "utm_source": request.query_params.get("utm_source", ""),
+        "utm_medium": request.query_params.get("utm_medium", ""),
+        "utm_campaign": request.query_params.get("utm_campaign", ""),
+    })
 
 
 @app.post("/signup")
@@ -169,24 +176,37 @@ async def signup_post(
     request: Request,
     email: str = Form(...),
     password: str = Form(...),
+    utm_source: str = Form(default=""),
+    utm_medium: str = Form(default=""),
+    utm_campaign: str = Form(default=""),
 ):
     if len(password) < 12:
         return _template(
             "signup.html", request,
-            {"error": "Password must be at least 12 characters."},
+            {"error": "Password must be at least 12 characters.",
+             "utm_source": utm_source, "utm_medium": utm_medium, "utm_campaign": utm_campaign},
             status_code=422,
         )
 
+    referrer = request.headers.get("referer", "") or ""
     try:
-        user_id = create_user(DB_PATH, email, password)
+        user_id = create_user(
+            DB_PATH, email, password,
+            utm_source=utm_source or None,
+            utm_medium=utm_medium or None,
+            utm_campaign=utm_campaign or None,
+            referrer=referrer or None,
+        )
     except sqlite3.IntegrityError:
         return _template(
             "signup.html", request,
-            {"error": "An account with that email already exists."},
+            {"error": "An account with that email already exists.",
+             "utm_source": utm_source, "utm_medium": utm_medium, "utm_campaign": utm_campaign},
             status_code=422,
         )
 
     create_feed_token(DB_PATH, user_id)
+    log_funnel_event(DB_PATH, user_id, "signup_completed")
 
     session_token = create_session_token(user_id)
     response = RedirectResponse(url="/setup", status_code=303)
@@ -228,6 +248,7 @@ async def setup_post(
             )
 
     set_user_location(DB_PATH, user_id, location, resolved_lat, resolved_lon, resolved_tz)
+    log_funnel_event(DB_PATH, user_id, "location_set")
     existing_prefs = get_user_preferences(DB_PATH, user_id)
     if not existing_prefs and "united states" in country.lower():
         upsert_user_preferences(DB_PATH, user_id, **{**DEFAULT_PREFS, "temp_unit": "F"})
@@ -677,6 +698,7 @@ async def google_auth_callback(
         return RedirectResponse(url="/settings?error=google_auth_failed", status_code=303)
 
     store_google_tokens(DB_PATH, session_user_id, credentials, calendar_id)
+    log_funnel_event(DB_PATH, session_user_id, "google_connected")
     background_tasks.add_task(_google_push_initial, DB_PATH, session_user_id)
     return RedirectResponse(url="/settings?tab=reconnect&success=google_connected", status_code=303)
 
@@ -713,10 +735,13 @@ async def feed(request: Request, token: str):
         return Response(content="Invalid or expired token.", status_code=404)
 
     ua = request.headers.get("user-agent", "")
+    # Log funnel event on first-ever feed poll
+    user_id = rows[0]["id"]
+    from src.web.db import _get_feed_poll_count
+    if _get_feed_poll_count(DB_PATH, token) == 0:
+        log_funnel_event(DB_PATH, user_id, "feed_subscribed")
     update_feed_poll(DB_PATH, token, ua)
     log_feed_poll(DB_PATH, token, ua)
-
-    user_id = rows[0]["id"]
     locations = list({row["location"] for row in rows})
     store = ForecastStore(db_path=DB_PATH)
     forecasts = store.get_forecasts_for_locations(locations, days=14)
@@ -780,7 +805,8 @@ async def admin(request: Request):
         return Response(content="Forbidden", status_code=403)
     stats = get_admin_stats(DB_PATH)
     feedback = get_feedback(DB_PATH)
-    return _template("admin.html", request, {"stats": stats, "feedback": feedback})
+    funnel = get_funnel_stats(DB_PATH)
+    return _template("admin.html", request, {"stats": stats, "feedback": feedback, "funnel": funnel})
 
 
 @app.get("/impressum", response_class=HTMLResponse)
@@ -796,6 +822,22 @@ async def privacy(request: Request):
 @app.get("/terms", response_class=HTMLResponse)
 async def terms(request: Request):
     return _template("terms.html", request)
+
+
+@app.get("/sitemap.xml")
+async def sitemap():
+    xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    for path in ["/", "/signup", "/privacy", "/terms", "/impressum"]:
+        xml += f"  <url><loc>https://weathercal.app{path}</loc></url>\n"
+    xml += "</urlset>\n"
+    return Response(content=xml, media_type="application/xml")
+
+
+@app.get("/robots.txt")
+async def robots():
+    content = "User-agent: *\nAllow: /\nSitemap: https://weathercal.app/sitemap.xml\n"
+    return Response(content=content, media_type="text/plain")
 
 
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")

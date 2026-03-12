@@ -76,6 +76,7 @@
         <tr>
           <th>Email</th>
           <th>Location</th>
+          <th>Source</th>
           <th>Signed up</th>
           <th>Last poll</th>
           <th>Last 24h</th>
@@ -90,6 +91,7 @@
         <tr>
           <td>{{ u.email }}</td>
           <td>{{ u.location or '—' }}</td>
+          <td>{{ u.utm_source or '—' }}</td>
           <td>{{ u.created_at or '—' }}</td>
           <td>{{ u.last_polled_at or '—' }}</td>
           <td>{{ u.polls_last_24h }}{% if u.low_polls %} <span class="dot dot-warn" title="Low poll rate"></span>{% endif %}</td>
@@ -116,6 +118,26 @@
   {% else %}
   <p class="empty">No users yet.</p>
   {% endif %}
+
+  <h2>Funnel</h2>
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="label">Signed up</div>
+      <div class="value">{{ funnel.signup_completed }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Location set</div>
+      <div class="value">{{ funnel.location_set }} <small style="font-size:0.7rem;color:#6b7280">{{ funnel.pct_location }}%</small></div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Feed subscribed</div>
+      <div class="value">{{ funnel.feed_subscribed }} <small style="font-size:0.7rem;color:#6b7280">{{ funnel.pct_feed }}%</small></div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Google connected</div>
+      <div class="value">{{ funnel.google_connected }} <small style="font-size:0.7rem;color:#6b7280">{{ funnel.pct_google }}%</small></div>
+    </div>
+  </div>
 
   <h2>Feedback</h2>
 

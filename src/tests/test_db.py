@@ -12,12 +12,14 @@ from src.web.db import (
     set_user_location,
     get_admin_stats,
     get_feed_token_by_user,
+    get_funnel_stats,
     get_rows_by_token,
     get_user_by_email,
     get_user_locations,
     get_user_preferences,
     increment_settings_clicks,
     log_feed_poll,
+    log_funnel_event,
     update_feed_poll,
     upsert_user_preferences,
 )
@@ -442,3 +444,73 @@ def test_admin_stats_google_connected_count(db_path):
     conn.close()
     stats = get_admin_stats(db_path)
     assert stats["google_connected_count"] == 1
+
+
+# --- UTM tracking ---
+
+
+def test_create_user_stores_utm_params(db_path):
+    user_id = create_user(
+        db_path, "utm@example.com", "password123456",
+        utm_source="twitter", utm_medium="social", utm_campaign="launch",
+        referrer="https://twitter.com/someone",
+    )
+    conn = sqlite3.connect(db_path)
+    row = conn.execute(
+        "SELECT utm_source, utm_medium, utm_campaign, referrer FROM users WHERE id = ?",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+    assert row[0] == "twitter"
+    assert row[1] == "social"
+    assert row[2] == "launch"
+    assert row[3] == "https://twitter.com/someone"
+
+
+def test_create_user_without_utm_params(db_path):
+    user_id = create_user(db_path, "noutm@example.com", "password123456")
+    conn = sqlite3.connect(db_path)
+    row = conn.execute(
+        "SELECT utm_source, utm_medium, utm_campaign, referrer FROM users WHERE id = ?",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+    assert row[0] is None
+    assert row[1] is None
+    assert row[2] is None
+    assert row[3] is None
+
+
+def test_admin_stats_includes_utm_source(db_path):
+    user_id = create_user(db_path, "utmadmin@example.com", "password123456", utm_source="reddit")
+    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    create_feed_token(db_path, user_id)
+    stats = get_admin_stats(db_path)
+    user = next(u for u in stats["users"] if u["email"] == "utmadmin@example.com")
+    assert user["utm_source"] == "reddit"
+
+
+# --- Funnel events ---
+
+
+def test_log_funnel_event_and_get_stats(db_path):
+    uid1 = create_user(db_path, "funnel1@example.com", "password123456")
+    uid2 = create_user(db_path, "funnel2@example.com", "password123456")
+    log_funnel_event(db_path, uid1, "signup_completed")
+    log_funnel_event(db_path, uid2, "signup_completed")
+    log_funnel_event(db_path, uid1, "location_set")
+    log_funnel_event(db_path, uid1, "feed_subscribed")
+    stats = get_funnel_stats(db_path)
+    assert stats["signup_completed"] == 2
+    assert stats["location_set"] == 1
+    assert stats["feed_subscribed"] == 1
+    assert stats["google_connected"] == 0
+    assert stats["pct_location"] == 50
+    assert stats["pct_feed"] == 50
+    assert stats["pct_google"] == 0
+
+
+def test_get_funnel_stats_empty(db_path):
+    stats = get_funnel_stats(db_path)
+    assert stats["signup_completed"] == 0
+    assert stats["pct_location"] == 0

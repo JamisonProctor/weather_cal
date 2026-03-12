@@ -615,6 +615,8 @@
     for (var si = 0; si < driftDefs.length; si++) {
       driftDefs[si].speed = 0.20 + seededRandom() * 0.35;
     }
+    // 3rd cloud (index 2) should move faster
+    if (driftDefs.length > 2) driftDefs[2].speed = 0.50;
     var driftClouds = [];
     var driftFrag = document.createDocumentFragment();
     for (var i = 0; i < driftDefs.length; i++) {

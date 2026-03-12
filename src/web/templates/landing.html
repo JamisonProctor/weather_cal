@@ -11,7 +11,7 @@
 
     :root {
       --lp-bg: #FFFBF6;
-      --lp-bg-alt: #FFF3E0;
+      --lp-bg-alt: #FFFBF6;
       --lp-text: #3E2723;
       --lp-text-muted: #795548;
       --lp-accent: #E65100;
@@ -475,7 +475,7 @@
   </div>
 
   <!-- FAQ -->
-  <section class="lp-section" style="background:var(--lp-bg-alt)">
+  <section class="lp-section">
     <h2>Questions?</h2>
     <div class="lp-faq">
 
@@ -586,6 +586,24 @@
     }
     emojiLayer.appendChild(frag);
 
+    // Generate drifting background clouds (below hero)
+    var driftClouds = [];
+    var driftCount = isMobile ? 10 : 18;
+    var driftFrag = document.createDocumentFragment();
+    for (var i = 0; i < driftCount; i++) {
+      var dc = document.createElement('span');
+      dc.className = 'emoji-particle zone-drift';
+      var dcTop = 60 + Math.random() * 160;       // 60%-220% of viewport
+      var dcLeft = -20 + Math.random() * 100;      // -20% to 80%
+      var dcSize = 2 + Math.random() * 2;           // 2-4rem
+      var dcSpeed = 0.15 + Math.random() * 0.25;    // parallax variation
+      dc.style.cssText = 'top:' + dcTop.toFixed(1) + '%;left:' + dcLeft.toFixed(1) + '%;font-size:' + dcSize.toFixed(1) + 'rem;opacity:0';
+      dc.textContent = '\u2601\uFE0F';
+      driftClouds.push({ el: dc, speed: dcSpeed });
+      driftFrag.appendChild(dc);
+    }
+    emojiLayer.appendChild(driftFrag);
+
     var heroEmojis = document.querySelectorAll('.zone-hero');
 
     function onScroll() {
@@ -624,9 +642,10 @@
           heroContent.style.left = '50%';
           heroContent.style.transform = 'translate(-50%, -50%)';
         } else {
-          // Scroll up at 1:1 with page, fade out quickly
-          var scrollOffset = scrollY - pinEnd;
-          var fadeOut = Math.max(0, 1 - scrollOffset / fadeOutDist);
+          // Scroll up at 0.5x page speed, fade out by the time it reaches 25% from top
+          var scrollOffset = (scrollY - pinEnd) * 0.5;
+          var visualTop = vh * 0.5 - scrollOffset;
+          var fadeOut = Math.min(1, Math.max(0, (visualTop - vh * 0.25) / (vh * 0.25)));
           heroContent.style.opacity = fadeOut;
           heroContent.style.position = 'fixed';
           heroContent.style.left = '50%';
@@ -639,6 +658,23 @@
           nav.classList.add('lp-nav-scrolled');
         } else {
           nav.classList.remove('lp-nav-scrolled');
+        }
+
+        // Drifting background clouds — scroll-driven horizontal movement
+        var driftStart = heroHeight * 0.3;
+        var driftFadeRange = vh * 0.4;
+        for (var di = 0; di < driftClouds.length; di++) {
+          var dc = driftClouds[di];
+          if (scrollY > driftStart) {
+            var driftProgress = scrollY - driftStart;
+            var driftOpacity = Math.min(0.4, driftProgress / driftFadeRange * 0.4);
+            var driftX = driftProgress * dc.speed * 0.3;
+            dc.el.style.opacity = driftOpacity;
+            dc.el.style.transform = 'translate3d(' + driftX.toFixed(1) + 'px,0,0)';
+          } else {
+            dc.el.style.opacity = 0;
+            dc.el.style.transform = 'translate3d(0,0,0)';
+          }
         }
 
         ticking = false;

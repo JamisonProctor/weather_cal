@@ -118,14 +118,14 @@ def build_forecasts() -> list[Forecast]:
         high=11, low=6,
     )
 
-    # Friday: clearing up, nicer
+    # Friday: clearing up, nicer — short wind burst late afternoon
     fri = _make_forecast(
         date(2026, 3, 20),
         temps= [7, 8, 10, 12, 13, 14, 15, 16, 16, 15, 14, 12, 10],
         codes= [3, 2, 2, 2, 2, 0, 0, 0, 0, 0, 2, 2, 3],
         rain_pcts=  [0]*13,
         precip_mms= [0]*13,
-        winds= [8, 8, 10, 10, 8, 6, 6, 5, 5, 6, 8, 8, 6],
+        winds= [8, 8, 10, 10, 8, 6, 6, 5, 5, 32, 35, 12, 6],
         high=16, low=7,
     )
 
@@ -208,39 +208,39 @@ def generate_life_ics() -> bytes:
 
     life_events = [
         # Monday — PACKED (screenshot 1: busy person's real day)
-        {"summary": "Team standup", "start": _dt(mon, 9, 0), "end": _dt(mon, 9, 30)},
-        {"summary": "Design review", "start": _dt(mon, 10, 0), "end": _dt(mon, 11, 0)},
-        {"summary": "Lunch", "start": _dt(mon, 12, 0), "end": _dt(mon, 12, 45)},
-        {"summary": "1:1 with Maria", "start": _dt(mon, 13, 0), "end": _dt(mon, 13, 30)},
-        {"summary": "Product sync", "start": _dt(mon, 14, 0), "end": _dt(mon, 15, 0)},
-        {"summary": "Focus time", "start": _dt(mon, 15, 30), "end": _dt(mon, 17, 0)},
-        {"summary": "Gym", "start": _dt(mon, 18, 0), "end": _dt(mon, 19, 0)},
+        {"summary": "Morning meeting", "start": _dt(mon, 9, 0), "end": _dt(mon, 10, 0)},
+        {"summary": "Call with Anna", "start": _dt(mon, 10, 30), "end": _dt(mon, 11, 0)},
+        {"summary": "Lunch with Emma", "start": _dt(mon, 12, 0), "end": _dt(mon, 13, 0)},
+        {"summary": "Pick up dry cleaning", "start": _dt(mon, 14, 0), "end": _dt(mon, 14, 30)},
+        {"summary": "Dentist", "start": _dt(mon, 15, 0), "end": _dt(mon, 16, 0)},
+        {"summary": "Yoga", "start": _dt(mon, 17, 30), "end": _dt(mon, 18, 30)},
+        {"summary": "Grocery run", "start": _dt(mon, 19, 0), "end": _dt(mon, 19, 45)},
 
         # Tuesday
-        {"summary": "Team standup", "start": _dt(tue, 9, 0), "end": _dt(tue, 9, 30)},
-        {"summary": "Sprint planning", "start": _dt(tue, 10, 0), "end": _dt(tue, 11, 30)},
-        {"summary": "Dentist", "start": _dt(tue, 15, 0), "end": _dt(tue, 16, 0)},
+        {"summary": "Morning meeting", "start": _dt(tue, 9, 0), "end": _dt(tue, 10, 0)},
+        {"summary": "Car to mechanic", "start": _dt(tue, 11, 0), "end": _dt(tue, 12, 0)},
+        {"summary": "Pilates", "start": _dt(tue, 17, 30), "end": _dt(tue, 18, 30)},
 
         # Wednesday
-        {"summary": "Team standup", "start": _dt(wed, 9, 0), "end": _dt(wed, 9, 30)},
-        {"summary": "Backlog grooming", "start": _dt(wed, 11, 0), "end": _dt(wed, 12, 0)},
+        {"summary": "Morning meeting", "start": _dt(wed, 9, 0), "end": _dt(wed, 10, 0)},
+        {"summary": "Lunch", "start": _dt(wed, 12, 0), "end": _dt(wed, 13, 0)},
         {"summary": "Coffee with Alex", "start": _dt(wed, 15, 30), "end": _dt(wed, 16, 30)},
 
         # Thursday — packed, Lunch with Sara overlaps rain warning
-        {"summary": "Hiring sync", "start": _dt(thu, 9, 0), "end": _dt(thu, 10, 0)},
-        {"summary": "Code review", "start": _dt(thu, 10, 30), "end": _dt(thu, 11, 30)},
+        {"summary": "Call with bank", "start": _dt(thu, 9, 0), "end": _dt(thu, 9, 30)},
+        {"summary": "Post office", "start": _dt(thu, 10, 0), "end": _dt(thu, 10, 30)},
         {"summary": "Lunch with Sara", "start": _dt(thu, 12, 0), "end": _dt(thu, 13, 0)},
-        {"summary": "Retro", "start": _dt(thu, 14, 0), "end": _dt(thu, 15, 0)},
-        {"summary": "Focus time", "start": _dt(thu, 15, 30), "end": _dt(thu, 17, 0)},
+        {"summary": "Pick up kids", "start": _dt(thu, 15, 0), "end": _dt(thu, 15, 30)},
+        {"summary": "Piano lesson (Mia)", "start": _dt(thu, 16, 0), "end": _dt(thu, 17, 0)},
         {"summary": "Gym", "start": _dt(thu, 18, 0), "end": _dt(thu, 19, 0)},
 
         # Friday — packed
-        {"summary": "All hands", "start": _dt(fri, 9, 0), "end": _dt(fri, 10, 0)},
-        {"summary": "1:1 with Jake", "start": _dt(fri, 10, 30), "end": _dt(fri, 11, 0)},
-        {"summary": "Demo", "start": _dt(fri, 11, 0), "end": _dt(fri, 12, 0)},
+        {"summary": "Morning meeting", "start": _dt(fri, 9, 0), "end": _dt(fri, 10, 0)},
+        {"summary": "Optician", "start": _dt(fri, 11, 0), "end": _dt(fri, 11, 45)},
         {"summary": "Lunch", "start": _dt(fri, 12, 30), "end": _dt(fri, 13, 15)},
-        {"summary": "Focus time", "start": _dt(fri, 14, 0), "end": _dt(fri, 16, 0)},
-        {"summary": "Dinner with Tom", "start": _dt(fri, 19, 0), "end": _dt(fri, 20, 30)},
+        {"summary": "Pick up kids", "start": _dt(fri, 15, 0), "end": _dt(fri, 15, 30)},
+        {"summary": "Swim class (Mia)", "start": _dt(fri, 16, 0), "end": _dt(fri, 17, 0)},
+        {"summary": "Dinner with Tom & Lisa", "start": _dt(fri, 19, 0), "end": _dt(fri, 21, 0)},
 
         # Saturday
         {"summary": "Farmers market", "start": _dt(sat, 9, 30), "end": _dt(sat, 11, 0)},

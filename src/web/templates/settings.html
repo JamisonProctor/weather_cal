@@ -37,7 +37,7 @@
   .pref-note { color: var(--text-muted); font-size: 0.85rem; }
 
   /* Preference cards */
-  .pref-card { background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
+  .pref-card { background: rgba(255,245,214,0.6); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
   .pref-card-title { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 0 0 4px; }
   .pref-card-desc { font-size: 0.85rem; color: var(--text-muted); margin: 0 0 16px; }
 
@@ -58,21 +58,21 @@
   .threshold-row input[type="number"] { width: 72px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; text-align: center; }
 
   .feed-input-row { display: flex; gap: 8px; }
-  .feed-url { flex: 1; padding: 10px 12px; font-family: monospace; font-size: 0.82rem; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 6px; color: var(--text); cursor: text; }
-  .copy-btn { padding: 10px 16px; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
-  .copy-btn:hover { background: var(--border); }
+  .feed-url { flex: 1; padding: 10px 12px; font-family: monospace; font-size: 0.82rem; background: rgba(255,245,214,0.6); border: 1px solid var(--border); border-radius: 6px; color: var(--text); cursor: text; }
+  .copy-btn { padding: 10px 16px; background: transparent; border: 1px solid var(--accent); border-radius: 6px; cursor: pointer; font-size: 0.9rem; white-space: nowrap; color: var(--accent); font-weight: 600; }
+  .copy-btn:hover { background: rgba(230,81,0,0.1); }
   .copy-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 6px; }
 
   .connect-btn-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
   .connect-btn-wrapper { display: flex; flex-direction: column; gap: 4px; }
   .connect-btn-note { font-size: 0.8rem; color: var(--text-muted); padding-left: 4px; }
   .btn-connect { display: inline-flex; align-items: center; gap: 8px; padding: 13px 20px; border-radius: 8px; font-size: 1rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; }
-  .btn-cal-red { background: #ea4335; color: #fff; }
-  .btn-cal-red:hover { background: #c5392c; }
-  .btn-cal-neutral { background: #374151; color: #fff; }
-  .btn-cal-neutral:hover { background: #1f2937; }
+  .btn-cal-red { background: var(--accent); color: #fff; }
+  .btn-cal-red:hover { background: var(--accent-hover); }
+  .btn-cal-neutral { background: var(--accent); color: #fff; }
+  .btn-cal-neutral:hover { background: var(--accent-hover); }
   .connect-section-label { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 0 0 10px; }
-  .connect-section-label .badge { font-size: 0.75rem; font-weight: 500; color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 2px 8px; margin-left: 8px; vertical-align: middle; }
+  .connect-section-label .badge { font-size: 0.75rem; font-weight: 500; color: var(--accent); background: rgba(230,81,0,0.1); border: 1px solid rgba(230,81,0,0.25); border-radius: 10px; padding: 2px 8px; margin-left: 8px; vertical-align: middle; }
   .connect-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
   .connect-help-text { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
 
@@ -91,7 +91,9 @@
       position: sticky;
       top: 0;
       z-index: 10;
-      background: var(--bg);
+      background: rgba(255,248,225,0.85);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
     }
     .sidebar-link { display: inline-block; white-space: nowrap; margin-bottom: 0; }
     .sidebar-footer { display: none; }
@@ -132,7 +134,7 @@
         {% if success == 'prefs' %}
         <div class="alert alert-success">
           Preferences saved. Changes will appear in your calendar at the next sync — usually within a few hours.
-          <span style="display:block;margin-top:6px;font-size:0.82rem;color:#15803d">
+          <span style="display:block;margin-top:6px;font-size:0.82rem;color:var(--accent-hover)">
             Apple Calendar / Outlook: right-click WeatherCal &rarr; Get Info &rarr; set Auto-refresh to Every Hour for faster updates.
           </span>
         </div>

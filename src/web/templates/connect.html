@@ -10,19 +10,19 @@
   .subtitle { color: var(--text-muted); margin-bottom: 2rem; }
   .connect-section { margin-bottom: 28px; }
   .section-label { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 0 0 10px; }
-  .section-label .badge { font-size: 0.75rem; font-weight: 500; color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 2px 8px; margin-left: 8px; vertical-align: middle; }
+  .section-label .badge { font-size: 0.75rem; font-weight: 500; color: var(--accent); background: rgba(230,81,0,0.1); border: 1px solid rgba(230,81,0,0.25); border-radius: 10px; padding: 2px 8px; margin-left: 8px; vertical-align: middle; }
   .btn-wrapper { display: flex; flex-direction: column; gap: 4px; }
   .btn-note { font-size: 0.8rem; color: var(--text-muted); padding-left: 4px; }
   .btn { width: 100%; }
-  .btn-red { background: #ea4335; color: #fff; }
-  .btn-red:hover { background: #c5392c; }
-  .btn-neutral { background: #374151; color: #fff; }
-  .btn-neutral:hover { background: #1f2937; }
+  .btn-red { background: var(--accent); color: #fff; }
+  .btn-red:hover { background: var(--accent-hover); }
+  .btn-neutral { background: var(--accent); color: #fff; }
+  .btn-neutral:hover { background: var(--accent-hover); }
   .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
   .feed-input-row { display: flex; gap: 8px; }
   .feed-url { flex: 1; padding: 10px 12px; font-family: monospace; font-size: 0.82rem; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 6px; color: var(--text); cursor: text; }
-  .copy-btn { padding: 10px 16px; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
-  .copy-btn:hover { background: var(--border); }
+  .copy-btn { padding: 10px 16px; background: transparent; border: 1px solid var(--accent); border-radius: 6px; cursor: pointer; font-size: 0.9rem; white-space: nowrap; color: var(--accent); font-weight: 600; }
+  .copy-btn:hover { background: rgba(230,81,0,0.1); }
   .copy-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 6px; }
   .help-text { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; margin-top: 24px; }
   .cta-section { margin-top: 28px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }

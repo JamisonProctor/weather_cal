@@ -11,13 +11,20 @@ from src.web.db import (
     create_user,
     set_user_location,
     get_admin_stats,
+    get_admin_users_for_export,
     get_feed_token_by_user,
+    get_funnel_by_source,
+    get_funnel_stats,
+    get_funnel_timeseries,
+    get_page_view_stats,
     get_rows_by_token,
     get_user_by_email,
     get_user_locations,
     get_user_preferences,
+    increment_page_view,
     increment_settings_clicks,
     log_feed_poll,
+    log_funnel_event,
     update_feed_poll,
     upsert_user_preferences,
 )
@@ -442,3 +449,166 @@ def test_admin_stats_google_connected_count(db_path):
     conn.close()
     stats = get_admin_stats(db_path)
     assert stats["google_connected_count"] == 1
+
+
+# --- UTM tracking ---
+
+
+def test_create_user_stores_utm_params(db_path):
+    user_id = create_user(
+        db_path, "utm@example.com", "password123456",
+        utm_source="twitter", utm_medium="social", utm_campaign="launch",
+        referrer="https://twitter.com/someone",
+    )
+    conn = sqlite3.connect(db_path)
+    row = conn.execute(
+        "SELECT utm_source, utm_medium, utm_campaign, referrer FROM users WHERE id = ?",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+    assert row[0] == "twitter"
+    assert row[1] == "social"
+    assert row[2] == "launch"
+    assert row[3] == "https://twitter.com/someone"
+
+
+def test_create_user_without_utm_params(db_path):
+    user_id = create_user(db_path, "noutm@example.com", "password123456")
+    conn = sqlite3.connect(db_path)
+    row = conn.execute(
+        "SELECT utm_source, utm_medium, utm_campaign, referrer FROM users WHERE id = ?",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+    assert row[0] is None
+    assert row[1] is None
+    assert row[2] is None
+    assert row[3] is None
+
+
+def test_admin_stats_includes_utm_source(db_path):
+    user_id = create_user(db_path, "utmadmin@example.com", "password123456", utm_source="reddit")
+    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    create_feed_token(db_path, user_id)
+    stats = get_admin_stats(db_path)
+    user = next(u for u in stats["users"] if u["email"] == "utmadmin@example.com")
+    assert user["utm_source"] == "reddit"
+
+
+# --- Funnel events ---
+
+
+def test_log_funnel_event_and_get_stats(db_path):
+    uid1 = create_user(db_path, "funnel1@example.com", "password123456")
+    uid2 = create_user(db_path, "funnel2@example.com", "password123456")
+    log_funnel_event(db_path, uid1, "signup_completed")
+    log_funnel_event(db_path, uid2, "signup_completed")
+    log_funnel_event(db_path, uid1, "location_set")
+    log_funnel_event(db_path, uid1, "feed_subscribed")
+    stats = get_funnel_stats(db_path)
+    assert stats["signup_completed"] == 2
+    assert stats["location_set"] == 1
+    assert stats["feed_subscribed"] == 1
+    assert stats["google_connected"] == 0
+    assert stats["pct_location"] == 50
+    assert stats["pct_feed"] == 50
+    assert stats["pct_google"] == 0
+
+
+def test_get_funnel_stats_empty(db_path):
+    stats = get_funnel_stats(db_path)
+    assert stats["signup_completed"] == 0
+    assert stats["pct_location"] == 0
+
+
+# --- Funnel timeseries ---
+
+
+def test_get_funnel_timeseries_empty_db(db_path):
+    rows = get_funnel_timeseries(db_path, days=7)
+    assert len(rows) == 7
+    assert all(r["signups"] == 0 for r in rows)
+    assert all(r["location_set"] == 0 for r in rows)
+
+
+def test_get_funnel_timeseries_events_land_on_correct_day(db_path):
+    uid = create_user(db_path, "ts@example.com", "password123456")
+    log_funnel_event(db_path, uid, "signup_completed")
+    rows = get_funnel_timeseries(db_path, days=7)
+    today = datetime.now().date().isoformat()
+    today_row = next(r for r in rows if r["date"] == today)
+    assert today_row["signups"] == 1
+
+
+def test_get_funnel_timeseries_days_param_limits_range(db_path):
+    rows_7 = get_funnel_timeseries(db_path, days=7)
+    rows_30 = get_funnel_timeseries(db_path, days=30)
+    assert len(rows_7) == 7
+    assert len(rows_30) == 30
+
+
+# --- Funnel by source ---
+
+
+def test_get_funnel_by_source_empty(db_path):
+    result = get_funnel_by_source(db_path)
+    assert result == []
+
+
+def test_get_funnel_by_source_groups_by_utm_source(db_path):
+    uid1 = create_user(db_path, "src1@example.com", "password123456", utm_source="twitter")
+    uid2 = create_user(db_path, "src2@example.com", "password123456")
+    log_funnel_event(db_path, uid1, "signup_completed")
+    log_funnel_event(db_path, uid2, "signup_completed")
+    log_funnel_event(db_path, uid1, "location_set")
+    result = get_funnel_by_source(db_path)
+    sources = {r["source"]: r for r in result}
+    assert "twitter" in sources
+    assert "direct" in sources
+    assert sources["twitter"]["signups"] == 1
+    assert sources["twitter"]["location_set"] == 1
+    assert sources["direct"]["signups"] == 1
+
+
+# --- Page views ---
+
+
+def test_increment_page_view_creates_row(db_path):
+    increment_page_view(db_path, "/")
+    stats = get_page_view_stats(db_path)
+    assert stats["today"].get("/") == 1
+    assert stats["total"].get("/") == 1
+
+
+def test_increment_page_view_increments_existing(db_path):
+    increment_page_view(db_path, "/")
+    increment_page_view(db_path, "/")
+    increment_page_view(db_path, "/signup")
+    stats = get_page_view_stats(db_path)
+    assert stats["today"]["/"] == 2
+    assert stats["today"]["/signup"] == 1
+    assert stats["total"]["/"] == 2
+
+
+def test_get_page_view_stats_empty(db_path):
+    stats = get_page_view_stats(db_path)
+    assert stats["total"] == {}
+    assert stats["today"] == {}
+
+
+# --- Admin users export ---
+
+
+def test_get_admin_users_for_export_returns_expected_keys(db_path):
+    uid = create_user(db_path, "exp@example.com", "password123456")
+    set_user_location(db_path, uid, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    create_feed_token(db_path, uid)
+    users = get_admin_users_for_export(db_path)
+    assert len(users) == 1
+    u = users[0]
+    assert "email" in u
+    assert "location" in u
+    assert "utm_source" in u
+    assert "calendar_app" in u
+    assert "settings_clicks" in u
+    assert u["email"] == "exp@example.com"

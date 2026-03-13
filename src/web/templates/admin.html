@@ -15,25 +15,37 @@
   h1 { font-size: 1.5rem; margin: 0 0 24px; }
 
   .stats-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 32px; }
-  .stat-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px 22px; min-width: 140px; }
-  .stat-card .label { font-size: 0.78rem; color: #6b7280; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .stat-card .value { font-size: 1.8rem; font-weight: 700; color: #111; }
+  .stat-card { background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 10px; padding: 16px 22px; min-width: 140px; }
+  .stat-card .label { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-card .value { font-size: 1.8rem; font-weight: 700; color: var(--text); }
+  .stat-card .sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
 
-  h2 { font-size: 1.05rem; color: #374151; margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6; }
+  h2 { font-size: 1.05rem; color: var(--text); margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
 
   .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-  th { text-align: left; padding: 9px 12px; background: #f9fafb; border-bottom: 2px solid #e5e7eb; font-size: 0.8rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
-  td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+  th { text-align: left; padding: 9px 12px; background: var(--bg-subtle); border-bottom: 2px solid var(--border); font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
-  tr:hover td { background: #fafafa; }
+  tr:hover td { background: var(--bg-subtle); }
 
   .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
-  .dot-yes { background: #2563eb; }
-  .dot-no { background: #d1d5db; }
+  .dot-yes { background: var(--accent); }
+  .dot-no { background: var(--border); }
   .dot-warn { background: #ef4444; }
 
-  .empty { color: #9ca3af; font-style: italic; }
+  .empty { color: var(--text-muted); font-style: italic; }
+
+  .day-selector { margin-bottom: 12px; font-size: 0.85rem; }
+  .day-selector a { color: var(--accent); text-decoration: none; margin-right: 12px; }
+  .day-selector a.active { font-weight: 700; text-decoration: underline; }
+
+  .row-zero td { color: var(--border); }
+
+  .section-header { display: flex; align-items: center; gap: 12px; }
+  .section-header h2 { flex: 1; }
+  .export-link { font-size: 0.85rem; color: var(--accent); text-decoration: none; white-space: nowrap; }
+  .export-link:hover { text-decoration: underline; }
 </style>
 {% endblock %}
 
@@ -65,9 +77,22 @@
       <div class="label">Feedback</div>
       <div class="value">{{ feedback|length }}</div>
     </div>
+    <div class="stat-card">
+      <div class="label">Landing views</div>
+      <div class="value">{{ page_views.today.get('/', 0) }}</div>
+      <div class="sub">{{ page_views.total.get('/', 0) }} all-time</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Signup views</div>
+      <div class="value">{{ page_views.today.get('/signup', 0) }}</div>
+      <div class="sub">{{ page_views.total.get('/signup', 0) }} all-time</div>
+    </div>
   </div>
 
-  <h2>Users</h2>
+  <div class="section-header">
+    <h2>Users</h2>
+    <a href="/admin/export.csv" class="export-link">Export CSV</a>
+  </div>
 
   {% if stats.users %}
   <div class="table-wrap">
@@ -76,6 +101,7 @@
         <tr>
           <th>Email</th>
           <th>Location</th>
+          <th>Source</th>
           <th>Signed up</th>
           <th>Last poll</th>
           <th>Last 24h</th>
@@ -90,6 +116,7 @@
         <tr>
           <td>{{ u.email }}</td>
           <td>{{ u.location or '—' }}</td>
+          <td>{{ u.utm_source or '—' }}</td>
           <td>{{ u.created_at or '—' }}</td>
           <td>{{ u.last_polled_at or '—' }}</td>
           <td>{{ u.polls_last_24h }}{% if u.low_polls %} <span class="dot dot-warn" title="Low poll rate"></span>{% endif %}</td>
@@ -100,7 +127,7 @@
             {% elif u.google_status == 'revoked' %}
               <span class="dot dot-warn" title="Revoked"></span> Revoked
             {% else %}
-              <span style="color:#9ca3af">—</span>
+              <span style="color:var(--text-muted)">—</span>
             {% endif %}
           </td>
           <td>
@@ -115,6 +142,87 @@
   </div>
   {% else %}
   <p class="empty">No users yet.</p>
+  {% endif %}
+
+  <h2>Funnel</h2>
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="label">Signed up</div>
+      <div class="value">{{ funnel.signup_completed }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Location set</div>
+      <div class="value">{{ funnel.location_set }} <small style="font-size:0.7rem;color:var(--text-muted)">{{ funnel.pct_location }}%</small></div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Feed subscribed</div>
+      <div class="value">{{ funnel.feed_subscribed }} <small style="font-size:0.7rem;color:var(--text-muted)">{{ funnel.pct_feed }}%</small></div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Google connected</div>
+      <div class="value">{{ funnel.google_connected }} <small style="font-size:0.7rem;color:var(--text-muted)">{{ funnel.pct_google }}%</small></div>
+    </div>
+  </div>
+
+  <h2>Funnel over time</h2>
+  <div class="day-selector">
+    <a href="?days=7" {% if days == 7 %}class="active"{% endif %}>7 days</a>
+    <a href="?days=30" {% if days == 30 %}class="active"{% endif %}>30 days</a>
+    <a href="?days=90" {% if days == 90 %}class="active"{% endif %}>90 days</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Signups</th>
+          <th>Location Set</th>
+          <th>Feed Subscribed</th>
+          <th>Google Connected</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in timeseries %}
+        <tr {% if row.signups == 0 and row.location_set == 0 and row.feed_subscribed == 0 and row.google_connected == 0 %}class="row-zero"{% endif %}>
+          <td style="white-space:nowrap">{{ row.date }}</td>
+          <td>{{ row.signups }}</td>
+          <td>{{ row.location_set }}</td>
+          <td>{{ row.feed_subscribed }}</td>
+          <td>{{ row.google_connected }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Funnel by source</h2>
+  {% if funnel_by_source %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>Signups</th>
+          <th>Location Set</th>
+          <th>Feed Subscribed</th>
+          <th>Google Connected</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in funnel_by_source %}
+        <tr>
+          <td>{{ row.source }}</td>
+          <td>{{ row.signups }}</td>
+          <td>{{ row.location_set }}</td>
+          <td>{{ row.feed_subscribed }}</td>
+          <td>{{ row.google_connected }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty">No funnel data by source yet.</p>
   {% endif %}
 
   <h2>Feedback</h2>

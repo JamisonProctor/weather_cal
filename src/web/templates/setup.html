@@ -7,20 +7,20 @@
 {% block extra_style %}
 <style>
   h1 { margin-bottom: 0.4rem; }
-  .subtitle { color: #333; margin-bottom: 1.5rem; }
+  .subtitle { color: var(--text-muted); margin-bottom: 1.5rem; }
   label { display: block; margin: 16px 0 4px; font-weight: 500; font-size: 0.95rem; }
   .input-wrap { position: relative; }
-  input[type="text"] { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; }
-  input[type="text"]:focus { outline: 2px solid #2563eb; border-color: transparent; }
-  .dropdown { position: absolute; top: 100%; left: 0; right: 0; margin: 0; padding: 0; background: #fff; border: 1px solid #d1d5db; border-top: none; border-radius: 0 0 6px 6px; z-index: 10; max-height: 240px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-  .dropdown li { list-style: none; padding: 10px 12px; cursor: pointer; font-size: 0.95rem; border-bottom: 1px solid #f3f4f6; }
+  input[type="text"] { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; font-size: 1rem; }
+  input[type="text"]:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  .dropdown { position: absolute; top: 100%; left: 0; right: 0; margin: 0; padding: 0; background: var(--bg); border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; z-index: 10; max-height: 240px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .dropdown li { list-style: none; padding: 10px 12px; cursor: pointer; font-size: 0.95rem; border-bottom: 1px solid var(--border); }
   .dropdown li:last-child { border-bottom: none; }
-  .dropdown li:hover, .dropdown li.active { background: #eff6ff; }
+  .dropdown li:hover, .dropdown li.active { background: var(--bg-subtle); }
   .dropdown li .city { font-weight: 500; }
-  .dropdown li .region { color: #6b7280; font-size: 0.85rem; margin-left: 6px; }
-  .hint { font-size: 0.82rem; color: #6b7280; margin-top: 4px; }
-  button { margin-top: 24px; width: 100%; padding: 12px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
-  button:hover { background: #1d4ed8; }
+  .dropdown li .region { color: var(--text-muted); font-size: 0.85rem; margin-left: 6px; }
+  .hint { font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; }
+  button { margin-top: 24px; width: 100%; padding: 14px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+  button:hover { background: var(--accent-hover); }
 </style>
 {% endblock %}
 

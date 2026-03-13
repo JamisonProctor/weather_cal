@@ -938,3 +938,337 @@ def test_settings_post_no_gcal_push_when_not_connected(client, db_path, auth_coo
 
     assert resp.status_code == 303
     mock_push.assert_not_called()
+
+
+# --- Landing page ---
+
+def test_landing_returns_200_with_brand(client):
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "WeatherCal" in resp.text
+    assert "\U0001f324" in resp.text  # 🌤️
+
+
+def test_landing_contains_sections(client):
+    resp = client.get("/")
+    assert "How it works" in resp.text
+    assert "Questions?" in resp.text
+
+
+def test_landing_unauthenticated_cta_links_signup(client):
+    resp = client.get("/")
+    assert "/signup" in resp.text
+    assert "Get started" in resp.text
+
+
+def test_landing_authenticated_cta_links_settings(client, auth_cookies):
+    _, cookies = auth_cookies(email="landing@example.com")
+    resp = client.get("/", cookies=cookies)
+    assert "/settings" in resp.text
+    assert "Go to settings" in resp.text
+
+
+def test_static_files_served(client):
+    resp = client.get("/static/screenshots/.gitkeep")
+    assert resp.status_code == 200
+
+
+# --- UTM tracking ---
+
+
+def test_signup_with_utm_params_stores_them(client, db_path):
+    resp = client.post(
+        "/signup",
+        data={
+            "email": "utm@example.com",
+            "password": "supersecretpass1",
+            "utm_source": "twitter",
+            "utm_medium": "social",
+            "utm_campaign": "launch",
+        },
+    )
+    assert resp.status_code == 303
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("SELECT utm_source, utm_medium, utm_campaign FROM users WHERE email = ?", ("utm@example.com",)).fetchone()
+    conn.close()
+    assert row["utm_source"] == "twitter"
+    assert row["utm_medium"] == "social"
+    assert row["utm_campaign"] == "launch"
+
+
+def test_signup_without_utm_params_still_works(client, db_path):
+    resp = client.post(
+        "/signup",
+        data={"email": "noutm@example.com", "password": "supersecretpass1"},
+    )
+    assert resp.status_code == 303
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute("SELECT utm_source FROM users WHERE email = ?", ("noutm@example.com",)).fetchone()
+    conn.close()
+    assert row["utm_source"] is None
+
+
+def test_signup_get_passes_utm_to_template(client):
+    resp = client.get("/signup?utm_source=hn&utm_medium=link&utm_campaign=launch")
+    assert resp.status_code == 200
+    assert 'value="hn"' in resp.text
+    assert 'value="link"' in resp.text
+    assert 'value="launch"' in resp.text
+
+
+# --- Funnel events ---
+
+
+def test_signup_logs_funnel_event(client, db_path):
+    client.post("/signup", data={"email": "funnel@example.com", "password": "supersecretpass1"})
+    conn = sqlite3.connect(db_path)
+    row = conn.execute(
+        "SELECT event_name FROM funnel_events WHERE user_id = (SELECT id FROM users WHERE email = ?)",
+        ("funnel@example.com",),
+    ).fetchone()
+    conn.close()
+    assert row[0] == "signup_completed"
+
+
+def test_setup_logs_location_set_funnel_event(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies(email="funnelsetup@example.com")
+    create_feed_token(db_path, user_id)
+    client.post(
+        "/setup",
+        data={"location": "Munich, Germany", "lat": "48.137", "lon": "11.576", "timezone": "Europe/Berlin"},
+        cookies=cookies,
+    )
+    conn = sqlite3.connect(db_path)
+    row = conn.execute(
+        "SELECT event_name FROM funnel_events WHERE user_id = ? AND event_name = 'location_set'",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+    assert row is not None
+
+
+def test_feed_poll_logs_feed_subscribed_once(client, db_path, auth_cookies, make_forecast):
+    user_id, cookies = auth_cookies(email="feedfunnel@example.com")
+    token = create_feed_token(db_path, user_id)
+    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    store = ForecastStore(db_path=db_path)
+    store.upsert_forecast(make_forecast())
+    # First poll → should log feed_subscribed
+    client.get(f"/feed/{token}/weather.ics")
+    # Second poll → should NOT log again
+    client.get(f"/feed/{token}/weather.ics")
+    conn = sqlite3.connect(db_path)
+    rows = conn.execute(
+        "SELECT * FROM funnel_events WHERE user_id = ? AND event_name = 'feed_subscribed'",
+        (user_id,),
+    ).fetchall()
+    conn.close()
+    assert len(rows) == 1
+
+
+# --- Sitemap and robots.txt ---
+
+
+def test_sitemap_returns_valid_xml(client):
+    resp = client.get("/sitemap.xml")
+    assert resp.status_code == 200
+    assert "application/xml" in resp.headers["content-type"]
+    assert "<urlset" in resp.text
+    assert "https://weathercal.app/" in resp.text
+    assert "https://weathercal.app/signup" in resp.text
+    assert "https://weathercal.app/privacy" in resp.text
+
+
+def test_robots_txt_returns_expected_content(client):
+    resp = client.get("/robots.txt")
+    assert resp.status_code == 200
+    assert "text/plain" in resp.headers["content-type"]
+    assert "User-agent: *" in resp.text
+    assert "Sitemap: https://weathercal.app/sitemap.xml" in resp.text
+
+
+# --- Admin dashboard source column ---
+
+
+def test_admin_shows_utm_source(client, db_path, monkeypatch, auth_cookies):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    user_id, cookies = auth_cookies(email="admin@example.com")
+    # Create a user with utm_source
+    from src.web.db import log_funnel_event
+    uid2 = create_user(db_path, "tracked@example.com", "password123456", utm_source="producthunt")
+    set_user_location(db_path, uid2, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    create_feed_token(db_path, uid2)
+    resp = client.get("/admin", cookies=cookies)
+    assert resp.status_code == 200
+    assert "producthunt" in resp.text
+    assert "Source" in resp.text
+
+
+# --- OG tags ---
+
+
+def test_google_auth_callback_logs_google_connected_funnel_event(client, db_path, monkeypatch, auth_cookies):
+    from unittest.mock import MagicMock, patch
+    from datetime import datetime, timedelta, timezone
+    from jose import jwt as _jwt
+    from src.web.auth import SECRET_KEY
+
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-client-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-client-secret")
+
+    user_id, cookies = auth_cookies(email="gcfunnel@example.com")
+
+    state = _jwt.encode(
+        {"user_id": user_id, "purpose": "google_oauth"},
+        SECRET_KEY,
+        algorithm="HS256",
+    )
+
+    mock_flow = MagicMock()
+    mock_creds = MagicMock()
+    mock_creds.token = "access_token_123"
+    mock_creds.refresh_token = "refresh_token_123"
+    mock_creds.expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+    mock_flow.credentials = mock_creds
+
+    with patch("src.web.app.get_oauth_flow", return_value=mock_flow), \
+         patch("src.web.app.build_google_service", return_value=MagicMock()), \
+         patch("src.web.app.create_weathercal_calendar", return_value="cal@group.calendar.google.com"), \
+         patch("src.web.app._google_push_initial"):
+        client.get(f"/auth/google/callback?code=test_code&state={state}", cookies=cookies)
+
+    conn = sqlite3.connect(db_path)
+    row = conn.execute(
+        "SELECT event_name FROM funnel_events WHERE user_id = ? AND event_name = 'google_connected'",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+    assert row is not None
+
+
+# --- Signup validation preserves UTM ---
+
+
+def test_signup_validation_error_preserves_utm_params(client):
+    resp = client.post(
+        "/signup",
+        data={
+            "email": "short@example.com",
+            "password": "short",
+            "utm_source": "twitter",
+            "utm_medium": "social",
+            "utm_campaign": "launch",
+        },
+    )
+    assert resp.status_code == 422
+    assert 'value="twitter"' in resp.text
+    assert 'value="social"' in resp.text
+    assert 'value="launch"' in resp.text
+
+
+# --- OG tags ---
+
+
+def test_landing_has_og_tags(client):
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert 'og:title' in resp.text
+    assert 'og:description' in resp.text
+    assert 'og:image' in resp.text
+    assert 'twitter:card' in resp.text
+
+
+# --- Admin analytics extensions ---
+
+
+def test_admin_shows_timeseries_section(client, db_path, monkeypatch, auth_cookies):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    _, cookies = auth_cookies(email="admin@example.com")
+    resp = client.get("/admin", cookies=cookies)
+    assert resp.status_code == 200
+    assert "Funnel over time" in resp.text
+    assert "30 days" in resp.text
+
+
+def test_admin_accepts_days_param(client, db_path, monkeypatch, auth_cookies):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    _, cookies = auth_cookies(email="admin@example.com")
+    resp = client.get("/admin?days=7", cookies=cookies)
+    assert resp.status_code == 200
+    assert "Funnel over time" in resp.text
+
+
+def test_admin_shows_source_breakdown(client, db_path, monkeypatch, auth_cookies):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    uid, cookies = auth_cookies(email="admin@example.com")
+    from src.web.db import log_funnel_event
+    log_funnel_event(db_path, uid, "signup_completed")
+    resp = client.get("/admin", cookies=cookies)
+    assert resp.status_code == 200
+    assert "Funnel by source" in resp.text
+
+
+def test_admin_shows_page_view_cards(client, db_path, monkeypatch, auth_cookies):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    _, cookies = auth_cookies(email="admin@example.com")
+    # Visit landing to generate a page view
+    client.get("/")
+    resp = client.get("/admin", cookies=cookies)
+    assert resp.status_code == 200
+    assert "Landing views" in resp.text
+    assert "Signup views" in resp.text
+
+
+def test_landing_increments_page_views(client, db_path):
+    client.get("/")
+    client.get("/")
+    from src.web.db import get_page_view_stats
+    stats = get_page_view_stats(db_path)
+    assert stats["today"].get("/", 0) >= 2
+
+
+def test_signup_increments_page_views(client, db_path):
+    client.get("/signup")
+    from src.web.db import get_page_view_stats
+    stats = get_page_view_stats(db_path)
+    assert stats["today"].get("/signup", 0) >= 1
+
+
+def test_csv_export_requires_auth(client):
+    resp = client.get("/admin/export.csv")
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/login"
+
+
+def test_csv_export_forbidden_for_non_admin(client, db_path, monkeypatch, auth_cookies):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    _, cookies = auth_cookies(email="nonadmin@example.com")
+    resp = client.get("/admin/export.csv", cookies=cookies)
+    assert resp.status_code == 403
+
+
+def test_csv_export_returns_csv_with_data(client, db_path, monkeypatch, auth_cookies):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    _, cookies = auth_cookies(email="admin@example.com")
+    # Create a second user so there's data to export
+    uid2 = create_user(db_path, "csvuser@example.com", "password123456", utm_source="reddit")
+    set_user_location(db_path, uid2, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    create_feed_token(db_path, uid2)
+    resp = client.get("/admin/export.csv", cookies=cookies)
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    assert "Content-Disposition" in resp.headers
+    lines = resp.text.strip().split("\n")
+    assert "Email" in lines[0]
+    assert "Location" in lines[0]
+    assert len(lines) >= 3  # header + at least 2 users
+
+
+def test_admin_shows_export_csv_link(client, db_path, monkeypatch, auth_cookies):
+    monkeypatch.setattr(web_app, "ADMIN_EMAIL", "admin@example.com")
+    _, cookies = auth_cookies(email="admin@example.com")
+    resp = client.get("/admin", cookies=cookies)
+    assert resp.status_code == 200
+    assert "/admin/export.csv" in resp.text

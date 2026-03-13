@@ -75,6 +75,12 @@ class ForecastStore:
                 cur.execute(f"ALTER TABLE forecast ADD COLUMN {col_def}")
             except sqlite3.OperationalError:
                 pass  # column already exists
+        # UTM tracking columns on users (idempotent)
+        for col_def in ["utm_source TEXT", "utm_medium TEXT", "utm_campaign TEXT", "referrer TEXT"]:
+            try:
+                cur.execute(f"ALTER TABLE users ADD COLUMN {col_def}")
+            except sqlite3.OperationalError:
+                pass  # column already exists
         cur.execute("""
             CREATE TABLE IF NOT EXISTS poll_log (
                 id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -103,6 +109,23 @@ class ForecastStore:
                 cur.execute(f"ALTER TABLE feed_tokens ADD COLUMN {col_def}")
             except sqlite3.OperationalError:
                 pass  # column already exists
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS funnel_events (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id    INTEGER,
+                event_name TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_funnel_user ON funnel_events (user_id)")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS page_views (
+                path      TEXT NOT NULL,
+                view_date TEXT NOT NULL,
+                count     INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (path, view_date)
+            )
+        """)
         conn.commit()
         conn.close()
 

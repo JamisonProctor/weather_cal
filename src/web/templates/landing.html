@@ -1,34 +1,738 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌤️</text></svg>">
+  <title>WeatherCal — Weather forecasts, in your calendar</title>
+  <meta name="description" content="Subscribe once. Emoji-rich weather forecasts appear as calendar events — updated daily. Works with Apple Calendar, Google Calendar, and Outlook.">
+  <meta property="og:title" content="WeatherCal — Weather forecasts, in your calendar">
+  <meta property="og:description" content="Subscribe once. Emoji-rich 14-day weather forecasts appear as calendar events. Works with Apple Calendar, Google Calendar, and Outlook.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://weathercal.app">
+  <meta property="og:image" content="https://weathercal.app/static/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="WeatherCal — Weather forecasts, in your calendar">
+  <meta name="twitter:description" content="14-day emoji weather forecasts as calendar events. Free.">
+  <meta name="twitter:image" content="https://weathercal.app/static/og-image.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
 
-{% block title %}Welcome to WeatherCal{% endblock %}
+    :root {
+      --lp-bg: #FFF8E1;
+      --lp-bg-alt: #FFF8E1;
+      --lp-text: #3E2723;
+      --lp-text-muted: #795548;
+      --lp-accent: #E65100;
+      --lp-accent-hover: #BF360C;
+      --lp-hero-bg: #FFF8E1;
+    }
 
-{% block body_class %}layout-medium{% endblock %}
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      color: var(--lp-text);
+      margin: 0;
+      padding: 0;
+      background: #FFF8E1;
+      -webkit-font-smoothing: antialiased;
+    }
 
-{% block extra_style %}
-<style>
-  h1 { font-size: 2.4rem; margin-bottom: 0.5rem; }
-  p.lead { font-size: 1.15rem; color: #333; margin-bottom: 2rem; }
-  ul.features { list-style: none; padding: 0; margin: 0; }
-  ul.features li { display: flex; gap: 12px; margin: 16px 0; font-size: 1.05rem; color: #333; }
-  ul.features li .icon { flex-shrink: 0; width: 1.5em; }
-  .cta { display: inline-block; margin-top: 36px; padding: 14px 32px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600; }
-  .cta:hover { background: #1d4ed8; }
-</style>
-{% endblock %}
+    /* --- Nav --- */
+    .lp-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px max(24px, 5vw);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .lp-nav .brand {
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-decoration: none;
+      color: var(--lp-accent);
+    }
+    .lp-nav .nav-link {
+      color: var(--lp-text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: color 0.3s;
+    }
+    .lp-nav .nav-link:hover { color: var(--lp-text); }
+    .lp-nav.lp-nav-scrolled {
+      background: rgba(255, 248, 225, 0.95);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .lp-nav .logout-btn {
+      background: none;
+      border: none;
+      color: var(--lp-text-muted);
+      cursor: pointer;
+      font-size: 0.95rem;
+      padding: 0;
+      transition: color 0.3s;
+    }
+    .lp-nav .logout-btn:hover { color: var(--lp-text); }
 
-{% block content %}
-  <h1>Welcome to WeatherCal</h1>
-  <p class="lead">A weather forecast in your calendar app.</p>
-  <ul class="features">
-    <li><span class="icon">☀️</span><span><strong>Emoji-first forecasts</strong> — morning and afternoon conditions as all-day calendar events, readable at a glance</span></li>
-    <li><span class="icon">⚠️</span><span><strong>Warnings where you'll actually see them</strong> — rain ☂️, wind 🌬️, cold 🥶, and snow ☃️ flag right in the event title</span></li>
-    <li><span class="icon">🕐</span><span><strong>Timed warning events</strong> — when rain or wind is coming, a precise block event (e.g. "☂️ Rain Warning 10am–2pm") lands in your calendar so you know exactly when to pack an umbrella</span></li>
-    <li><span class="icon">📋</span><span><strong>Hourly detail on demand</strong> — tap any event to see a full hour-by-hour breakdown with per-hour weather</span></li>
-    <li><span class="icon">📅</span><span><strong>Works everywhere</strong> — Apple Calendar, Google Calendar, Outlook — subscribe once, updated every morning</span></li>
-  </ul>
-  {% if is_authenticated %}
-  <a href="/settings" class="cta">Go to settings</a>
-  {% else %}
-  <a href="/signup" class="cta">Get started</a>
-  {% endif %}
-{% endblock %}
+    /* --- Fixed emoji layer --- */
+    .emoji-layer {
+      position: fixed;
+      top: -10%;
+      left: 0;
+      width: 100%;
+      height: 120%;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+      background: linear-gradient(135deg, #FFF8E1, #FFF3E0);
+    }
+    .emoji-particle {
+      position: absolute;
+      user-select: none;
+      pointer-events: none;
+      will-change: transform;
+      line-height: 1;
+    }
+    @keyframes cloud-drift {
+      from { transform: translate3d(0, 0, 0); }
+      to { transform: translate3d(140vw, 0, 0); }
+    }
+    /* --- Hero --- */
+    .lp-hero {
+      position: relative;
+      z-index: 1;
+      height: 150vh;
+      min-height: 600px;
+      max-height: 1500px;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .lp-hero-content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      padding: 0 24px;
+      opacity: 0;
+      width: 100%;
+      max-width: 600px;
+    }
+    .lp-hero-brand {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 800;
+      color: var(--lp-accent);
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+    .lp-hero-content h1 {
+      font-size: clamp(1.1rem, 3.5vw, 2rem);
+      margin: 0 0 16px;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      font-weight: 400;
+      white-space: nowrap;
+    }
+    .lp-hero-content .lead {
+      font-size: clamp(1rem, 2.5vw, 1.25rem);
+      color: var(--lp-text-muted);
+      margin: 0 0 32px;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.5;
+    }
+
+    /* --- CTA button --- */
+    .lp-cta {
+      display: inline-block;
+      padding: 14px 32px;
+      background: var(--lp-accent);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .lp-cta:hover { background: var(--lp-accent-hover); }
+
+    /* --- Sections --- */
+    .lp-section {
+      position: relative;
+      z-index: 1;
+      padding: 80px 24px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .lp-section-alt {
+      position: relative;
+      z-index: 1;
+    }
+    .lp-section-alt .lp-section-inner {
+      padding: 80px 24px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .lp-section h2, .lp-section-alt h2 {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      text-align: center;
+      margin: 0 0 48px;
+      letter-spacing: -0.01em;
+    }
+
+    /* --- How it works --- */
+    .lp-steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .lp-step { text-align: center; }
+    .lp-step-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .lp-step h3 { font-size: 1.05rem; margin: 0 0 8px; }
+    .lp-step p {
+      font-size: 0.95rem;
+      color: var(--lp-text-muted);
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    /* --- Feature walkthrough --- */
+    .lp-walkthrough {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 48px;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 80px 24px;
+    }
+    .lp-walkthrough.reverse { flex-direction: row-reverse; }
+    .lp-walkthrough-text { flex: 1; }
+    .lp-walkthrough-text .wt-icon { font-size: 2rem; margin-bottom: 8px; }
+    .lp-walkthrough-text h3 {
+      font-size: 1.3rem;
+      margin: 0 0 12px;
+      letter-spacing: -0.01em;
+    }
+    .lp-walkthrough-text p {
+      font-size: 1rem;
+      color: var(--lp-text-muted);
+      margin: 0;
+      line-height: 1.6;
+    }
+    .lp-walkthrough-screenshot { flex: 1; display: flex; justify-content: center; }
+    .lp-phone-frame {
+      width: 260px;
+      height: 460px;
+      border-radius: 24px;
+      border: 2px dashed var(--lp-text-muted);
+      background: var(--lp-hero-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+    .lp-phone-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 22px;
+    }
+    .lp-phone-placeholder {
+      color: var(--lp-text-muted);
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 16px;
+    }
+    .wt-bg-default { position: relative; z-index: 1; }
+    .wt-bg-alt { position: relative; z-index: 1; }
+
+    /* --- CTA band --- */
+    .lp-cta-band {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 64px 24px;
+    }
+    .lp-cta-band h2 {
+      font-size: clamp(1.3rem, 3vw, 1.6rem);
+      margin: 0 0 24px;
+    }
+
+    /* --- FAQ --- */
+    .lp-faq {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .lp-faq details {
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+    .lp-faq details:first-of-type {
+      border-top: 1px solid rgba(0,0,0,0.08);
+    }
+    .lp-faq summary {
+      padding: 16px 0;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1rem;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .lp-faq summary::-webkit-details-marker { display: none; }
+    .lp-faq summary::after {
+      content: "+";
+      font-size: 1.3rem;
+      color: var(--lp-text-muted);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+      margin-left: 16px;
+    }
+    .lp-faq details[open] summary::after {
+      content: "\2212";
+    }
+    .lp-faq .faq-answer {
+      padding: 0 0 16px;
+      font-size: 0.95rem;
+      color: var(--lp-text-muted);
+      line-height: 1.6;
+    }
+
+    /* --- Final CTA --- */
+    .lp-final-cta {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 80px 24px;
+    }
+    .lp-final-cta h2 {
+      font-size: clamp(1.4rem, 3vw, 1.8rem);
+      margin: 0 0 24px;
+    }
+
+    /* --- Footer --- */
+    .lp-footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 32px 24px;
+      border-top: 1px solid rgba(0,0,0,0.06);
+      font-size: 0.85rem;
+      color: var(--lp-text-muted);
+    }
+    .lp-footer-brand {
+      font-weight: 700;
+      color: var(--lp-accent);
+      font-size: 1.1rem;
+      text-decoration: none;
+      margin-bottom: 20px;
+      display: block;
+    }
+    .lp-footer-links {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .lp-footer-links a {
+      color: var(--lp-text-muted);
+      text-decoration: none;
+    }
+    .lp-footer-links a:hover {
+      color: var(--lp-accent);
+    }
+
+    /* --- Responsive --- */
+    @media (max-width: 768px) {
+      .lp-steps { grid-template-columns: 1fr; gap: 24px; }
+      .lp-walkthrough, .lp-walkthrough.reverse {
+        flex-direction: column;
+        gap: 32px;
+        padding: 56px 20px;
+      }
+      .lp-phone-frame { width: 220px; height: 380px; }
+      .emoji-particle.cloud-mobile-hide { display: none; }
+    }
+    @media (max-width: 640px) {
+      .lp-hero { min-height: 500px; }
+      .lp-section { padding: 56px 20px; }
+      .lp-section-alt .lp-section-inner { padding: 56px 20px; }
+    }
+
+    /* --- Reduced motion --- */
+    @media (prefers-reduced-motion: reduce) {
+      .lp-hero-content { opacity: 1 !important; }
+      .emoji-particle { display: none; }
+      .lp-nav { background: var(--lp-bg) !important; box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important; }
+      .lp-nav .brand { color: var(--lp-accent) !important; }
+      .lp-nav .nav-link { color: var(--lp-text-muted) !important; }
+      .lp-nav .logout-btn { color: var(--lp-text-muted) !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fixed emoji layer -->
+  <div class="emoji-layer" id="emoji-layer">
+    <!-- Hero zone clouds generated by JS below -->
+
+  </div>
+
+  <!-- Nav -->
+  <nav class="lp-nav" id="lp-nav">
+    <a href="/" class="brand">WeatherCal 🌤️</a>
+    <div>
+      {% if is_authenticated %}
+        <a href="/settings" class="nav-link">Settings</a>
+      {% else %}
+        <a href="/login" class="nav-link">Sign in</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="lp-hero" id="lp-hero">
+    <div class="lp-hero-content" id="lp-hero-content">
+      <div class="lp-hero-brand">WeatherCal</div>
+      <h1>Your weather forecast, right in your calendar.</h1>
+    </div>
+  </section>
+
+  <!-- Feature walkthrough -->
+  <div class="wt-bg-alt">
+    <div class="lp-walkthrough">
+      <div class="lp-walkthrough-text">
+        <div class="wt-icon">📅</div>
+        <h3>Weather events, not weather apps</h3>
+        <p>WeatherCal adds daily forecasts as calendar events — morning and afternoon, with conditions, temps, and emoji you can read at a glance. It just shows up alongside the rest of your day.</p>
+      </div>
+      <div class="lp-walkthrough-screenshot">
+        <div class="lp-phone-frame">
+          <div class="lp-phone-placeholder">Screenshot coming soon<br><small>Day view with forecast events</small></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wt-bg-default">
+    <div class="lp-walkthrough reverse">
+      <div class="lp-walkthrough-text">
+        <div class="wt-icon">☀️</div>
+        <h3>Plan with the weather, not around it</h3>
+        <p>See rain on Thursday before you schedule that outdoor lunch. Spot a sunny weekend while you're planning the week ahead. Your forecast is already where your decisions happen.</p>
+      </div>
+      <div class="lp-walkthrough-screenshot">
+        <div class="lp-phone-frame">
+          <div class="lp-phone-placeholder">Screenshot coming soon<br><small>Forecast alongside your plans</small></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wt-bg-alt">
+    <div class="lp-walkthrough">
+      <div class="lp-walkthrough-text">
+        <div class="wt-icon">✅</div>
+        <h3>Works with the calendar you already use</h3>
+        <p>Connect Google Calendar, Apple Calendar, or Outlook — setup takes under a minute. Forecasts update automatically, and there's nothing to install.</p>
+      </div>
+      <div class="lp-walkthrough-screenshot">
+        <div class="lp-phone-frame">
+          <div class="lp-phone-placeholder">Screenshot coming soon<br><small>Quick setup flow</small></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA band -->
+  <div class="lp-cta-band">
+    <h2>You already check your calendar every day. Now your forecast is there too.</h2>
+    {% if is_authenticated %}
+    <a href="/settings" class="lp-cta">Go to settings</a>
+    {% else %}
+    <a href="/signup" class="lp-cta">Get started — it's free</a>
+    {% endif %}
+  </div>
+
+  <!-- FAQ -->
+  <section class="lp-section">
+    <h2>Questions?</h2>
+    <div class="lp-faq">
+
+      <details>
+        <summary>How does it work?</summary>
+        <div class="faq-answer">Sign up, choose your city, and pick how you want to receive your forecast. For Apple Calendar, Outlook, and most other apps, you'll get a personal ICS feed URL — tap it or paste it into your calendar's "subscribe" option and forecasts appear automatically. For Google Calendar, you can connect your account directly and we'll create a dedicated "WeatherCal" calendar with your forecast events.</div>
+      </details>
+
+      <details>
+        <summary>Can WeatherCal see my other calendar events?</summary>
+        <div class="faq-answer">No. When you connect Google Calendar, we create a separate "WeatherCal" calendar and only have access to that one calendar. We cannot see, read, or modify anything else in your account.</div>
+      </details>
+
+      <details>
+        <summary>Which calendar apps are supported?</summary>
+        <div class="faq-answer">Any app that supports ICS calendar subscriptions — Apple Calendar, Google Calendar, Outlook, and most others. For Google Calendar, we also offer a direct sync option that pushes events automatically.</div>
+      </details>
+
+      <details>
+        <summary>How accurate are the forecasts?</summary>
+        <div class="faq-answer">We use Open-Meteo, which combines data from national weather services worldwide. Forecasts are most accurate for the next 3–5 days and update every morning with the latest data.</div>
+      </details>
+
+      <details>
+        <summary>How often does the forecast update?</summary>
+        <div class="faq-answer">Forecasts are refreshed every morning. Your calendar app will pick up the latest data automatically — most apps check every few hours.</div>
+      </details>
+
+      <details>
+        <summary>Is my data private?</summary>
+        <div class="faq-answer">Yes. We store only what's needed to generate your forecast: your email, location, and preferences. We don't sell data or show ads. See our <a href="/privacy" style="color:var(--lp-accent)">Privacy Policy</a> for details.</div>
+      </details>
+
+      <details>
+        <summary>Is it free?</summary>
+        <div class="faq-answer">Yes, WeatherCal is completely free.</div>
+      </details>
+
+    </div>
+  </section>
+
+  <!-- Final CTA -->
+  <div class="lp-final-cta">
+    <h2>More convenient than you'd think.</h2>
+    {% if is_authenticated %}
+    <a href="/settings" class="lp-cta">Go to settings</a>
+    {% else %}
+    <a href="/signup" class="lp-cta">Sign up — it's free</a>
+    {% endif %}
+  </div>
+
+  <!-- Footer -->
+  <footer class="lp-footer">
+    <a href="/" class="lp-footer-brand">WeatherCal 🌤️</a>
+    <div class="lp-footer-links">
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/impressum">Impressum</a>
+      <a href="{% if is_authenticated %}/settings#feedback{% else %}/login{% endif %}">Feedback</a>
+    </div>
+  </footer>
+
+  <!-- Parallax + Nav scroll JS -->
+  <script>
+  (function() {
+    var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return;
+
+    var hero = document.getElementById('lp-hero');
+    var heroContent = document.getElementById('lp-hero-content');
+    var nav = document.getElementById('lp-nav');
+    var emojiLayer = document.getElementById('emoji-layer');
+    var isMobile = window.innerWidth < 768;
+    var ticking = false;
+
+    // Seeded PRNG (mulberry32) — deterministic layout for all users
+    var _seed = 42;
+    function seededRandom() {
+      _seed |= 0; _seed = _seed + 0x6D2B79F5 | 0;
+      var t = Math.imul(_seed ^ _seed >>> 15, 1 | _seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+
+    // Generate clouds on a grid for even coverage with limited overlap
+    var COLS = isMobile ? 8 : 14;
+    var ROWS = isMobile ? 8 : 14;
+    var cellW = 120 / COLS;   // 120% total width (-10% to 110%)
+    var cellH = 120 / ROWS;
+    var frag = document.createDocumentFragment();
+    for (var row = 0; row < ROWS; row++) {
+      for (var col = 0; col < COLS; col++) {
+        var span = document.createElement('span');
+        span.className = 'emoji-particle zone-hero';
+        // Place within cell with jitter, offset by -10% for edge bleed
+        var top = -10 + row * cellH + seededRandom() * cellH * 0.7;
+        var left = -10 + col * cellW + seededRandom() * cellW * 0.7;
+        var size = 7 + seededRandom() * 9;         // 7-16rem
+        var speed = 0.4 + seededRandom() * 0.3;    // 0.4-0.7
+        // Direction: radiate outward from center
+        var cx = left - 50, cy = top - 50;
+        var len = Math.sqrt(cx * cx + cy * cy) || 1;
+        var dx = (cx / len) + (seededRandom() - 0.5) * 0.4;
+        var dy = (cy / len) + (seededRandom() - 0.5) * 0.4;
+        span.style.cssText = 'top:' + top.toFixed(1) + '%;left:' + left.toFixed(1) + '%;font-size:' + size.toFixed(1) + 'rem';
+        span.dataset.speed = speed.toFixed(2);
+        span.dataset.dx = dx.toFixed(2);
+        span.dataset.dy = dy.toFixed(2);
+        span.textContent = '\u2601\uFE0F';
+        frag.appendChild(span);
+      }
+    }
+    emojiLayer.appendChild(frag);
+
+    // Generate drifting background clouds — continuous CSS animation
+    // Negative delay = starts mid-animation (already on-screen)
+    // Vertical bands sized to prevent overlap at largest cloud size in each band
+    var driftDefs = isMobile ? [
+      // top%, size(rem), duration(s), delay(s) — negative = start partway through
+      { top: 5,  size: 11, duration: 50, delay: -5 },   // left side
+      { top: 25, size: 8,  duration: 60, delay: -20 },   // left-center
+      { top: 45, size: 15, duration: 42, delay: 0 },     // entering from left
+      { top: 68, size: 9,  duration: 55, delay: -30 },   // center
+      { top: 85, size: 12, duration: 48, delay: -12 }    // left side
+    ] : [
+      { top: 3,  size: 14, duration: 55, delay: -3 },    // far left
+      { top: 16, size: 8,  duration: 70, delay: -22 },   // left-center
+      { top: 28, size: 18, duration: 48, delay: -35 },   // center-right
+      { top: 42, size: 10, duration: 65, delay: -8 },    // left
+      { top: 55, size: 20, duration: 52, delay: -28 },   // center
+      { top: 70, size: 9,  duration: 72, delay: -15 },   // left-center
+      { top: 82, size: 16, duration: 46, delay: -40 },   // right
+      { top: 93, size: 7,  duration: 62, delay: -5 }     // far left
+    ];
+    // Randomize durations slightly with seeded PRNG
+    for (var si = 0; si < driftDefs.length; si++) {
+      driftDefs[si].duration += Math.floor(seededRandom() * 15 - 7);
+    }
+    var driftEls = [];
+    var driftFrag = document.createDocumentFragment();
+    for (var i = 0; i < driftDefs.length; i++) {
+      var def = driftDefs[i];
+      var dc = document.createElement('span');
+      dc.className = 'emoji-particle zone-drift';
+      dc.style.cssText = 'top:' + def.top + '%;left:-20%;font-size:' + def.size + 'rem;opacity:0;'
+        + 'animation:cloud-drift ' + def.duration + 's linear ' + def.delay + 's infinite;'
+        + 'animation-play-state:paused;';
+      dc.textContent = '\u2601\uFE0F';
+      driftEls.push(dc);
+      driftFrag.appendChild(dc);
+    }
+    emojiLayer.appendChild(driftFrag);
+    var cloudsActive = false;
+
+    // Sun emoji — arcs across the sky from left to right
+    var sunEl = document.createElement('span');
+    sunEl.className = 'emoji-particle zone-drift';
+    sunEl.style.cssText = 'top:85%;left:-10%;font-size:' + (isMobile ? '6' : '9') + 'rem;opacity:0';
+    sunEl.textContent = '\u2600\uFE0F';
+    emojiLayer.appendChild(sunEl);
+
+    var heroEmojis = document.querySelectorAll('.zone-hero');
+    var firstPhone = document.querySelector('.lp-phone-frame');
+
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function() {
+        var scrollY = window.scrollY;
+        var heroHeight = hero.offsetHeight;
+        var intensity = isMobile ? 0.6 : 1;
+
+        // Hero zone emojis: aggressive dispersal (2-3x multiplier)
+        heroEmojis.forEach(function(el) {
+          var speed = parseFloat(el.dataset.speed) || 0.5;
+          var dx = parseFloat(el.dataset.dx) || 0;
+          var dy = parseFloat(el.dataset.dy) || 0;
+          var move = scrollY * speed * intensity * 2.5;
+          el.style.transform = 'translate3d(' + (dx * move) + 'px,' + (dy * move) + 'px,0)';
+        });
+
+        // Hero content: fade in 0-30%, pin 30-35%, scroll up + quick fade out
+        var pinEnd = heroHeight * 0.35;
+        var vh = window.innerHeight;
+        var fadeOutDist = vh * 0.25; // gone within 25vh of scrolling
+        if (scrollY < heroHeight * 0.3) {
+          // Fade in
+          heroContent.style.opacity = scrollY / (heroHeight * 0.3);
+          heroContent.style.position = 'fixed';
+          heroContent.style.top = '50%';
+          heroContent.style.left = '50%';
+          heroContent.style.transform = 'translate(-50%, -50%)';
+        } else if (scrollY < pinEnd) {
+          // Pin in center while clouds finish dispersing
+          heroContent.style.opacity = 1;
+          heroContent.style.position = 'fixed';
+          heroContent.style.top = '50%';
+          heroContent.style.left = '50%';
+          heroContent.style.transform = 'translate(-50%, -50%)';
+        } else {
+          // Scroll up at 0.5x page speed, fade out by the time it reaches 25% from top
+          var scrollOffset = (scrollY - pinEnd) * 0.5;
+          var visualTop = vh * 0.5 - scrollOffset;
+          var fadeOut = Math.min(1, Math.max(0, (visualTop - vh * 0.25) / (vh * 0.25)));
+          heroContent.style.opacity = fadeOut;
+          heroContent.style.position = 'fixed';
+          heroContent.style.left = '50%';
+          heroContent.style.top = 'calc(50% - ' + scrollOffset + 'px)';
+          heroContent.style.transform = 'translate(-50%, -50%)';
+        }
+
+        // Nav transition
+        if (scrollY > heroHeight - 60) {
+          nav.classList.add('lp-nav-scrolled');
+        } else {
+          nav.classList.remove('lp-nav-scrolled');
+        }
+
+        // Drifting background clouds — activate CSS animations at trigger
+        var phoneRect = firstPhone ? firstPhone.getBoundingClientRect() : null;
+        var driftTrigger = phoneRect ? phoneRect.top <= vh * 0.75 : scrollY > heroHeight;
+        // Fade clouds in/out gradually based on how far past trigger
+        var cloudFadeProgress = driftTrigger ? (phoneRect ? (vh * 0.75 - phoneRect.top) : scrollY - heroHeight) : 0;
+        var cloudOpacity = Math.min(0.3, Math.max(0, cloudFadeProgress / (vh * 0.3) * 0.3));
+        if (driftTrigger && !cloudsActive) {
+          cloudsActive = true;
+          for (var di = 0; di < driftEls.length; di++) {
+            driftEls[di].style.animationPlayState = 'running';
+          }
+        } else if (!driftTrigger && cloudsActive) {
+          cloudsActive = false;
+          for (var di = 0; di < driftEls.length; di++) {
+            driftEls[di].style.animationPlayState = 'paused';
+          }
+        }
+        for (var di = 0; di < driftEls.length; di++) {
+          driftEls[di].style.opacity = cloudOpacity;
+        }
+
+        // Sun emoji — arcs across the sky, starts with clouds, sets at bottom
+        var maxScroll = document.documentElement.scrollHeight - vh;
+        var cloudTriggerScroll = driftTrigger ? (phoneRect ? (vh * 0.75 - phoneRect.top) : scrollY - heroHeight) : 0;
+        var sunTotalRange = maxScroll - (scrollY - cloudTriggerScroll);
+        if (driftTrigger && cloudTriggerScroll > 0 && sunTotalRange > 0) {
+          var sunProgress = Math.min(1, cloudTriggerScroll / sunTotalRange);
+          var sunX = sunProgress * (window.innerWidth * 1.2);
+          var peakHeight = vh * 0.7;
+          var sunY = -4 * peakHeight * sunProgress * (1 - sunProgress);
+          var sunOpacity = sunProgress < 0.15 ? (sunProgress / 0.15) * 0.45
+            : sunProgress > 0.85 ? ((1 - sunProgress) / 0.15) * 0.45
+            : 0.45;
+          sunEl.style.opacity = sunOpacity;
+          sunEl.style.transform = 'translate3d(' + sunX.toFixed(1) + 'px,' + sunY.toFixed(1) + 'px,0)';
+        } else {
+          sunEl.style.opacity = 0;
+          sunEl.style.transform = 'translate3d(0,0,0)';
+        }
+
+        ticking = false;
+      });
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+  </script>
+</body>
+</html>

@@ -9,10 +9,10 @@
   .settings-layout { display: flex; gap: 40px; align-items: flex-start; }
 
   .sidebar { width: 180px; flex-shrink: 0; display: flex; flex-direction: column; }
-  .sidebar-link { display: block; padding: 10px 14px; color: #374151; text-decoration: none; border-radius: 6px; font-size: 0.95rem; margin-bottom: 2px; }
-  .sidebar-link:hover { background: #f3f4f6; }
-  .sidebar-link.active { background: #eff6ff; color: #2563eb; font-weight: 600; }
-  .sidebar-footer { margin-top: auto; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 0.78rem; color: #9ca3af; line-height: 1.4; padding-left: 4px; }
+  .sidebar-link { display: block; padding: 10px 14px; color: var(--text); text-decoration: none; border-radius: 6px; font-size: 0.95rem; margin-bottom: 2px; }
+  .sidebar-link:hover { background: var(--bg-subtle); }
+  .sidebar-link.active { background: rgba(230,81,0,0.1); color: var(--accent); font-weight: 600; }
+  .sidebar-footer { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border); font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; padding-left: 4px; }
   .sidebar-footer + .sidebar-footer { border-top: none; padding-top: 4px; }
 
   .panel-title { font-size: 1.3rem; margin: 0 0 24px; display: none; }
@@ -21,30 +21,30 @@
   .panel { display: none; }
 
   .section { margin-bottom: 32px; }
-  .section h2 { font-size: 1.05rem; color: #374151; margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6; }
+  .section h2 { font-size: 1.05rem; color: var(--text); margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
 
   .form-group { margin-bottom: 14px; }
-  .form-group label { display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 5px; }
+  .form-group label { display: block; font-size: 0.875rem; font-weight: 500; color: var(--text); margin-bottom: 5px; }
 
-  .location-tag { display: inline-block; padding: 6px 14px; background: #f3f4f6; border-radius: 20px; font-size: 0.95rem; }
-  .link-blue { color: #2563eb; text-decoration: none; font-size: 0.9rem; }
+  .location-tag { display: inline-block; padding: 6px 14px; background: var(--bg-subtle); border-radius: 20px; font-size: 0.95rem; }
+  .link-blue { color: var(--accent); text-decoration: none; font-size: 0.9rem; }
   .link-blue:hover { text-decoration: underline; }
 
   .danger-zone { border: 1px solid #fecaca; border-radius: 8px; padding: 20px; background: #fef2f2; }
   .danger-zone h2 { color: #dc2626; border-bottom-color: #fecaca; }
-  .danger-hint { font-size: 0.875rem; color: #6b7280; margin: 0 0 14px; }
+  .danger-hint { font-size: 0.875rem; color: var(--text-muted); margin: 0 0 14px; }
 
-  .pref-note { color: #6b7280; font-size: 0.85rem; }
+  .pref-note { color: var(--text-muted); font-size: 0.85rem; }
 
   /* Preference cards */
-  .pref-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
-  .pref-card-title { font-size: 0.95rem; font-weight: 600; color: #374151; margin: 0 0 4px; }
-  .pref-card-desc { font-size: 0.85rem; color: #6b7280; margin: 0 0 16px; }
+  .pref-card { background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
+  .pref-card-title { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 0 0 4px; }
+  .pref-card-desc { font-size: 0.85rem; color: var(--text-muted); margin: 0 0 16px; }
 
   /* Custom checkboxes */
   .check-label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; margin-bottom: 10px; font-size: 0.95rem; position: relative; }
   .check-label input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
-  .checkmark { width: 20px; height: 20px; flex-shrink: 0; border: 2px solid #d1d5db; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; transition: background 0.15s, border-color 0.15s; }
+  .checkmark { width: 20px; height: 20px; flex-shrink: 0; border: 2px solid var(--border); border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; transition: background 0.15s, border-color 0.15s; }
   .check-label input:checked ~ .checkmark { background: #16a34a; border-color: #16a34a; }
   .check-label input:checked ~ .checkmark::after { content: '\2713'; color: #fff; font-size: 13px; font-weight: 700; }
 
@@ -55,26 +55,26 @@
 
   /* Threshold row */
   .threshold-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; font-size: 0.95rem; }
-  .threshold-row input[type="number"] { width: 72px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem; text-align: center; }
+  .threshold-row input[type="number"] { width: 72px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; text-align: center; }
 
   .feed-input-row { display: flex; gap: 8px; }
-  .feed-url { flex: 1; padding: 10px 12px; font-family: monospace; font-size: 0.82rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px; color: #374151; cursor: text; }
-  .copy-btn { padding: 10px 16px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
-  .copy-btn:hover { background: #e5e7eb; }
-  .copy-hint { font-size: 0.8rem; color: #6b7280; margin-top: 6px; }
+  .feed-url { flex: 1; padding: 10px 12px; font-family: monospace; font-size: 0.82rem; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 6px; color: var(--text); cursor: text; }
+  .copy-btn { padding: 10px 16px; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
+  .copy-btn:hover { background: var(--border); }
+  .copy-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 6px; }
 
   .connect-btn-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
   .connect-btn-wrapper { display: flex; flex-direction: column; gap: 4px; }
-  .connect-btn-note { font-size: 0.8rem; color: #6b7280; padding-left: 4px; }
+  .connect-btn-note { font-size: 0.8rem; color: var(--text-muted); padding-left: 4px; }
   .btn-connect { display: inline-flex; align-items: center; gap: 8px; padding: 13px 20px; border-radius: 8px; font-size: 1rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; }
   .btn-cal-red { background: #ea4335; color: #fff; }
   .btn-cal-red:hover { background: #c5392c; }
   .btn-cal-neutral { background: #374151; color: #fff; }
   .btn-cal-neutral:hover { background: #1f2937; }
-  .connect-section-label { font-size: 0.95rem; font-weight: 600; color: #374151; margin: 0 0 10px; }
+  .connect-section-label { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 0 0 10px; }
   .connect-section-label .badge { font-size: 0.75rem; font-weight: 500; color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 2px 8px; margin-left: 8px; vertical-align: middle; }
-  .connect-divider { border: none; border-top: 1px solid #e5e7eb; margin: 20px 0; }
-  .connect-help-text { font-size: 0.8rem; color: #6b7280; line-height: 1.5; }
+  .connect-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .connect-help-text { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
 
   /* Mobile responsive */
   @media (max-width: 640px) {
@@ -87,11 +87,11 @@
       padding-bottom: 8px;
       margin-bottom: 24px;
       gap: 2px;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid var(--border);
       position: sticky;
       top: 0;
       z-index: 10;
-      background: #fff;
+      background: var(--bg);
     }
     .sidebar-link { display: inline-block; white-space: nowrap; margin-bottom: 0; }
     .sidebar-footer { display: none; }
@@ -328,7 +328,7 @@
           {% for loc in locations %}
           <span class="location-tag">&#128205; {{ loc["location"] }}</span>
           {% else %}
-          <p style="color:#6b7280;font-size:0.95rem">No location set.</p>
+          <p style="color:var(--text-muted);font-size:0.95rem">No location set.</p>
           {% endfor %}
           <br>
           <a href="/setup" class="btn-primary" style="display:inline-block;margin-top:8px;text-decoration:none">Change location</a>
@@ -364,7 +364,7 @@
 
         <div class="section">
           <h2>Feedback</h2>
-          <p style="color:#374151;margin-bottom:1.5rem;font-size:0.95rem">Got a bug, idea, or something on your mind? We'd love to hear it.</p>
+          <p style="color:var(--text);margin-bottom:1.5rem;font-size:0.95rem">Got a bug, idea, or something on your mind? We'd love to hear it.</p>
           <form method="post" action="/settings/feedback" id="feedback-form">
             <input type="hidden" name="user_agent" id="f-user-agent">
             <input type="hidden" name="platform" id="f-platform">
@@ -382,7 +382,7 @@
             </div>
             <div class="form-group">
               <label for="description">Tell us more</label>
-              <textarea name="description" id="description" required placeholder="What happened? What would you like to see?" style="width:100%;max-width:500px;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.95rem;font-family:inherit;resize:vertical;min-height:120px"></textarea>
+              <textarea name="description" id="description" required placeholder="What happened? What would you like to see?" style="width:100%;max-width:500px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:0.95rem;font-family:inherit;resize:vertical;min-height:120px"></textarea>
             </div>
             <button type="submit" class="btn-primary" data-loading-text="Sending...">Send feedback</button>
           </form>
@@ -402,7 +402,7 @@
 
         <div class="section">
           <h2>Connect your calendar</h2>
-          <p style="color:#374151;margin-bottom:1.5rem">Add your feed to a calendar app and forecasts will appear automatically.</p>
+          <p style="color:var(--text);margin-bottom:1.5rem">Add your feed to a calendar app and forecasts will appear automatically.</p>
 
           {% if webcal_url %}
           <!-- Google Calendar section -->
@@ -446,7 +446,7 @@
 
           <p class="connect-help-text">Calendar links refresh every few hours. Apple Calendar users can speed this up: right-click WeatherCal &#8594; Get Info &#8594; set Auto-refresh to Every Hour.</p>
           {% else %}
-          <p style="color:#6b7280">No feed token found. Please contact support.</p>
+          <p style="color:var(--text-muted)">No feed token found. Please contact support.</p>
           {% endif %}
         </div>
 

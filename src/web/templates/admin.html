@@ -15,36 +15,36 @@
   h1 { font-size: 1.5rem; margin: 0 0 24px; }
 
   .stats-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 32px; }
-  .stat-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px 22px; min-width: 140px; }
-  .stat-card .label { font-size: 0.78rem; color: #6b7280; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .stat-card .value { font-size: 1.8rem; font-weight: 700; color: #111; }
-  .stat-card .sub { font-size: 0.75rem; color: #9ca3af; margin-top: 2px; }
+  .stat-card { background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 10px; padding: 16px 22px; min-width: 140px; }
+  .stat-card .label { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-card .value { font-size: 1.8rem; font-weight: 700; color: var(--text); }
+  .stat-card .sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
 
-  h2 { font-size: 1.05rem; color: #374151; margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6; }
+  h2 { font-size: 1.05rem; color: var(--text); margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
 
   .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-  th { text-align: left; padding: 9px 12px; background: #f9fafb; border-bottom: 2px solid #e5e7eb; font-size: 0.8rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
-  td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+  th { text-align: left; padding: 9px 12px; background: var(--bg-subtle); border-bottom: 2px solid var(--border); font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
-  tr:hover td { background: #fafafa; }
+  tr:hover td { background: var(--bg-subtle); }
 
   .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
-  .dot-yes { background: #2563eb; }
-  .dot-no { background: #d1d5db; }
+  .dot-yes { background: var(--accent); }
+  .dot-no { background: var(--border); }
   .dot-warn { background: #ef4444; }
 
-  .empty { color: #9ca3af; font-style: italic; }
+  .empty { color: var(--text-muted); font-style: italic; }
 
   .day-selector { margin-bottom: 12px; font-size: 0.85rem; }
-  .day-selector a { color: #2563eb; text-decoration: none; margin-right: 12px; }
+  .day-selector a { color: var(--accent); text-decoration: none; margin-right: 12px; }
   .day-selector a.active { font-weight: 700; text-decoration: underline; }
 
-  .row-zero td { color: #d1d5db; }
+  .row-zero td { color: var(--border); }
 
   .section-header { display: flex; align-items: center; gap: 12px; }
   .section-header h2 { flex: 1; }
-  .export-link { font-size: 0.85rem; color: #2563eb; text-decoration: none; white-space: nowrap; }
+  .export-link { font-size: 0.85rem; color: var(--accent); text-decoration: none; white-space: nowrap; }
   .export-link:hover { text-decoration: underline; }
 </style>
 {% endblock %}
@@ -127,7 +127,7 @@
             {% elif u.google_status == 'revoked' %}
               <span class="dot dot-warn" title="Revoked"></span> Revoked
             {% else %}
-              <span style="color:#9ca3af">—</span>
+              <span style="color:var(--text-muted)">—</span>
             {% endif %}
           </td>
           <td>
@@ -152,15 +152,15 @@
     </div>
     <div class="stat-card">
       <div class="label">Location set</div>
-      <div class="value">{{ funnel.location_set }} <small style="font-size:0.7rem;color:#6b7280">{{ funnel.pct_location }}%</small></div>
+      <div class="value">{{ funnel.location_set }} <small style="font-size:0.7rem;color:var(--text-muted)">{{ funnel.pct_location }}%</small></div>
     </div>
     <div class="stat-card">
       <div class="label">Feed subscribed</div>
-      <div class="value">{{ funnel.feed_subscribed }} <small style="font-size:0.7rem;color:#6b7280">{{ funnel.pct_feed }}%</small></div>
+      <div class="value">{{ funnel.feed_subscribed }} <small style="font-size:0.7rem;color:var(--text-muted)">{{ funnel.pct_feed }}%</small></div>
     </div>
     <div class="stat-card">
       <div class="label">Google connected</div>
-      <div class="value">{{ funnel.google_connected }} <small style="font-size:0.7rem;color:#6b7280">{{ funnel.pct_google }}%</small></div>
+      <div class="value">{{ funnel.google_connected }} <small style="font-size:0.7rem;color:var(--text-muted)">{{ funnel.pct_google }}%</small></div>
     </div>
   </div>
 

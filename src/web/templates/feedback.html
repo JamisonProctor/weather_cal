@@ -7,15 +7,15 @@
 {% block extra_style %}
 <style>
   h1 { margin-bottom: 0.4rem; }
-  .subtitle { color: #333; margin-bottom: 1.5rem; }
+  .subtitle { color: var(--text-muted); margin-bottom: 1.5rem; }
   label { display: block; margin: 16px 0 4px; font-weight: 500; font-size: 0.95rem; }
-  select, textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; font-family: inherit; }
-  select:focus, textarea:focus { outline: 2px solid #2563eb; border-color: transparent; }
+  select, textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; font-size: 1rem; font-family: inherit; }
+  select:focus, textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
   textarea { resize: vertical; min-height: 120px; }
-  button[type="submit"] { margin-top: 24px; width: 100%; padding: 12px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
-  button[type="submit"]:hover { background: #1d4ed8; }
-  .back-link { display: block; margin-top: 20px; color: #6b7280; text-decoration: none; font-size: 0.9rem; }
-  .back-link:hover { color: #111; text-decoration: underline; }
+  button[type="submit"] { margin-top: 24px; width: 100%; padding: 14px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+  button[type="submit"]:hover { background: var(--accent-hover); }
+  .back-link { display: block; margin-top: 20px; color: var(--text-muted); text-decoration: none; font-size: 0.9rem; }
+  .back-link:hover { color: var(--text); text-decoration: underline; }
   .success { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; color: #166534; }
   .success h2 { margin: 0 0 8px; font-size: 1.1rem; }
   .success p { margin: 0; font-size: 0.95rem; }

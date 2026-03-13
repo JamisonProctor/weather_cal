@@ -33,7 +33,7 @@
   <form method="post" action="/setup" id="setup-form">
     <label for="location-input">City</label>
     <div class="input-wrap">
-      <input type="text" id="location-input" autocomplete="off" autofocus spellcheck="false" placeholder="Munich Bavaria, Germany">
+      <input type="text" id="location-input" autocomplete="off" autofocus spellcheck="false" placeholder="Munich, Germany">
       <ul class="dropdown" id="dropdown" hidden></ul>
     </div>
     <p class="hint" id="hint"></p>
@@ -73,7 +73,7 @@
   }
 
   function selectResult(r) {
-    const label = r.admin1 ? `${r.name}, ${r.admin1}, ${r.country}` : `${r.name}, ${r.country}`;
+    const label = `${r.name}, ${r.country}`;
     input.value = label;
     hiddenLocation.value = label;
     hiddenLat.value = r.lat;
@@ -101,7 +101,7 @@
     }
     data.forEach((r, i) => {
       const li = document.createElement('li');
-      const region = r.admin1 ? `${r.admin1}, ${r.country}` : r.country;
+      const region = r.country;
       li.innerHTML = `<span class="city">${r.name}</span><span class="region">${region}</span>`;
       li.addEventListener('mousedown', (e) => { e.preventDefault(); selectResult(r); });
       dropdown.appendChild(li);

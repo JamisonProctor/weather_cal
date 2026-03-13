@@ -129,15 +129,15 @@ def build_forecasts() -> list[Forecast]:
         high=16, low=7,
     )
 
-    # Saturday: warm and sunny
+    # Saturday: pleasant, warming up
     sat = _make_forecast(
         date(2026, 3, 21),
-        temps= [10, 11, 13, 15, 17, 18, 19, 20, 20, 19, 18, 16, 14],
-        codes= [2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2],
+        temps= [10, 11, 13, 15, 16, 17, 18, 19, 19, 18, 17, 15, 13],
+        codes= [2, 2, 1, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2],
         rain_pcts=  [0]*13,
         precip_mms= [0]*13,
         winds= [5, 5, 6, 6, 8, 8, 6, 6, 5, 5, 5, 4, 4],
-        high=20, low=10,
+        high=19, low=10,
     )
 
     # SUNDAY: BEAUTIFUL SUNNY DAY (the "spot a sunny weekend" day)
@@ -167,8 +167,8 @@ def generate_weather_ics() -> bytes:
         "warn_wind": 1,
         "warn_cold": 1,
         "warn_snow": 1,
-        "warn_sunny": 0,
-        "warm_threshold": 14,
+        "warn_sunny": 1,
+        "warm_threshold": 20,
         "allday_rain": 1,
         "allday_wind": 1,
         "allday_cold": 1,
@@ -226,18 +226,25 @@ def generate_life_ics() -> bytes:
         {"summary": "Backlog grooming", "start": _dt(wed, 11, 0), "end": _dt(wed, 12, 0)},
         {"summary": "Coffee with Alex", "start": _dt(wed, 15, 30), "end": _dt(wed, 16, 30)},
 
-        # Thursday — Lunch with Sara overlaps rain warning
-        {"summary": "Team standup", "start": _dt(thu, 9, 0), "end": _dt(thu, 9, 30)},
+        # Thursday — packed, Lunch with Sara overlaps rain warning
+        {"summary": "Hiring sync", "start": _dt(thu, 9, 0), "end": _dt(thu, 10, 0)},
+        {"summary": "Code review", "start": _dt(thu, 10, 30), "end": _dt(thu, 11, 30)},
         {"summary": "Lunch with Sara", "start": _dt(thu, 12, 0), "end": _dt(thu, 13, 0)},
         {"summary": "Retro", "start": _dt(thu, 14, 0), "end": _dt(thu, 15, 0)},
+        {"summary": "Focus time", "start": _dt(thu, 15, 30), "end": _dt(thu, 17, 0)},
+        {"summary": "Gym", "start": _dt(thu, 18, 0), "end": _dt(thu, 19, 0)},
 
-        # Friday
-        {"summary": "Team standup", "start": _dt(fri, 9, 0), "end": _dt(fri, 9, 30)},
+        # Friday — packed
+        {"summary": "All hands", "start": _dt(fri, 9, 0), "end": _dt(fri, 10, 0)},
+        {"summary": "1:1 with Jake", "start": _dt(fri, 10, 30), "end": _dt(fri, 11, 0)},
         {"summary": "Demo", "start": _dt(fri, 11, 0), "end": _dt(fri, 12, 0)},
+        {"summary": "Lunch", "start": _dt(fri, 12, 30), "end": _dt(fri, 13, 15)},
+        {"summary": "Focus time", "start": _dt(fri, 14, 0), "end": _dt(fri, 16, 0)},
         {"summary": "Dinner with Tom", "start": _dt(fri, 19, 0), "end": _dt(fri, 20, 30)},
 
         # Saturday
         {"summary": "Farmers market", "start": _dt(sat, 9, 30), "end": _dt(sat, 11, 0)},
+        {"summary": "Haircut", "start": _dt(sat, 14, 0), "end": _dt(sat, 14, 45)},
 
         # Sunday — empty (nice sunny day, enjoy it)
     ]

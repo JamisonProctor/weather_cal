@@ -379,7 +379,33 @@
       .lp-nav .brand { color: var(--lp-accent) !important; }
       .lp-nav .nav-link { color: var(--lp-text-muted) !important; }
       .lp-nav .logout-btn { color: var(--lp-text-muted) !important; }
+      .scroll-hint svg { animation: none; }
     }
+    /* --- Scroll hint chevron --- */
+    .scroll-hint {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      pointer-events: none;
+    }
+    .scroll-hint svg {
+      width: 32px;
+      height: 32px;
+      stroke: var(--lp-text-muted);
+      stroke-width: 2.5;
+      fill: none;
+      animation: bounce-hint 2s ease-in-out infinite;
+    }
+    @keyframes bounce-hint {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(8px); }
+    }
+    .scroll-hint.hidden { opacity: 0; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -409,6 +435,11 @@
       <h1>You already check your calendar. Why open another app?</h1>
     </div>
   </section>
+
+  <!-- Scroll hint -->
+  <div class="scroll-hint" id="scroll-hint" aria-hidden="true">
+    <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
 
   <!-- Feature walkthrough -->
   <div class="wt-bg-alt">
@@ -642,6 +673,15 @@
     var heroEmojis = document.querySelectorAll('.zone-hero');
     var firstPhone = document.querySelector('.lp-phone-frame');
 
+    // Scroll hint state
+    var scrollHint = document.getElementById('scroll-hint');
+    var hintHidden = false;
+    function hideHint() {
+      if (hintHidden) return;
+      hintHidden = true;
+      scrollHint.classList.add('hidden');
+    }
+
     function onScroll() {
       if (ticking) return;
       ticking = true;
@@ -696,6 +736,9 @@
           nav.classList.remove('lp-nav-scrolled');
         }
 
+        // Hide scroll hint on any scroll
+        if (scrollY > 20 && !hintHidden) { hideHint(); }
+
         // Drifting background clouds — activate CSS animations at trigger
         var phoneRect = firstPhone ? firstPhone.getBoundingClientRect() : null;
         var driftTrigger = phoneRect ? phoneRect.top <= vh * 0.75 : scrollY > heroHeight;
@@ -742,6 +785,34 @@
 
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
+
+    // Scroll hint: show after delay if user hasn't scrolled yet
+    var scrollTarget = hero.nextElementSibling;
+    if (window.scrollY < 10) {
+      setTimeout(function() {
+        if (!hintHidden) {
+          scrollHint.style.opacity = '0.7';
+          scrollHint.style.pointerEvents = 'auto';
+        }
+      }, 1200);
+    } else {
+      hideHint();
+    }
+
+    // Tap/click hero to scroll past it
+    function scrollPastHero(e) {
+      if (e.target.closest('a, button, details, summary, input')) return;
+      if (window.scrollY >= hero.offsetHeight * 0.8) return;
+      e.preventDefault();
+      if (scrollTarget) scrollTarget.scrollIntoView({ behavior: 'smooth' });
+      hideHint();
+    }
+    hero.addEventListener('click', scrollPastHero);
+    scrollHint.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (scrollTarget) scrollTarget.scrollIntoView({ behavior: 'smooth' });
+      hideHint();
+    });
   })();
   </script>
 </body>

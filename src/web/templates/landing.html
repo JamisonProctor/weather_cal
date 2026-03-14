@@ -431,35 +431,9 @@
       .lp-nav .brand { color: var(--lp-accent) !important; }
       .lp-nav .nav-link { color: var(--lp-text-muted) !important; }
       .lp-nav .logout-btn { color: var(--lp-text-muted) !important; }
-      .scroll-hint svg { animation: none; }
       .cal-icon-row { opacity: 1 !important; transform: none !important; transition: none !important; }
       .cal-icon-check { opacity: 1 !important; transition: none !important; }
     }
-    /* --- Scroll hint chevron --- */
-    .scroll-hint {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-      cursor: pointer;
-      opacity: 0;
-      transition: opacity 0.4s ease;
-      pointer-events: none;
-    }
-    .scroll-hint svg {
-      width: 32px;
-      height: 32px;
-      stroke: var(--lp-text-muted);
-      stroke-width: 2.5;
-      fill: none;
-      animation: bounce-hint 2s ease-in-out infinite;
-    }
-    @keyframes bounce-hint {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(8px); }
-    }
-    .scroll-hint.hidden { opacity: 0; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -489,11 +463,6 @@
       <h1>A weather forecast right in your calendar.</h1>
     </div>
   </section>
-
-  <!-- Scroll hint -->
-  <div class="scroll-hint" id="scroll-hint" aria-hidden="true">
-    <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-  </div>
 
   <!-- Feature walkthrough -->
   <div class="wt-bg-alt">
@@ -765,15 +734,6 @@
     sunEl.textContent = '\u2600\uFE0F';
     emojiLayer.appendChild(sunEl);
 
-    // Scroll hint state
-    var scrollHint = document.getElementById('scroll-hint');
-    var hintHidden = false;
-    function hideHint() {
-      if (hintHidden) return;
-      hintHidden = true;
-      scrollHint.classList.add('hidden');
-    }
-
     // Auto-animation state
     var autoProgress = 0;        // 0-1, driven by rAF auto-animation
     var autoTimerId = null;
@@ -822,9 +782,6 @@
         heroContent.style.top = 'calc(50% - ' + scrollOffset + 'px)';
         heroContent.style.transform = 'translate(-50%, -50%)';
       }
-
-      // Hide scroll hint during auto-animation or scroll
-      if (effectiveScrollY > 20 && !hintHidden) { hideHint(); }
 
       // Everything below uses realScrollY — only responds to actual scroll position
       // Nav transition
@@ -931,21 +888,12 @@
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
 
-    // Scroll hint: show after delay if user hasn't scrolled yet
     var scrollTarget = hero.nextElementSibling;
     if (window.scrollY < 10) {
-      setTimeout(function() {
-        if (!hintHidden) {
-          scrollHint.style.opacity = '0.7';
-          scrollHint.style.pointerEvents = 'auto';
-        }
-      }, 1200);
       // Auto-trigger cloud dispersal after 2s
       autoTimerId = setTimeout(function() {
         if (!userHasScrolled) startAutoAnimation();
       }, 2000);
-    } else {
-      hideHint();
     }
 
     // Tap/click hero to scroll past it
@@ -954,14 +902,8 @@
       if (window.scrollY >= hero.offsetHeight * 0.8) return;
       e.preventDefault();
       if (scrollTarget) scrollTarget.scrollIntoView({ behavior: 'smooth' });
-      hideHint();
     }
     hero.addEventListener('click', scrollPastHero);
-    scrollHint.addEventListener('click', function(e) {
-      e.preventDefault();
-      if (scrollTarget) scrollTarget.scrollIntoView({ behavior: 'smooth' });
-      hideHint();
-    });
 
     // Calendar icons animation — triggered by IntersectionObserver
     (function() {

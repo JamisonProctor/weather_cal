@@ -89,12 +89,12 @@
       pointer-events: none;
       overflow: hidden;
       background: linear-gradient(135deg, #FFF8E1, #FFF3E0);
+      contain: layout style paint;
     }
     .emoji-particle {
       position: absolute;
       user-select: none;
       pointer-events: none;
-      will-change: transform;
       line-height: 1;
     }
     @keyframes cloud-drift {
@@ -358,38 +358,48 @@
     .cal-icons-stack {
       display: flex;
       flex-direction: column;
-      align-items: center;
       gap: 20px;
-      position: relative;
       padding: 24px 0;
+      overflow: visible;
     }
     .cal-icon-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
       opacity: 0;
       transform: translateY(12px);
-      transition: opacity 0.5s ease, transform 0.5s ease;
+      transition: opacity 0.7s ease, transform 0.7s ease;
     }
     .cal-icon-row.visible {
       opacity: 1;
       transform: translateY(0);
+    }
+    .cal-icon-img-wrap {
+      position: relative;
+      flex-shrink: 0;
+      padding: 10px 10px 0 0;
     }
     .cal-icon-row img {
       width: 72px;
       height: 72px;
       border-radius: 16px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+      display: block;
+    }
+    .cal-icon-label {
+      font-size: 1.05rem;
+      font-weight: 500;
+      color: var(--lp-text);
+      white-space: nowrap;
     }
     .cal-icon-check {
       position: absolute;
-      top: 8px;
-      right: -8px;
-      font-size: 1.6rem;
-      opacity: 0;
-      transform: scale(0.5);
-      transition: opacity 0.4s ease, transform 0.4s ease;
+      top: 2px;
+      right: 2px;
+      display: none;
     }
     .cal-icon-check.visible {
-      opacity: 1;
-      transform: scale(1);
+      display: block;
     }
 
     /* --- Responsive --- */
@@ -404,7 +414,8 @@
       .emoji-particle.cloud-mobile-hide { display: none; }
       .cal-icons-stack { gap: 16px; }
       .cal-icon-row img { width: 56px; height: 56px; }
-      .cal-icon-check { font-size: 1.3rem; }
+      .cal-icon-label { font-size: 0.95rem; }
+      .cal-icon-check { font-size: 1.1rem; }
     }
     @media (max-width: 640px) {
       .lp-hero { min-height: 500px; }
@@ -422,7 +433,7 @@
       .lp-nav .logout-btn { color: var(--lp-text-muted) !important; }
       .scroll-hint svg { animation: none; }
       .cal-icon-row { opacity: 1 !important; transform: none !important; transition: none !important; }
-      .cal-icon-check { opacity: 1 !important; transform: none !important; transition: none !important; }
+      .cal-icon-check { opacity: 1 !important; transition: none !important; }
     }
     /* --- Scroll hint chevron --- */
     .scroll-hint {
@@ -524,10 +535,27 @@
       </div>
       <div class="lp-walkthrough-screenshot">
         <div class="cal-icons-stack" id="cal-icons">
-          <div class="cal-icon-row" data-icon="0"><img src="{{ url_for('static', path='icons/apple-calendar.png') }}" alt="Apple Calendar" width="72" height="72"></div>
-          <div class="cal-icon-row" data-icon="1"><img src="{{ url_for('static', path='icons/google-calendar.png') }}" alt="Google Calendar" width="72" height="72"></div>
-          <div class="cal-icon-row" data-icon="2"><img src="{{ url_for('static', path='icons/microsoft-outlook.png') }}" alt="Microsoft Outlook" width="72" height="72"></div>
-          <span class="cal-icon-check" id="cal-check">✅</span>
+          <div class="cal-icon-row" data-icon="0">
+            <div class="cal-icon-img-wrap">
+              <img src="{{ url_for('static', path='icons/apple-calendar.png') }}" alt="Apple Calendar" width="72" height="72">
+              <span class="cal-icon-check"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#22c55e"/><path d="M6 10.5l2.5 2.5 5.5-5.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </div>
+            <span class="cal-icon-label">Apple Calendar</span>
+          </div>
+          <div class="cal-icon-row" data-icon="1">
+            <div class="cal-icon-img-wrap">
+              <img src="{{ url_for('static', path='icons/google-calendar.png') }}" alt="Google Calendar" width="72" height="72">
+              <span class="cal-icon-check"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#22c55e"/><path d="M6 10.5l2.5 2.5 5.5-5.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </div>
+            <span class="cal-icon-label">Google Calendar</span>
+          </div>
+          <div class="cal-icon-row" data-icon="2">
+            <div class="cal-icon-img-wrap">
+              <img src="{{ url_for('static', path='icons/microsoft-outlook.png') }}" alt="Microsoft Outlook" width="72" height="72">
+              <span class="cal-icon-check"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#22c55e"/><path d="M6 10.5l2.5 2.5 5.5-5.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </div>
+            <span class="cal-icon-label">Outlook</span>
+          </div>
         </div>
       </div>
     </div>
@@ -630,6 +658,27 @@
     var isMobile = window.innerWidth < 768;
     var ticking = false;
 
+    // Cached layout measurements — read once, update on resize
+    var cachedHeroHeight = hero.offsetHeight;
+    var cachedVh = window.innerHeight;
+    var cachedWindowWidth = window.innerWidth;
+    var cachedScrollHeight = document.documentElement.scrollHeight;
+    var cachedPhoneTop = 0; // offset from document top
+    var firstPhone = document.querySelector('.lp-phone-frame');
+    if (firstPhone) {
+      cachedPhoneTop = firstPhone.getBoundingClientRect().top + window.scrollY;
+    }
+
+    window.addEventListener('resize', function() {
+      cachedHeroHeight = hero.offsetHeight;
+      cachedVh = window.innerHeight;
+      cachedWindowWidth = window.innerWidth;
+      cachedScrollHeight = document.documentElement.scrollHeight;
+      if (firstPhone) {
+        cachedPhoneTop = firstPhone.getBoundingClientRect().top + window.scrollY;
+      }
+    });
+
     // Seeded PRNG (mulberry32) — deterministic layout for all users
     var _seed = 42;
     function seededRandom() {
@@ -639,12 +688,14 @@
       return ((t ^ t >>> 14) >>> 0) / 4294967296;
     }
 
-    // Generate clouds on a grid for even coverage with limited overlap
-    var COLS = isMobile ? 8 : 14;
-    var ROWS = isMobile ? 8 : 14;
+    // Generate clouds on a grid — fewer on mobile to reduce GPU layers
+    var COLS = isMobile ? 5 : 14;
+    var ROWS = isMobile ? 5 : 14;
     var cellW = 120 / COLS;   // 120% total width (-10% to 110%)
     var cellH = 120 / ROWS;
     var frag = document.createDocumentFragment();
+    // Pre-parsed arrays for scroll handler (avoid parseFloat per frame)
+    var heroEmojiData = [];
     for (var row = 0; row < ROWS; row++) {
       for (var col = 0; col < COLS; col++) {
         var span = document.createElement('span');
@@ -660,10 +711,8 @@
         var dx = (cx / len) + (seededRandom() - 0.5) * 0.4;
         var dy = (cy / len) + (seededRandom() - 0.5) * 0.4;
         span.style.cssText = 'top:' + top.toFixed(1) + '%;left:' + left.toFixed(1) + '%;font-size:' + size.toFixed(1) + 'rem';
-        span.dataset.speed = speed.toFixed(2);
-        span.dataset.dx = dx.toFixed(2);
-        span.dataset.dy = dy.toFixed(2);
         span.textContent = '\u2601\uFE0F';
+        heroEmojiData.push({ el: span, speed: speed, dx: dx, dy: dy });
         frag.appendChild(span);
       }
     }
@@ -716,9 +765,6 @@
     sunEl.textContent = '\u2600\uFE0F';
     emojiLayer.appendChild(sunEl);
 
-    var heroEmojis = document.querySelectorAll('.zone-hero');
-    var firstPhone = document.querySelector('.lp-phone-frame');
-
     // Scroll hint state
     var scrollHint = document.getElementById('scroll-hint');
     var hintHidden = false;
@@ -728,43 +774,43 @@
       scrollHint.classList.add('hidden');
     }
 
+    // Track last cloud opacity to avoid redundant style writes
+    var lastCloudOpacity = -1;
+
     function onScroll() {
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(function() {
+        // All reads use cached values — no layout thrashing
         var scrollY = window.scrollY;
-        var heroHeight = hero.offsetHeight;
+        var heroHeight = cachedHeroHeight;
+        var vh = cachedVh;
         var intensity = isMobile ? 0.6 : 1;
 
-        // Hero zone emojis: aggressive dispersal (2-3x multiplier)
-        heroEmojis.forEach(function(el) {
-          var speed = parseFloat(el.dataset.speed) || 0.5;
-          var dx = parseFloat(el.dataset.dx) || 0;
-          var dy = parseFloat(el.dataset.dy) || 0;
-          var move = scrollY * speed * intensity * 2.5;
-          el.style.transform = 'translate3d(' + (dx * move) + 'px,' + (dy * move) + 'px,0)';
-        });
+        // Hero zone emojis: skip when scrolled past hero (off-screen)
+        if (scrollY < heroHeight * 1.5) {
+          for (var i = 0; i < heroEmojiData.length; i++) {
+            var d = heroEmojiData[i];
+            var move = scrollY * d.speed * intensity * 2.5;
+            d.el.style.transform = 'translate3d(' + (d.dx * move) + 'px,' + (d.dy * move) + 'px,0)';
+          }
+        }
 
         // Hero content: fade in 0-30%, pin 30-35%, scroll up + quick fade out
         var pinEnd = heroHeight * 0.35;
-        var vh = window.innerHeight;
-        var fadeOutDist = vh * 0.25; // gone within 25vh of scrolling
         if (scrollY < heroHeight * 0.3) {
-          // Fade in
           heroContent.style.opacity = scrollY / (heroHeight * 0.3);
           heroContent.style.position = 'fixed';
           heroContent.style.top = '50%';
           heroContent.style.left = '50%';
           heroContent.style.transform = 'translate(-50%, -50%)';
         } else if (scrollY < pinEnd) {
-          // Pin in center while clouds finish dispersing
           heroContent.style.opacity = 1;
           heroContent.style.position = 'fixed';
           heroContent.style.top = '50%';
           heroContent.style.left = '50%';
           heroContent.style.transform = 'translate(-50%, -50%)';
         } else {
-          // Scroll up at 0.5x page speed, fade out by the time it reaches 25% from top
           var scrollOffset = (scrollY - pinEnd) * 0.5;
           var visualTop = vh * 0.5 - scrollOffset;
           var fadeOut = Math.min(1, Math.max(0, (visualTop - vh * 0.25) / (vh * 0.25)));
@@ -785,12 +831,13 @@
         // Hide scroll hint on any scroll
         if (scrollY > 20 && !hintHidden) { hideHint(); }
 
-        // Drifting background clouds — activate CSS animations at trigger
-        var phoneRect = firstPhone ? firstPhone.getBoundingClientRect() : null;
-        var driftTrigger = phoneRect ? phoneRect.top <= vh * 0.75 : scrollY > heroHeight;
-        // Fade clouds in/out gradually based on how far past trigger
-        var cloudFadeProgress = driftTrigger ? (phoneRect ? (vh * 0.75 - phoneRect.top) : scrollY - heroHeight) : 0;
+        // Drifting background clouds — use cached phone position (no getBoundingClientRect)
+        var phoneViewportTop = cachedPhoneTop - scrollY;
+        var driftTrigger = firstPhone ? phoneViewportTop <= vh * 0.75 : scrollY > heroHeight;
+        var cloudFadeProgress = driftTrigger ? (firstPhone ? (vh * 0.75 - phoneViewportTop) : scrollY - heroHeight) : 0;
         var cloudOpacity = Math.min(0.3, Math.max(0, cloudFadeProgress / (vh * 0.3) * 0.3));
+        // Round to 2 decimals to avoid redundant style writes
+        cloudOpacity = Math.round(cloudOpacity * 100) / 100;
         if (driftTrigger && !cloudsActive) {
           cloudsActive = true;
           for (var di = 0; di < driftEls.length; di++) {
@@ -802,17 +849,20 @@
             driftEls[di].style.animationPlayState = 'paused';
           }
         }
-        for (var di = 0; di < driftEls.length; di++) {
-          driftEls[di].style.opacity = cloudOpacity;
+        if (cloudOpacity !== lastCloudOpacity) {
+          lastCloudOpacity = cloudOpacity;
+          for (var di = 0; di < driftEls.length; di++) {
+            driftEls[di].style.opacity = cloudOpacity;
+          }
         }
 
         // Sun emoji — arcs across the sky, starts with clouds, sets at bottom
-        var maxScroll = document.documentElement.scrollHeight - vh;
-        var cloudTriggerScroll = driftTrigger ? (phoneRect ? (vh * 0.75 - phoneRect.top) : scrollY - heroHeight) : 0;
+        var maxScroll = cachedScrollHeight - vh;
+        var cloudTriggerScroll = driftTrigger ? (firstPhone ? (vh * 0.75 - phoneViewportTop) : scrollY - heroHeight) : 0;
         var sunTotalRange = maxScroll - (scrollY - cloudTriggerScroll);
         if (driftTrigger && cloudTriggerScroll > 0 && sunTotalRange > 0) {
           var sunProgress = Math.min(1, cloudTriggerScroll / sunTotalRange);
-          var sunX = sunProgress * (window.innerWidth * 1.2);
+          var sunX = sunProgress * (cachedWindowWidth * 1.2);
           var peakHeight = vh * 0.7;
           var sunY = -4 * peakHeight * sunProgress * (1 - sunProgress);
           var sunOpacity = sunProgress < 0.15 ? (sunProgress / 0.15) * 0.45
@@ -865,34 +915,41 @@
       var container = document.getElementById('cal-icons');
       if (!container) return;
       var icons = container.querySelectorAll('.cal-icon-row');
-      var check = document.getElementById('cal-check');
+      var checks = container.querySelectorAll('.cal-icon-check');
       var animTimer = null;
       var isVisible = false;
 
       function resetAll() {
         for (var i = 0; i < icons.length; i++) {
           icons[i].classList.remove('visible');
+          checks[i].classList.remove('visible');
         }
-        check.classList.remove('visible');
       }
 
       function runCycle() {
         resetAll();
-        // Stagger each icon: 0ms, 400ms, 800ms
+        // Stagger each icon: 0ms, 600ms, 1200ms
+        var stagger = 600;
         for (var i = 0; i < icons.length; i++) {
           (function(idx) {
             setTimeout(function() {
               if (!isVisible) return;
               icons[idx].classList.add('visible');
-            }, idx * 400);
+            }, idx * stagger);
           })(i);
         }
-        // Show check after all icons are in (800 + 500 settle)
-        setTimeout(function() {
-          if (!isVisible) return;
-          check.classList.add('visible');
-        }, icons.length * 400 + 300);
+        // Show all checks after all icons are in, same stagger
+        var checkDelay = icons.length * stagger + 400;
+        for (var i = 0; i < checks.length; i++) {
+          (function(idx) {
+            setTimeout(function() {
+              if (!isVisible) return;
+              checks[idx].classList.add('visible');
+            }, checkDelay + idx * stagger);
+          })(i);
+        }
         // Hold for 3s, then restart
+        var totalIn = checkDelay + checks.length * stagger;
         animTimer = setTimeout(function() {
           if (!isVisible) return;
           resetAll();
@@ -900,7 +957,7 @@
           animTimer = setTimeout(function() {
             if (isVisible) runCycle();
           }, 600);
-        }, icons.length * 400 + 300 + 3000);
+        }, totalIn + 3000);
       }
 
       var observer = new IntersectionObserver(function(entries) {

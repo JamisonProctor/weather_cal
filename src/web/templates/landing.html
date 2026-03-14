@@ -354,6 +354,44 @@
       color: var(--lp-accent);
     }
 
+    /* --- Calendar icons animation --- */
+    .cal-icons-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      position: relative;
+      padding: 24px 0;
+    }
+    .cal-icon-row {
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .cal-icon-row.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .cal-icon-row img {
+      width: 72px;
+      height: 72px;
+      border-radius: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+    }
+    .cal-icon-check {
+      position: absolute;
+      top: 8px;
+      right: -8px;
+      font-size: 1.6rem;
+      opacity: 0;
+      transform: scale(0.5);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    .cal-icon-check.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
     /* --- Responsive --- */
     @media (max-width: 768px) {
       .lp-steps { grid-template-columns: 1fr; gap: 24px; }
@@ -364,6 +402,9 @@
       }
       .lp-phone-frame { width: 220px; height: 380px; }
       .emoji-particle.cloud-mobile-hide { display: none; }
+      .cal-icons-stack { gap: 16px; }
+      .cal-icon-row img { width: 56px; height: 56px; }
+      .cal-icon-check { font-size: 1.3rem; }
     }
     @media (max-width: 640px) {
       .lp-hero { min-height: 500px; }
@@ -380,6 +421,8 @@
       .lp-nav .nav-link { color: var(--lp-text-muted) !important; }
       .lp-nav .logout-btn { color: var(--lp-text-muted) !important; }
       .scroll-hint svg { animation: none; }
+      .cal-icon-row { opacity: 1 !important; transform: none !important; transition: none !important; }
+      .cal-icon-check { opacity: 1 !important; transform: none !important; transition: none !important; }
     }
     /* --- Scroll hint chevron --- */
     .scroll-hint {
@@ -480,8 +523,11 @@
         <p>Connect Google Calendar, Apple Calendar, or Outlook — setup takes under a minute. Forecasts update automatically, and there's nothing to install.</p>
       </div>
       <div class="lp-walkthrough-screenshot">
-        <div class="lp-phone-frame">
-          <div class="lp-phone-placeholder">Screenshot coming soon<br><small>Quick setup flow</small></div>
+        <div class="cal-icons-stack" id="cal-icons">
+          <div class="cal-icon-row" data-icon="0"><img src="{{ url_for('static', path='icons/apple-calendar.png') }}" alt="Apple Calendar" width="72" height="72"></div>
+          <div class="cal-icon-row" data-icon="1"><img src="{{ url_for('static', path='icons/google-calendar.png') }}" alt="Google Calendar" width="72" height="72"></div>
+          <div class="cal-icon-row" data-icon="2"><img src="{{ url_for('static', path='icons/microsoft-outlook.png') }}" alt="Microsoft Outlook" width="72" height="72"></div>
+          <span class="cal-icon-check" id="cal-check">✅</span>
         </div>
       </div>
     </div>
@@ -813,6 +859,65 @@
       if (scrollTarget) scrollTarget.scrollIntoView({ behavior: 'smooth' });
       hideHint();
     });
+
+    // Calendar icons animation — triggered by IntersectionObserver
+    (function() {
+      var container = document.getElementById('cal-icons');
+      if (!container) return;
+      var icons = container.querySelectorAll('.cal-icon-row');
+      var check = document.getElementById('cal-check');
+      var animTimer = null;
+      var isVisible = false;
+
+      function resetAll() {
+        for (var i = 0; i < icons.length; i++) {
+          icons[i].classList.remove('visible');
+        }
+        check.classList.remove('visible');
+      }
+
+      function runCycle() {
+        resetAll();
+        // Stagger each icon: 0ms, 400ms, 800ms
+        for (var i = 0; i < icons.length; i++) {
+          (function(idx) {
+            setTimeout(function() {
+              if (!isVisible) return;
+              icons[idx].classList.add('visible');
+            }, idx * 400);
+          })(i);
+        }
+        // Show check after all icons are in (800 + 500 settle)
+        setTimeout(function() {
+          if (!isVisible) return;
+          check.classList.add('visible');
+        }, icons.length * 400 + 300);
+        // Hold for 3s, then restart
+        animTimer = setTimeout(function() {
+          if (!isVisible) return;
+          resetAll();
+          // Brief pause before restarting
+          animTimer = setTimeout(function() {
+            if (isVisible) runCycle();
+          }, 600);
+        }, icons.length * 400 + 300 + 3000);
+      }
+
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting && !isVisible) {
+            isVisible = true;
+            runCycle();
+          } else if (!entry.isIntersecting && isVisible) {
+            isVisible = false;
+            clearTimeout(animTimer);
+            resetAll();
+          }
+        });
+      }, { threshold: 0.3 });
+
+      observer.observe(container);
+    })();
   })();
   </script>
 </body>

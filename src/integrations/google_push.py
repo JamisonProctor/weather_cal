@@ -442,7 +442,8 @@ def _push_forecast_events(service, calendar_id, forecast, prefs, tz, tz_name):
     timed_enabled = prefs.get("timed_events_enabled", 1) if prefs else 1
     logger.info("push forecast date=%s show_allday=%s timed=%s", forecast.date, show_allday, timed_enabled)
 
-    events = build_calendar_events(forecast, prefs)
+    settings_url = "https://weathercal.app/settings?ref=cal"
+    events = build_calendar_events(forecast, prefs, settings_url)
     logger.info("Built %d events for date=%s (allday=%d, timed=%d)",
                 len(events), forecast.date,
                 sum(1 for e in events if e.is_allday),

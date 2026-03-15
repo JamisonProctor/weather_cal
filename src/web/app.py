@@ -367,6 +367,8 @@ async def settings_post(
     allday_hot: str = Form(default=""),
     warn_hot: str = Form(default=""),
     temp_unit: str = Form(default="C"),
+    reminder_allday_hour: int = Form(default=-1),
+    reminder_timed_minutes: int = Form(default=-1),
 ):
     user_id = _get_user_id(request)
     if not user_id:
@@ -399,6 +401,8 @@ async def settings_post(
         allday_hot=1 if allday_hot == "on" else 0,
         warn_hot=1 if warn_hot == "on" else 0,
         temp_unit=temp_unit,
+        reminder_allday_hour=reminder_allday_hour,
+        reminder_timed_minutes=reminder_timed_minutes,
     )
     return RedirectResponse(url="/settings?success=prefs", status_code=303)
 

@@ -3,7 +3,7 @@ from datetime import date as date_type, datetime, timedelta, timezone
 from typing import List
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from icalendar import Calendar, Event
+from icalendar import Calendar, Event, Alarm
 
 from src.models.forecast import Forecast
 from src.services.forecast_formatting import (
@@ -139,6 +139,15 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, sett
             event.add("dtend", event_date + timedelta(days=1))
             event.add("transp", "TRANSPARENT")
             event.add("dtstamp", now)
+
+            reminder_hour = prefs.get("reminder_allday_hour", -1) if prefs else -1
+            if reminder_hour is not None and reminder_hour >= 0:
+                alarm = Alarm()
+                alarm.add("action", "DISPLAY")
+                alarm.add("description", summary)
+                alarm.add("trigger", timedelta(hours=reminder_hour))
+                event.add_component(alarm)
+
             cal.add_component(event)
 
         # Timed warning events
@@ -164,6 +173,15 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, sett
                 if settings_url:
                     description += f"\n\n⚙️ Change your settings: {settings_url}"
                 w_event.add("description", description)
+
+                reminder_mins = prefs.get("reminder_timed_minutes", -1) if prefs else -1
+                if reminder_mins is not None and reminder_mins >= 0:
+                    w_alarm = Alarm()
+                    w_alarm.add("action", "DISPLAY")
+                    w_alarm.add("description", summary)
+                    w_alarm.add("trigger", timedelta(minutes=-reminder_mins))
+                    w_event.add_component(w_alarm)
+
                 cal.add_component(w_event)
 
     cal.add_missing_timezones()

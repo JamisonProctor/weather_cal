@@ -57,6 +57,9 @@
   .threshold-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; font-size: 0.95rem; }
   .threshold-row input[type="number"] { width: 72px; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem; text-align: center; }
 
+  .reminder-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #e5e7eb; font-size: 0.95rem; flex-wrap: wrap; }
+  .reminder-row select { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem; background: #fff; }
+
   .feed-input-row { display: flex; gap: 8px; }
   .feed-url { flex: 1; padding: 10px 12px; font-family: monospace; font-size: 0.82rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px; color: #374151; cursor: text; }
   .copy-btn { padding: 10px 16px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
@@ -213,6 +216,17 @@
                 </label>
               </div>
             </div>
+
+            <div class="reminder-row">
+              <span>Notification</span>
+              <select name="reminder_allday_hour">
+                <option value="-1" {% if prefs.reminder_allday_hour == -1 or prefs.reminder_allday_hour is none %}selected{% endif %}>None</option>
+                <option value="6" {% if prefs.reminder_allday_hour == 6 %}selected{% endif %}>6:00 AM</option>
+                <option value="7" {% if prefs.reminder_allday_hour == 7 %}selected{% endif %}>7:00 AM</option>
+                <option value="8" {% if prefs.reminder_allday_hour == 8 %}selected{% endif %}>8:00 AM</option>
+                <option value="9" {% if prefs.reminder_allday_hour == 9 %}selected{% endif %}>9:00 AM</option>
+              </select>
+            </div>
           </div>
 
           <!-- Timed events card -->
@@ -257,6 +271,18 @@
                 <span class="checkmark"></span>
                 ☀️ Nice weather
               </label>
+            </div>
+
+            <div class="reminder-row">
+              <span>Notification</span>
+              <select name="reminder_timed_minutes">
+                <option value="-1" {% if prefs.reminder_timed_minutes == -1 or prefs.reminder_timed_minutes is none %}selected{% endif %}>None</option>
+                <option value="0" {% if prefs.reminder_timed_minutes == 0 %}selected{% endif %}>At time of event</option>
+                <option value="5" {% if prefs.reminder_timed_minutes == 5 %}selected{% endif %}>5 minutes before</option>
+                <option value="15" {% if prefs.reminder_timed_minutes == 15 %}selected{% endif %}>15 minutes before</option>
+                <option value="30" {% if prefs.reminder_timed_minutes == 30 %}selected{% endif %}>30 minutes before</option>
+                <option value="60" {% if prefs.reminder_timed_minutes == 60 %}selected{% endif %}>1 hour before</option>
+              </select>
             </div>
           </div>
 

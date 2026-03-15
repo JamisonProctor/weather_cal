@@ -427,3 +427,110 @@ def test_generate_ics_summary_uses_prefs_cold_threshold():
     events = _parse_events(ics_bytes)
     all_day = next(e for e in events if not hasattr(e["DTSTART"].dt, "hour"))
     assert "🥶" in str(all_day["SUMMARY"])
+
+
+def _parse_alarms(event) -> list:
+    return [c for c in event.walk() if c.name == "VALARM"]
+
+
+def test_allday_event_has_no_alarm_by_default():
+    forecast = _make_forecast(
+        times=["2026-03-10T06:00", "2026-03-10T12:00"],
+        temps=[10, 15],
+        codes=[0, 1],
+        rain=[0, 0],
+        winds=[5, 5],
+    )
+    ics_bytes = generate_ics([forecast], "Munich, Germany")
+    events = _parse_events(ics_bytes)
+    all_day = next(e for e in events if not hasattr(e["DTSTART"].dt, "hour"))
+    assert len(_parse_alarms(all_day)) == 0
+
+
+def test_allday_event_alarm_at_7am():
+    forecast = _make_forecast(
+        times=["2026-03-10T06:00", "2026-03-10T12:00"],
+        temps=[10, 15],
+        codes=[0, 1],
+        rain=[0, 0],
+        winds=[5, 5],
+    )
+    prefs = {
+        "warn_in_allday": 1, "warn_rain": 1, "warn_wind": 1,
+        "warn_cold": 1, "warn_snow": 1, "warn_sunny": 0, "cold_threshold": 3.0,
+        "show_allday_events": 1, "timed_events_enabled": 1,
+        "allday_rain": 1, "allday_wind": 1, "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0,
+        "reminder_allday_hour": 7,
+    }
+    ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
+    events = _parse_events(ics_bytes)
+    all_day = next(e for e in events if not hasattr(e["DTSTART"].dt, "hour"))
+    alarms = _parse_alarms(all_day)
+    assert len(alarms) == 1
+    from datetime import timedelta
+    assert alarms[0]["TRIGGER"].dt == timedelta(hours=7)
+    assert str(alarms[0]["ACTION"]) == "DISPLAY"
+
+
+def test_allday_event_no_alarm_when_minus_one():
+    forecast = _make_forecast(
+        times=["2026-03-10T06:00", "2026-03-10T12:00"],
+        temps=[10, 15],
+        codes=[0, 1],
+        rain=[0, 0],
+        winds=[5, 5],
+    )
+    prefs = {
+        "warn_in_allday": 1, "warn_rain": 1, "warn_wind": 1,
+        "warn_cold": 1, "warn_snow": 1, "warn_sunny": 0, "cold_threshold": 3.0,
+        "show_allday_events": 1, "timed_events_enabled": 1,
+        "allday_rain": 1, "allday_wind": 1, "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0,
+        "reminder_allday_hour": -1,
+    }
+    ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
+    events = _parse_events(ics_bytes)
+    all_day = next(e for e in events if not hasattr(e["DTSTART"].dt, "hour"))
+    assert len(_parse_alarms(all_day)) == 0
+
+
+def test_timed_event_alarm_15_minutes_before():
+    forecast = _make_forecast(
+        times=[
+            "2026-03-10T10:00", "2026-03-10T11:00",
+            "2026-03-10T12:00", "2026-03-10T13:00",
+        ],
+        temps=[12, 12, 13, 13],
+        codes=[1, 1, 1, 1],
+        rain=[50, 60, 55, 45],
+        winds=[5, 5, 5, 5],
+    )
+    prefs = {
+        "warn_in_allday": 1, "warn_rain": 1, "warn_wind": 1,
+        "warn_cold": 1, "warn_snow": 1, "warn_sunny": 0, "cold_threshold": 3.0,
+        "show_allday_events": 1, "timed_events_enabled": 1,
+        "allday_rain": 1, "allday_wind": 1, "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0,
+        "reminder_timed_minutes": 15,
+    }
+    ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
+    events = _parse_events(ics_bytes)
+    timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
+    assert len(timed) >= 1
+    alarms = _parse_alarms(timed[0])
+    assert len(alarms) == 1
+    from datetime import timedelta
+    assert alarms[0]["TRIGGER"].dt == timedelta(minutes=-15)
+
+
+def test_timed_event_no_alarm_by_default():
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00"],
+        temps=[12, 12],
+        codes=[1, 1],
+        rain=[50, 60],
+        winds=[5, 5],
+    )
+    ics_bytes = generate_ics([forecast], "Munich, Germany")
+    events = _parse_events(ics_bytes)
+    timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
+    assert len(timed) >= 1
+    assert len(_parse_alarms(timed[0])) == 0

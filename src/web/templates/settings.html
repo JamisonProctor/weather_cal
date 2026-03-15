@@ -219,13 +219,21 @@
 
             <div class="reminder-row">
               <span>Notification</span>
-              <select name="reminder_allday_hour">
-                <option value="-1" {% if prefs.reminder_allday_hour == -1 or prefs.reminder_allday_hour is none %}selected{% endif %}>None</option>
-                <option value="6" {% if prefs.reminder_allday_hour == 6 %}selected{% endif %}>6:00 AM</option>
-                <option value="7" {% if prefs.reminder_allday_hour == 7 %}selected{% endif %}>7:00 AM</option>
-                <option value="8" {% if prefs.reminder_allday_hour == 8 %}selected{% endif %}>8:00 AM</option>
-                <option value="9" {% if prefs.reminder_allday_hour == 9 %}selected{% endif %}>9:00 AM</option>
-              </select>
+              {% if calendar_app == 'Google Calendar' %}
+                <select name="reminder_allday_hour" disabled>
+                  <option value="-1" selected>Not supported</option>
+                </select>
+                <input type="hidden" name="reminder_allday_hour" value="{{ prefs.reminder_allday_hour | default(-1) }}">
+                <span class="pref-note">Google Calendar ignores notifications from subscribed calendars. Set a default reminder directly on the WeatherCal calendar in Google Calendar settings.</span>
+              {% else %}
+                <select name="reminder_allday_hour">
+                  <option value="-1" {% if prefs.reminder_allday_hour == -1 or prefs.reminder_allday_hour is none %}selected{% endif %}>None</option>
+                  <option value="6" {% if prefs.reminder_allday_hour == 6 %}selected{% endif %}>6:00 AM</option>
+                  <option value="7" {% if prefs.reminder_allday_hour == 7 %}selected{% endif %}>7:00 AM</option>
+                  <option value="8" {% if prefs.reminder_allday_hour == 8 %}selected{% endif %}>8:00 AM</option>
+                  <option value="9" {% if prefs.reminder_allday_hour == 9 %}selected{% endif %}>9:00 AM</option>
+                </select>
+              {% endif %}
             </div>
           </div>
 
@@ -275,14 +283,22 @@
 
             <div class="reminder-row">
               <span>Notification</span>
-              <select name="reminder_timed_minutes">
-                <option value="-1" {% if prefs.reminder_timed_minutes == -1 or prefs.reminder_timed_minutes is none %}selected{% endif %}>None</option>
-                <option value="0" {% if prefs.reminder_timed_minutes == 0 %}selected{% endif %}>At time of event</option>
-                <option value="5" {% if prefs.reminder_timed_minutes == 5 %}selected{% endif %}>5 minutes before</option>
-                <option value="15" {% if prefs.reminder_timed_minutes == 15 %}selected{% endif %}>15 minutes before</option>
-                <option value="30" {% if prefs.reminder_timed_minutes == 30 %}selected{% endif %}>30 minutes before</option>
-                <option value="60" {% if prefs.reminder_timed_minutes == 60 %}selected{% endif %}>1 hour before</option>
-              </select>
+              {% if calendar_app == 'Google Calendar' %}
+                <select name="reminder_timed_minutes" disabled>
+                  <option value="-1" selected>Not supported</option>
+                </select>
+                <input type="hidden" name="reminder_timed_minutes" value="{{ prefs.reminder_timed_minutes | default(-1) }}">
+                <span class="pref-note">Google Calendar ignores notifications from subscribed calendars.</span>
+              {% else %}
+                <select name="reminder_timed_minutes">
+                  <option value="-1" {% if prefs.reminder_timed_minutes == -1 or prefs.reminder_timed_minutes is none %}selected{% endif %}>None</option>
+                  <option value="0" {% if prefs.reminder_timed_minutes == 0 %}selected{% endif %}>At time of event</option>
+                  <option value="5" {% if prefs.reminder_timed_minutes == 5 %}selected{% endif %}>5 minutes before</option>
+                  <option value="15" {% if prefs.reminder_timed_minutes == 15 %}selected{% endif %}>15 minutes before</option>
+                  <option value="30" {% if prefs.reminder_timed_minutes == 30 %}selected{% endif %}>30 minutes before</option>
+                  <option value="60" {% if prefs.reminder_timed_minutes == 60 %}selected{% endif %}>1 hour before</option>
+                </select>
+              {% endif %}
             </div>
           </div>
 

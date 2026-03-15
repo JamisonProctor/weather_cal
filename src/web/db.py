@@ -434,6 +434,22 @@ def _detect_calendar_app(user_agent: str) -> str:
     return "Other"
 
 
+def get_user_calendar_app(db_path: str, user_id: int) -> str:
+    """Detect which calendar app a user is using from their feed token's User-Agent."""
+    conn = _conn(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT last_user_agent FROM feed_tokens WHERE user_id = ? LIMIT 1",
+            (user_id,),
+        )
+        row = cur.fetchone()
+        ua = row["last_user_agent"] if row and row["last_user_agent"] else ""
+        return _detect_calendar_app(ua)
+    finally:
+        conn.close()
+
+
 def update_feed_poll(db_path: str, token: str, user_agent: str) -> None:
     """Record an ICS feed poll: update timestamp, increment count, store UA."""
     now = datetime.now().isoformat()

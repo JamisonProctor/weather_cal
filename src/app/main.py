@@ -49,9 +49,17 @@ def main():
     forecast_days = 14
 
     calendar = None
+    allday_reminder = None
+    timed_reminder = None
     if os.getenv("ENABLE_GOOGLE_CALENDAR_SYNC"):
         try:
             calendar = CalendarService()
+            raw_allday = os.getenv("GCAL_REMINDER_ALLDAY_MINUTES")
+            raw_timed = os.getenv("GCAL_REMINDER_TIMED_MINUTES")
+            if raw_allday is not None:
+                allday_reminder = int(raw_allday)
+            if raw_timed is not None:
+                timed_reminder = int(raw_timed)
         except Exception as e:
             logger.error(f"Failed to initialize CalendarService: {e}", exc_info=True)
 
@@ -76,14 +84,14 @@ def main():
                         forecast.date,
                         forecast.location,
                     )
-                    calendar.sync_warning_events(forecast.date, forecast.location, warning_windows, tz)
+                    calendar.sync_warning_events(forecast.date, forecast.location, warning_windows, tz, reminder_minutes=timed_reminder)
 
         if calendar:
             logger.info("Retrieving forecasts from DB for calendar population...")
             all_forecasts = store.get_forecasts_future(days=forecast_days)
             for forecast in all_forecasts:
                 logger.info(f"Updating calendar for date={forecast.date}, location={forecast.location}")
-                calendar.upsert_event(forecast)
+                calendar.upsert_event(forecast, reminder_minutes=allday_reminder)
 
     except Exception as e:
         logger.error(f"Failed to fetch, process, store, or update calendar with forecasts: {e}", exc_info=True)

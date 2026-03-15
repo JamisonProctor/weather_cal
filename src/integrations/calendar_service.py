@@ -110,8 +110,29 @@ class CalendarService:
         except ValueError:
             return fetch_time
 
-    def upsert_event(self, forecast):
-        """Insert or update a Google Calendar event based on a Forecast object."""
+    @staticmethod
+    def _build_reminders(reminder_minutes=None):
+        """Build a Google Calendar reminders dict.
+
+        For all-day events, *minutes* counts backward from midnight of the
+        event date, so ``0`` means "at midnight" (the start of the day).
+        For timed events it counts backward from the event start time.
+        A value of ``None`` or negative disables reminders.
+        """
+        if reminder_minutes is not None and reminder_minutes >= 0:
+            return {
+                "useDefault": False,
+                "overrides": [{"method": "popup", "minutes": reminder_minutes}],
+            }
+        return {"useDefault": False}
+
+    def upsert_event(self, forecast, reminder_minutes=None):
+        """Insert or update a Google Calendar event based on a Forecast object.
+
+        *reminder_minutes* – minutes before midnight to fire a popup reminder
+        for the all-day event.  ``0`` = midnight, ``None``/negative = no
+        reminder.
+        """
         try:
             base_description = forecast.description or ""
             formatted_fetch_time = self._format_fetch_time(forecast.fetch_time)
@@ -128,7 +149,7 @@ class CalendarService:
                 "description": description,
                 "start": {"date": forecast.date},
                 "end": {"date": forecast.date},
-                "reminders": {"useDefault": False}
+                "reminders": self._build_reminders(reminder_minutes),
             }
 
             existing_event, duplicates = self._find_matching_event(forecast)
@@ -150,7 +171,7 @@ class CalendarService:
             logger.error(f"Failed to upsert event for {forecast.date}: {e}", exc_info=True)
             raise
 
-    def sync_warning_events(self, date: str, location: str, warning_windows: List, timezone: str) -> None:
+    def sync_warning_events(self, date: str, location: str, warning_windows: List, timezone: str, reminder_minutes=None) -> None:
         """
         Replace all existing timed warning events for a given date and location with
         new events derived from warning_windows. Each WarningWindow becomes one
@@ -190,7 +211,7 @@ class CalendarService:
                     "location": location,
                     "start": {"dateTime": window.start_time + ":00", "timeZone": timezone},
                     "end": {"dateTime": window.end_time + ":00", "timeZone": timezone},
-                    "reminders": {"useDefault": False},
+                    "reminders": self._build_reminders(reminder_minutes),
                 }
                 self.service.events().insert(
                     calendarId=self.calendar_id,

@@ -33,6 +33,7 @@ from src.web.db import (
     get_rows_by_token,
     get_user_by_email,
     get_user_by_id,
+    get_user_calendar_app,
     get_user_locations,
     get_user_preferences,
     increment_settings_clicks,
@@ -331,6 +332,8 @@ async def settings(
     else:
         last_updated = None
 
+    calendar_app = get_user_calendar_app(DB_PATH, user_id)
+
     return _template("settings.html", request, {
         "user": user,
         "feed_token": feed_token,
@@ -342,6 +345,7 @@ async def settings(
         "error": error,
         "last_updated": last_updated,
         "is_admin": _is_admin(user_id),
+        "calendar_app": calendar_app,
     })
 
 

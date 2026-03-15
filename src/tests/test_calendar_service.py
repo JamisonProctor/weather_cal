@@ -248,3 +248,81 @@ def test_sync_warning_events_no_existing_no_windows(monkeypatch):
 
     assert fake_service.events_client.deleted_ids == []
     assert fake_service.events_client.inserted_calls == []
+
+
+def test_build_reminders_none_disables():
+    result = CalendarService._build_reminders(None)
+    assert result == {"useDefault": False}
+    assert "overrides" not in result
+
+
+def test_build_reminders_negative_disables():
+    result = CalendarService._build_reminders(-1)
+    assert result == {"useDefault": False}
+    assert "overrides" not in result
+
+
+def test_build_reminders_zero_sets_popup():
+    result = CalendarService._build_reminders(0)
+    assert result == {
+        "useDefault": False,
+        "overrides": [{"method": "popup", "minutes": 0}],
+    }
+
+
+def test_build_reminders_positive_sets_popup():
+    result = CalendarService._build_reminders(15)
+    assert result["overrides"] == [{"method": "popup", "minutes": 15}]
+
+
+def test_upsert_event_with_reminder(monkeypatch):
+    fake_service = FakeService([])
+    monkeypatch.setattr(CalendarService, "get_calendar_service", staticmethod(lambda: fake_service))
+
+    calendar = CalendarService()
+    forecast = _build_forecast()
+
+    calendar.upsert_event(forecast, reminder_minutes=0)
+
+    inserted = fake_service.events_client.inserted_calls[0]
+    assert inserted["reminders"] == {
+        "useDefault": False,
+        "overrides": [{"method": "popup", "minutes": 0}],
+    }
+
+
+def test_upsert_event_without_reminder(monkeypatch):
+    fake_service = FakeService([])
+    monkeypatch.setattr(CalendarService, "get_calendar_service", staticmethod(lambda: fake_service))
+
+    calendar = CalendarService()
+    forecast = _build_forecast()
+
+    calendar.upsert_event(forecast)
+
+    inserted = fake_service.events_client.inserted_calls[0]
+    assert inserted["reminders"] == {"useDefault": False}
+
+
+def test_sync_warning_events_with_reminder(monkeypatch):
+    fake_service = FakeService([])
+    monkeypatch.setattr(CalendarService, "get_calendar_service", staticmethod(lambda: fake_service))
+
+    calendar = CalendarService()
+    windows = [
+        WarningWindow(
+            warning_type="rain",
+            emoji="☂️",
+            label="Rain Warning",
+            start_time="2025-10-21T10:00",
+            end_time="2025-10-21T14:00",
+        )
+    ]
+
+    calendar.sync_warning_events("2025-10-21", "Munich", windows, "Europe/Berlin", reminder_minutes=15)
+
+    inserted = fake_service.events_client.inserted_calls[0]
+    assert inserted["reminders"] == {
+        "useDefault": False,
+        "overrides": [{"method": "popup", "minutes": 15}],
+    }

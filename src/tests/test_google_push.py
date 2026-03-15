@@ -7,6 +7,7 @@ import pytest
 from src.integrations.google_push import (
     _cleanup_beyond_forecast,
     _cleanup_stale_events,
+    _push_forecast_events,
     _upsert_event,
     create_google_tokens_table,
     delete_google_calendar,
@@ -469,3 +470,36 @@ class TestCleanupWeathercalFilter:
         service.events().delete.assert_called_once_with(
             calendarId="cal123", eventId="evt_wc"
         )
+
+
+# --- Settings URL in pushed events ---
+
+class TestPushForecastEventsSettingsUrl:
+    """Verify Google-pushed events include settings link in description."""
+
+    def test_pushed_events_contain_settings_url(self):
+        from zoneinfo import ZoneInfo
+        from src.models.forecast import Forecast
+
+        tz = ZoneInfo("Europe/Berlin")
+        forecast = Forecast(
+            date="2026-03-15",
+            location="Munich, Germany",
+            high=18.0,
+            low=8.0,
+            summary="AM☀️10° / PM⛅15°",
+            description="A nice day",
+            timezone="Europe/Berlin",
+        )
+        prefs = {"show_allday_events": 1, "timed_events_enabled": 0}
+
+        service = MagicMock()
+        service.events().list().execute.return_value = {"items": []}
+
+        _push_forecast_events(service, "cal123", forecast, prefs, tz, "Europe/Berlin")
+
+        # Check that the import_ call included the settings URL in description
+        call_args = service.events().import_.call_args
+        assert call_args is not None, "Expected import_ to be called"
+        body = call_args[1]["body"] if "body" in call_args[1] else call_args[0][0]
+        assert "https://weathercal.app/settings" in body.get("description", "")

@@ -400,20 +400,15 @@
     }
 
     /* --- Responsive --- */
-    @media (min-width: 769px) and (max-width: 1024px) {
-      .lp-walkthrough {
-        padding: 80px 48px;
-      }
-    }
-    @media (max-width: 768px) {
+    @media (max-width: 1024px) {
       .lp-steps { grid-template-columns: 1fr; gap: 24px; }
       .lp-walkthrough, .lp-walkthrough.reverse {
         flex-direction: column;
         gap: 32px;
-        padding: 56px 20px;
+        padding: 56px 24px;
       }
-      .lp-walkthrough-text { max-width: 320px; margin: 0 auto; }
-      .lp-phone-frame { width: 220px; }
+      .lp-walkthrough-text { max-width: 380px; margin: 0 auto; }
+      .lp-phone-frame { width: 260px; }
       .emoji-particle.cloud-mobile-hide { display: none; }
       .cal-icons-stack { gap: 16px; }
       .cal-icon-row img { width: 56px; height: 56px; }
@@ -424,6 +419,8 @@
       .lp-hero { min-height: 500px; }
       .lp-section { padding: 56px 20px; }
       .lp-section-alt .lp-section-inner { padding: 56px 20px; }
+      .lp-walkthrough-text { max-width: 300px; }
+      .lp-phone-frame { width: 220px; }
     }
 
     /* --- Reduced motion --- */

@@ -451,7 +451,7 @@
 
           {% if webcal_url %}
           <!-- Google Calendar section -->
-          <p class="connect-section-label">Google Calendar <span class="badge">Recommended</span></p>
+          <p class="connect-section-label">Google Calendar {% if not google_connected %}<span class="badge">Recommended</span>{% endif %}</p>
           <div class="connect-btn-row">
             <div class="connect-btn-wrapper">
               {% if google_oauth_enabled and not google_connected %}

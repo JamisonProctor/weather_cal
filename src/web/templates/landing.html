@@ -412,7 +412,8 @@
         gap: 32px;
         padding: 56px 20px;
       }
-      .lp-phone-frame { width: 220px; height: 380px; }
+      .lp-walkthrough-text { text-align: center; }
+      .lp-phone-frame { width: 220px; }
       .emoji-particle.cloud-mobile-hide { display: none; }
       .cal-icons-stack { gap: 16px; }
       .cal-icon-row img { width: 56px; height: 56px; }
@@ -840,18 +841,7 @@
     }
 
     var tapOffset = 0;
-    var lastScrollY = window.scrollY;
-    window.addEventListener('scroll', function() {
-      var currentScrollY = window.scrollY;
-      if (tapOffset > 0) {
-        var scrollDelta = currentScrollY - lastScrollY;
-        if (scrollDelta > 0) {
-          tapOffset = Math.max(0, tapOffset - scrollDelta);
-        }
-      }
-      lastScrollY = currentScrollY;
-      onScroll();
-    }, { passive: true });
+    window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
 
     // Tap/click hero to clear clouds without scrolling

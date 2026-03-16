@@ -543,6 +543,32 @@ def test_connect_page_from_setup_returns_200(client, db_path, auth_cookies):
     assert resp.status_code == 200
 
 
+def test_connect_page_shows_recommended_badge_when_not_connected(client, db_path, monkeypatch, auth_cookies):
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-secret")
+    _, cookies = auth_cookies(email="connect_badge@example.com")
+    resp = client.get("/connect?from=setup", cookies=cookies)
+    assert resp.status_code == 200
+    assert b"Recommended" in resp.content
+
+
+def test_connect_page_hides_recommended_badge_when_connected(client, db_path, monkeypatch, auth_cookies):
+    from unittest.mock import MagicMock
+    from datetime import datetime, timedelta, timezone
+
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-secret")
+    user_id, cookies = auth_cookies(email="connect_badge2@example.com")
+    cred = MagicMock()
+    cred.token = "tok"
+    cred.refresh_token = "ref"
+    cred.expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+    store_google_tokens(db_path, user_id, cred, "cal123")
+    resp = client.get("/connect?from=setup", cookies=cookies)
+    assert resp.status_code == 200
+    assert b"Recommended" not in resp.content
+
+
 def test_connect_page_requires_auth(client):
     resp = client.get("/connect")
     assert resp.status_code == 303
@@ -830,6 +856,7 @@ def test_settings_shows_google_connect_when_enabled(client, db_path, monkeypatch
     resp = client.get("/settings", cookies=cookies)
     assert resp.status_code == 200
     assert b"Connect with Google Calendar" in resp.content
+    assert b"Recommended" in resp.content
 
 
 def test_settings_shows_connected_status(client, db_path, monkeypatch, auth_cookies):
@@ -850,6 +877,7 @@ def test_settings_shows_connected_status(client, db_path, monkeypatch, auth_cook
     resp = client.get("/settings", cookies=cookies)
     assert resp.status_code == 200
     assert b"Disconnect Google Calendar" in resp.content
+    assert b"Recommended" not in resp.content
 
 
 def test_settings_hides_google_when_not_configured(client, db_path, monkeypatch, auth_cookies):

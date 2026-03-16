@@ -39,7 +39,7 @@
 
   <!-- Google Calendar section -->
   <div class="connect-section">
-    <p class="section-label">Google Calendar <span class="badge">Recommended</span></p>
+    <p class="section-label">Google Calendar {% if not google_connected %}<span class="badge">Recommended</span>{% endif %}</p>
     <div class="btn-wrapper">
       {% if google_oauth_enabled and not google_connected %}
       <a href="/auth/google" class="btn btn-red">

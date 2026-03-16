@@ -227,9 +227,7 @@ def generate_life_ics() -> bytes:
         {"summary": "Coffee with Alex", "start": _dt(wed, 15, 30), "end": _dt(wed, 16, 30)},
 
         # Thursday — packed, Lunch with Sara overlaps rain warning
-        {"summary": "Call with bank", "start": _dt(thu, 9, 0), "end": _dt(thu, 9, 30)},
-        {"summary": "Post office", "start": _dt(thu, 10, 0), "end": _dt(thu, 10, 30)},
-        {"summary": "Lunch with Sara", "start": _dt(thu, 12, 0), "end": _dt(thu, 13, 0)},
+        {"summary": "Lunch with Sara", "start": _dt(thu, 12, 30), "end": _dt(thu, 13, 30)},
         {"summary": "Pick up kids", "start": _dt(thu, 15, 0), "end": _dt(thu, 15, 30)},
         {"summary": "Piano lesson (Mia)", "start": _dt(thu, 16, 0), "end": _dt(thu, 17, 0)},
         {"summary": "Gym", "start": _dt(thu, 18, 0), "end": _dt(thu, 19, 0)},
@@ -238,8 +236,6 @@ def generate_life_ics() -> bytes:
         {"summary": "Morning meeting", "start": _dt(fri, 9, 0), "end": _dt(fri, 10, 0)},
         {"summary": "Optician", "start": _dt(fri, 11, 0), "end": _dt(fri, 11, 45)},
         {"summary": "Lunch", "start": _dt(fri, 12, 30), "end": _dt(fri, 13, 15)},
-        {"summary": "Pick up kids", "start": _dt(fri, 15, 0), "end": _dt(fri, 15, 30)},
-        {"summary": "Swim class (Mia)", "start": _dt(fri, 16, 0), "end": _dt(fri, 17, 0)},
         {"summary": "Dinner with Tom & Lisa", "start": _dt(fri, 19, 0), "end": _dt(fri, 21, 0)},
 
         # Saturday

@@ -29,4 +29,6 @@ DEFAULT_PREFS = {
     "warm_threshold": 14.0,
     "hot_threshold": 28.0,
     "temp_unit": "C",
+    "reminder_allday_hour": -1,
+    "reminder_timed_minutes": -1,
 }

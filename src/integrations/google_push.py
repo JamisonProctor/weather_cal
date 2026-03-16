@@ -434,6 +434,13 @@ def _calendar_event_to_google_body(ce: CalendarEvent, tz_name: str | None) -> di
         tz_str = tz_name or "UTC"
         body["start"] = {"dateTime": ce.start.isoformat(), "timeZone": tz_str}
         body["end"] = {"dateTime": ce.end.isoformat(), "timeZone": tz_str}
+    if ce.reminder_minutes is not None and ce.reminder_minutes >= 0:
+        body["reminders"] = {
+            "useDefault": False,
+            "overrides": [{"method": "popup", "minutes": ce.reminder_minutes}],
+        }
+    else:
+        body["reminders"] = {"useDefault": False}
     return body
 
 

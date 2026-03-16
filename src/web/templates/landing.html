@@ -739,7 +739,8 @@
       ticking = true;
       requestAnimationFrame(function() {
         // All reads use cached values — no layout thrashing
-        var scrollY = window.scrollY;
+        var realScrollY = window.scrollY;
+        var scrollY = realScrollY + tapOffset;
         var heroHeight = cachedHeroHeight;
         var vh = cachedVh;
         var intensity = isMobile ? 0.6 : 1;
@@ -778,17 +779,17 @@
           heroContent.style.transform = 'translate(-50%, -50%)';
         }
 
-        // Nav transition
-        if (scrollY > heroHeight - 60) {
+        // Nav transition (use real scroll, not tap offset)
+        if (realScrollY > heroHeight - 60) {
           nav.classList.add('lp-nav-scrolled');
         } else {
           nav.classList.remove('lp-nav-scrolled');
         }
 
         // Drifting background clouds — use cached phone position (no getBoundingClientRect)
-        var phoneViewportTop = cachedPhoneTop - scrollY;
-        var driftTrigger = firstPhone ? phoneViewportTop <= vh * 0.75 : scrollY > heroHeight;
-        var cloudFadeProgress = driftTrigger ? (firstPhone ? (vh * 0.75 - phoneViewportTop) : scrollY - heroHeight) : 0;
+        var phoneViewportTop = cachedPhoneTop - realScrollY;
+        var driftTrigger = firstPhone ? phoneViewportTop <= vh * 0.75 : realScrollY > heroHeight;
+        var cloudFadeProgress = driftTrigger ? (firstPhone ? (vh * 0.75 - phoneViewportTop) : realScrollY - heroHeight) : 0;
         var cloudOpacity = Math.min(0.3, Math.max(0, cloudFadeProgress / (vh * 0.3) * 0.3));
         // Round to 2 decimals to avoid redundant style writes
         cloudOpacity = Math.round(cloudOpacity * 100) / 100;
@@ -812,8 +813,8 @@
 
         // Sun emoji — arcs across the sky, starts with clouds, sets at bottom
         var maxScroll = cachedScrollHeight - vh;
-        var cloudTriggerScroll = driftTrigger ? (firstPhone ? (vh * 0.75 - phoneViewportTop) : scrollY - heroHeight) : 0;
-        var sunTotalRange = maxScroll - (scrollY - cloudTriggerScroll);
+        var cloudTriggerScroll = driftTrigger ? (firstPhone ? (vh * 0.75 - phoneViewportTop) : realScrollY - heroHeight) : 0;
+        var sunTotalRange = maxScroll - (realScrollY - cloudTriggerScroll);
         if (driftTrigger && cloudTriggerScroll > 0 && sunTotalRange > 0) {
           var sunProgress = Math.min(1, cloudTriggerScroll / sunTotalRange);
           var sunX = sunProgress * (cachedWindowWidth * 1.2);
@@ -833,16 +834,17 @@
       });
     }
 
-    window.addEventListener('scroll', onScroll, { passive: true });
+    var tapOffset = 0;
+    window.addEventListener('scroll', function() { tapOffset = 0; onScroll(); }, { passive: true });
     onScroll();
 
-    // Tap/click hero to scroll past clouds, revealing hero content
+    // Tap/click hero to clear clouds without scrolling
     function scrollPastHero(e) {
       if (e.target.closest('a, button, details, summary, input')) return;
-      if (window.scrollY >= hero.offsetHeight * 0.3) return;
+      if (window.scrollY + tapOffset >= cachedHeroHeight * 0.3) return;
       e.preventDefault();
-      var start = window.scrollY;
-      var target = hero.offsetHeight * 0.3;
+      var start = tapOffset;
+      var target = cachedHeroHeight * 0.3 - window.scrollY;
       var distance = target - start;
       var duration = 800;
       var startTime = null;
@@ -850,7 +852,9 @@
         if (!startTime) startTime = ts;
         var t = Math.min((ts - startTime) / duration, 1);
         var ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-        window.scrollTo(0, start + distance * ease);
+        tapOffset = start + distance * ease;
+        ticking = false;
+        onScroll();
         if (t < 1) requestAnimationFrame(step);
       }
       requestAnimationFrame(step);

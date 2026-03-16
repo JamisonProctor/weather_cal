@@ -839,13 +839,12 @@
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
 
-    // Tap/click hero to scroll past it
-    var scrollTarget = hero.nextElementSibling;
+    // Tap/click hero to scroll past clouds (stay within hero)
     function scrollPastHero(e) {
       if (e.target.closest('a, button, details, summary, input')) return;
       if (window.scrollY >= hero.offsetHeight * 0.8) return;
       e.preventDefault();
-      if (scrollTarget) scrollTarget.scrollIntoView({ behavior: 'smooth' });
+      window.scrollTo({ top: hero.offsetHeight * 0.5, behavior: 'smooth' });
     }
     hero.addEventListener('click', scrollPastHero);
 

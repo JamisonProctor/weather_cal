@@ -71,7 +71,7 @@ def generate_google_active_ics(settings_url: str) -> bytes:
 
     event = Event()
     event.add("uid", "google-active@weathercal.app")
-    event.add("summary", "WeatherCal synced via Google Calendar")
+    event.add("summary", "⚠️👋 WeatherCal moved to Google Calendar")
     event.add(
         "description",
         "Your weather forecast is being delivered directly to Google Calendar.\n\n"

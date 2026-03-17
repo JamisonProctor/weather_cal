@@ -5,6 +5,7 @@ import pytest
 
 from src.services.forecast_store import ForecastStore
 from src.web.db import (
+    _combined_calendar_app,
     _detect_calendar_app,
     check_password,
     create_feed_token,
@@ -270,6 +271,34 @@ def test_detect_calendar_app_empty():
 
 def test_detect_calendar_app_unknown():
     assert _detect_calendar_app("SomeOtherApp/2.0") == "Other"
+
+
+# --- Combined calendar app detection ---
+
+def test_combined_calendar_app_both():
+    assert _combined_calendar_app("CFNetwork/1.0 Darwin/21.0", "active") == "Apple Calendar + Google Calendar"
+
+
+def test_combined_calendar_app_google_only():
+    assert _combined_calendar_app("", "active") == "Google Calendar"
+    assert _combined_calendar_app("   ", "active") == "Google Calendar"
+
+
+def test_combined_calendar_app_feed_only():
+    assert _combined_calendar_app("CFNetwork/1.0 Darwin/21.0", None) == "Apple Calendar"
+    assert _combined_calendar_app("CFNetwork/1.0 Darwin/21.0", "revoked") == "Apple Calendar"
+
+
+def test_combined_calendar_app_neither():
+    assert _combined_calendar_app("", None) == "Unknown"
+
+
+def test_combined_calendar_app_other_feed_plus_google():
+    assert _combined_calendar_app("SomeOtherApp/2.0", "active") == "Google Calendar"
+
+
+def test_combined_calendar_app_fantastical_plus_google():
+    assert _combined_calendar_app("Fantastical/3.0", "active") == "Fantastical + Google Calendar"
 
 
 # --- Account management ---

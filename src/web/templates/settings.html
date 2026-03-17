@@ -426,6 +426,7 @@
             </div>
           </div>
 
+          {% if not google_connected %}
           <hr class="connect-divider">
 
           <!-- Subscribe with a calendar link -->
@@ -447,6 +448,7 @@
           <hr class="connect-divider">
 
           <p class="connect-help-text">Calendar links refresh every few hours. Apple Calendar users can speed this up: right-click WeatherCal &#8594; Get Info &#8594; set Auto-refresh to Every Hour.</p>
+          {% endif %}
           {% else %}
           <p style="color:var(--text-muted)">No feed token found. Please contact support.</p>
           {% endif %}

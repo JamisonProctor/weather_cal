@@ -78,7 +78,7 @@ def test_export_google_connection_no_table(db_path):
 
 def test_get_summary_stats(db_path):
     user_id = create_user(db_path, "admin@test.com", "supersecretpass1")
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
     create_feed_token(db_path, user_id)
     from src.utils.db import get_connection
     conn = get_connection(db_path)
@@ -94,7 +94,7 @@ def test_get_summary_stats(db_path):
 
 def test_get_per_user_stats(db_path):
     user_id = create_user(db_path, "peruser@test.com", "supersecretpass1")
-    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Berlin", 52.52, 13.405, "Europe/Berlin")
     create_feed_token(db_path, user_id)
     upsert_user_preferences(db_path, user_id, **DEFAULT_PREFS)
     from datetime import datetime
@@ -105,7 +105,7 @@ def test_get_per_user_stats(db_path):
         users = _get_per_user_stats(cur, datetime.now())
         assert len(users) >= 1
         user = next(u for u in users if u["email"] == "peruser@test.com")
-        assert user["location"] == "Berlin, Germany"
+        assert user["location"] == "Berlin"
         assert "calendar_app" in user
     finally:
         conn.close()

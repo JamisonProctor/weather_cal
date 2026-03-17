@@ -73,7 +73,7 @@
   }
 
   function selectResult(r) {
-    const label = `${r.name}, ${r.country}`;
+    const label = r.name;
     input.value = label;
     hiddenLocation.value = label;
     hiddenLat.value = r.lat;

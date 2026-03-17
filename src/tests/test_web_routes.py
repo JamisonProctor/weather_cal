@@ -126,7 +126,7 @@ def test_setup_post_first_time_redirects_to_connect(client, db_path, auth_cookie
     resp = client.post(
         "/setup",
         data={
-            "location": "Munich, Germany",
+            "location": "Munich",
             "lat": "48.137",
             "lon": "11.576",
             "timezone": "Europe/Berlin",
@@ -139,11 +139,11 @@ def test_setup_post_first_time_redirects_to_connect(client, db_path, auth_cookie
 
 def test_setup_post_location_change_redirects_to_settings(client, db_path, auth_cookies):
     user_id, cookies = auth_cookies()
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
     resp = client.post(
         "/setup",
         data={
-            "location": "Berlin, Germany",
+            "location": "Berlin",
             "lat": "52.520",
             "lon": "13.405",
             "timezone": "Europe/Berlin",
@@ -163,13 +163,13 @@ def test_feed_invalid_token_returns_404(client):
 
 def test_feed_valid_token_returns_ics(client, db_path, auth_cookies):
     user_id, _ = auth_cookies()
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
     token = create_feed_token(db_path, user_id)
 
     store = ForecastStore(db_path=db_path)
     store.upsert_forecast(Forecast(
         date="2099-01-01",
-        location="Munich, Germany",
+        location="Munich",
         high=10,
         low=2,
         summary="Test",
@@ -189,13 +189,13 @@ def test_feed_valid_token_returns_ics(client, db_path, auth_cookies):
 
 def test_feed_records_poll(client, db_path, auth_cookies):
     user_id, _ = auth_cookies()
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
     token = create_feed_token(db_path, user_id)
 
     store = ForecastStore(db_path=db_path)
     store.upsert_forecast(Forecast(
         date="2099-01-01",
-        location="Munich, Germany",
+        location="Munich",
         high=10, low=2,
         summary="Test", description="Test",
         times=["2099-01-01T12:00"], temps=[10], codes=[1], rain=[0], winds=[5],
@@ -216,7 +216,7 @@ def test_feed_records_poll(client, db_path, auth_cookies):
 def test_settings_ref_cal_increments_clicks(client, db_path, auth_cookies):
     user_id, cookies = auth_cookies()
     token = create_feed_token(db_path, user_id)
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
 
     client.get("/settings?ref=cal", cookies=cookies)
     client.get("/settings?ref=cal", cookies=cookies)
@@ -351,7 +351,7 @@ def test_setup_triggers_welcome_email_on_first_setup(client, db_path, monkeypatc
     client.post(
         "/setup",
         data={
-            "location": "Munich, Germany",
+            "location": "Munich",
             "lat": "48.137",
             "lon": "11.576",
             "timezone": "Europe/Berlin",
@@ -469,7 +469,7 @@ def test_settings_delete_account_email_mismatch(client, db_path, auth_cookies):
 def test_settings_delete_invalidates_feed(client, db_path, auth_cookies):
     user_id, cookies = auth_cookies(email="delfeed@example.com")
     token = create_feed_token(db_path, user_id)
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
     client.post("/settings/delete", data={"confirm_email": "delfeed@example.com"}, cookies=cookies)
     resp = client.get(f"/feed/{token}/weather.ics")
     assert resp.status_code == 404
@@ -535,7 +535,7 @@ def test_feedback_get_unauthenticated_redirects_to_login(client):
 def test_feedback_post_saves_and_shows_sent(client, db_path, auth_cookies):
     user_id, cookies = auth_cookies(email="fbpost@example.com")
     create_feed_token(db_path, user_id)
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
     resp = client.post(
         "/feedback",
         data={
@@ -547,7 +547,7 @@ def test_feedback_post_saves_and_shows_sent(client, db_path, auth_cookies):
             "screen_height": "1080",
             "timezone": "Europe/Berlin",
             "feed_url": "",
-            "locations": "Munich, Germany",
+            "locations": "Munich",
         },
         cookies=cookies,
     )
@@ -562,7 +562,7 @@ def test_feedback_post_saves_and_shows_sent(client, db_path, auth_cookies):
 def test_settings_feedback_post_redirects(client, db_path, auth_cookies):
     user_id, cookies = auth_cookies(email="sfb@example.com")
     create_feed_token(db_path, user_id)
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
     resp = client.post(
         "/settings/feedback",
         data={"topic": "Bug report", "description": "Something broke"},
@@ -592,12 +592,12 @@ def test_setup_does_not_trigger_welcome_email_on_location_change(client, db_path
     monkeypatch.setattr(web_app, "send_welcome_email", lambda *a, **kw: calls.append(a))
 
     user_id, cookies = auth_cookies(email="existing@example.com")
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
 
     client.post(
         "/setup",
         data={
-            "location": "Berlin, Germany",
+            "location": "Berlin",
             "lat": "52.520",
             "lon": "13.405",
             "timezone": "Europe/Berlin",
@@ -630,7 +630,7 @@ def test_maintenance_mode_off_returns_200(client, tmp_path, monkeypatch):
 def test_delete_account_removes_all_related_data(db_path):
     user_id = create_user(db_path, "cleanup@example.com", "supersecretpass1")
     token = create_feed_token(db_path, user_id)
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
     upsert_user_preferences(db_path, user_id, **DEFAULT_PREFS)
     save_feedback(db_path, user_id, "cleanup@example.com", "", "Munich", "", "Nice!", "", "", "", "", "")
     log_feed_poll(db_path, token, "TestAgent/1.0")
@@ -654,7 +654,7 @@ def test_delete_account_removes_all_related_data(db_path):
 def test_export_user_data_returns_all_sections(db_path):
     user_id = create_user(db_path, "export@example.com", "supersecretpass1")
     token = create_feed_token(db_path, user_id)
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
     upsert_user_preferences(db_path, user_id, **DEFAULT_PREFS)
     save_feedback(db_path, user_id, "export@example.com", "", "Munich", "", "Great!", "", "", "", "", "")
     log_feed_poll(db_path, token, "TestAgent/1.0")
@@ -663,7 +663,7 @@ def test_export_user_data_returns_all_sections(db_path):
 
     assert data["account"]["email"] == "export@example.com"
     assert len(data["locations"]) == 1
-    assert data["locations"][0]["location"] == "Munich, Germany"
+    assert data["locations"][0]["location"] == "Munich"
     assert data["preferences"]["cold_threshold"] == 3.0
     assert len(data["feed_tokens"]) == 1
     assert len(data["poll_logs"]) == 1
@@ -674,7 +674,7 @@ def test_export_user_data_returns_all_sections(db_path):
 
 def test_export_endpoint_returns_json_download(client, db_path, auth_cookies):
     user_id, cookies = auth_cookies(email="exportroute@example.com")
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
 
     resp = client.get("/settings/export", cookies=cookies)
 
@@ -796,7 +796,7 @@ def test_settings_shows_google_connect_when_enabled(client, db_path, monkeypatch
     monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-secret")
     user_id, cookies = auth_cookies(email="gshow@example.com")
     create_feed_token(db_path, user_id)
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
     resp = client.get("/settings", cookies=cookies)
     assert resp.status_code == 200
     assert b"Connect with Google Calendar" in resp.content
@@ -810,7 +810,7 @@ def test_settings_shows_connected_status(client, db_path, monkeypatch, auth_cook
     monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-secret")
     user_id, cookies = auth_cookies(email="gconn@example.com")
     create_feed_token(db_path, user_id)
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
     cred = MagicMock()
     cred.token = "tok"
     cred.refresh_token = "ref"
@@ -827,7 +827,7 @@ def test_settings_hides_google_when_not_configured(client, db_path, monkeypatch,
     monkeypatch.delenv("GOOGLE_CLIENT_SECRET", raising=False)
     user_id, cookies = auth_cookies(email="ghide@example.com")
     create_feed_token(db_path, user_id)
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
     resp = client.get("/settings", cookies=cookies)
     assert resp.status_code == 200
     assert b"Connect with Google Calendar" not in resp.content
@@ -911,7 +911,7 @@ def test_settings_post_triggers_gcal_push_when_connected(client, db_path, monkey
 
     user_id, cookies = auth_cookies(email="gcalpush@example.com")
     create_feed_token(db_path, user_id)
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
 
     # Store Google tokens to make user "connected"
     cred = MagicMock()
@@ -930,7 +930,7 @@ def test_settings_post_triggers_gcal_push_when_connected(client, db_path, monkey
 def test_settings_post_no_gcal_push_when_not_connected(client, db_path, auth_cookies):
     user_id, cookies = auth_cookies(email="nogcal@example.com")
     create_feed_token(db_path, user_id)
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
 
     from unittest.mock import patch
     with patch("src.web.app._google_push_initial") as mock_push:
@@ -1037,7 +1037,7 @@ def test_setup_logs_location_set_funnel_event(client, db_path, auth_cookies):
     create_feed_token(db_path, user_id)
     client.post(
         "/setup",
-        data={"location": "Munich, Germany", "lat": "48.137", "lon": "11.576", "timezone": "Europe/Berlin"},
+        data={"location": "Munich", "lat": "48.137", "lon": "11.576", "timezone": "Europe/Berlin"},
         cookies=cookies,
     )
     conn = sqlite3.connect(db_path)
@@ -1052,7 +1052,7 @@ def test_setup_logs_location_set_funnel_event(client, db_path, auth_cookies):
 def test_feed_poll_logs_feed_subscribed_once(client, db_path, auth_cookies, make_forecast):
     user_id, cookies = auth_cookies(email="feedfunnel@example.com")
     token = create_feed_token(db_path, user_id)
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
     store = ForecastStore(db_path=db_path)
     store.upsert_forecast(make_forecast())
     # First poll → should log feed_subscribed
@@ -1098,7 +1098,7 @@ def test_admin_shows_utm_source(client, db_path, monkeypatch, auth_cookies):
     # Create a user with utm_source
     from src.web.db import log_funnel_event
     uid2 = create_user(db_path, "tracked@example.com", "password123456", utm_source="producthunt")
-    set_user_location(db_path, uid2, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    set_user_location(db_path, uid2, "Berlin", 52.52, 13.405, "Europe/Berlin")
     create_feed_token(db_path, uid2)
     resp = client.get("/admin", cookies=cookies)
     assert resp.status_code == 200
@@ -1254,7 +1254,7 @@ def test_csv_export_returns_csv_with_data(client, db_path, monkeypatch, auth_coo
     _, cookies = auth_cookies(email="admin@example.com")
     # Create a second user so there's data to export
     uid2 = create_user(db_path, "csvuser@example.com", "password123456", utm_source="reddit")
-    set_user_location(db_path, uid2, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    set_user_location(db_path, uid2, "Berlin", 52.52, 13.405, "Europe/Berlin")
     create_feed_token(db_path, uid2)
     resp = client.get("/admin/export.csv", cookies=cookies)
     assert resp.status_code == 200

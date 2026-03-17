@@ -9,7 +9,7 @@ def _parse_events(ics_bytes: bytes) -> list:
     return [c for c in cal.walk() if c.name == "VEVENT"]
 
 
-def _make_forecast(date="2026-03-10", location="Munich, Germany", timezone="Europe/Berlin", **kwargs):
+def _make_forecast(date="2026-03-10", location="Munich", timezone="Europe/Berlin", **kwargs):
     defaults = dict(
         date=date,
         location=location,
@@ -38,7 +38,7 @@ def test_no_warnings_emits_only_all_day_event():
         rain=[0, 5, 10],
         winds=[5, 8, 6],
     )
-    ics_bytes = generate_ics([forecast], "Munich, Germany")
+    ics_bytes = generate_ics([forecast], "Munich")
     events = _parse_events(ics_bytes)
 
     assert len(events) == 1
@@ -62,7 +62,7 @@ def test_warning_produces_timed_event():
         precipitation=[1.2, 2.0, 1.5, 0.8],
         winds=[5, 5, 5, 5],
     )
-    ics_bytes = generate_ics([forecast], "Munich, Germany")
+    ics_bytes = generate_ics([forecast], "Munich")
     events = _parse_events(ics_bytes)
 
     # One all-day + one timed warning
@@ -89,8 +89,8 @@ def test_warning_uid_is_stable():
         winds=[5, 5],
     )
 
-    ics1 = generate_ics([forecast], "Munich, Germany")
-    ics2 = generate_ics([forecast], "Munich, Germany")
+    ics1 = generate_ics([forecast], "Munich")
+    ics2 = generate_ics([forecast], "Munich")
 
     events1 = _parse_events(ics1)
     events2 = _parse_events(ics2)
@@ -116,7 +116,7 @@ def test_generate_ics_with_rain_disabled_prefs():
         "show_allday_events": 1, "timed_events_enabled": 1,
         "allday_rain": 1, "allday_wind": 1, "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0,
     }
-    ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
+    ics_bytes = generate_ics([forecast], "Munich", prefs=prefs)
     events = _parse_events(ics_bytes)
     # Only the all-day event — no timed rain warning
     assert len(events) == 1
@@ -137,7 +137,7 @@ def test_generate_ics_with_sunny_enabled_prefs():
         "show_allday_events": 1, "timed_events_enabled": 1,
         "allday_rain": 1, "allday_wind": 1, "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0,
     }
-    ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
+    ics_bytes = generate_ics([forecast], "Munich", prefs=prefs)
     events = _parse_events(ics_bytes)
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
     sunny = [e for e in timed if "☀️" in str(e["SUMMARY"])]
@@ -149,14 +149,14 @@ def test_generate_ics_with_sunny_enabled_prefs():
 
 def test_x_published_ttl_present():
     forecast = _make_forecast()
-    ics_bytes = generate_ics([forecast], "Munich, Germany")
+    ics_bytes = generate_ics([forecast], "Munich")
     assert b"X-PUBLISHED-TTL:PT12H" in ics_bytes
 
 
 def test_allday_event_description_contains_settings_url():
     forecast = _make_forecast(description="Nice day")
     settings_url = "https://weathercal.app/settings"
-    ics_bytes = generate_ics([forecast], "Munich, Germany", settings_url=settings_url)
+    ics_bytes = generate_ics([forecast], "Munich", settings_url=settings_url)
     events = _parse_events(ics_bytes)
     all_day = next(e for e in events if not hasattr(e["DTSTART"].dt, "hour"))
     description = str(all_day.get("DESCRIPTION", ""))
@@ -174,7 +174,7 @@ def test_timed_event_description_contains_settings_url():
         winds=[5, 5],
     )
     settings_url = "https://weathercal.app/settings"
-    ics_bytes = generate_ics([forecast], "Munich, Germany", settings_url=settings_url)
+    ics_bytes = generate_ics([forecast], "Munich", settings_url=settings_url)
     events = _parse_events(ics_bytes)
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
     assert timed, "Expected at least one timed warning event"
@@ -192,7 +192,7 @@ def test_vtimezone_present_when_timed_events_exist():
         precipitation=[1.0, 1.5],
         winds=[5, 5],
     )
-    ics_bytes = generate_ics([forecast], "Munich, Germany")
+    ics_bytes = generate_ics([forecast], "Munich")
     cal = Calendar.from_ical(ics_bytes)
     vtimezones = [c for c in cal.walk() if c.name == "VTIMEZONE"]
     assert len(vtimezones) >= 1
@@ -202,7 +202,7 @@ def test_vtimezone_present_when_timed_events_exist():
 
 def test_generate_ics_skips_invalid_date():
     forecast = _make_forecast(date="not-a-date")
-    ics_bytes = generate_ics([forecast], "Munich, Germany")
+    ics_bytes = generate_ics([forecast], "Munich")
     events = _parse_events(ics_bytes)
     assert len(events) == 0
 
@@ -222,7 +222,7 @@ def test_generate_ics_both_allday_and_timed_disabled():
         "warn_cold": 1, "warn_snow": 1, "warn_sunny": 0, "cold_threshold": 3.0,
         "allday_rain": 1, "allday_wind": 1, "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0,
     }
-    ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
+    ics_bytes = generate_ics([forecast], "Munich", prefs=prefs)
     events = _parse_events(ics_bytes)
     assert len(events) == 0
 
@@ -237,7 +237,7 @@ def test_generate_ics_unknown_timezone_falls_back_to_utc():
         precipitation=[2.0, 3.0],
         winds=[5, 5],
     )
-    ics_bytes = generate_ics([forecast], "Munich, Germany")
+    ics_bytes = generate_ics([forecast], "Munich")
     events = _parse_events(ics_bytes)
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
     assert len(timed) >= 1
@@ -327,9 +327,9 @@ def test_merged_window_summary_combined_shows_temp():
 
 def test_stable_uid_determinism():
     from src.services.calendar_events import stable_uid
-    uid1 = stable_uid("2026-03-10", "Munich, Germany")
-    uid2 = stable_uid("2026-03-10", "Munich, Germany")
-    uid3 = stable_uid("2026-03-11", "Munich, Germany")
+    uid1 = stable_uid("2026-03-10", "Munich")
+    uid2 = stable_uid("2026-03-10", "Munich")
+    uid3 = stable_uid("2026-03-11", "Munich")
     assert uid1 == uid2
     assert uid1 != uid3
     assert uid1.endswith("@weathercal.app")
@@ -349,7 +349,7 @@ def test_timed_event_description_contains_hourly_weather():
         precipitation=[1.2, 2.0, 3.5, 1.0],
         winds=[5, 5, 5, 5],
     )
-    ics_bytes = generate_ics([forecast], "Munich, Germany")
+    ics_bytes = generate_ics([forecast], "Munich")
     events = _parse_events(ics_bytes)
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
     assert timed, "Expected at least one timed event"
@@ -384,7 +384,7 @@ def test_timed_event_description_fahrenheit():
         "allday_rain": 1, "allday_wind": 1, "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0,
         "temp_unit": "F",
     }
-    ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
+    ics_bytes = generate_ics([forecast], "Munich", prefs=prefs)
     events = _parse_events(ics_bytes)
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
     assert timed
@@ -411,7 +411,7 @@ def test_overlapping_rain_and_cold_produces_single_timed_event():
         "show_allday_events": 1, "timed_events_enabled": 1,
         "allday_rain": 1, "allday_wind": 1, "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0,
     }
-    ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
+    ics_bytes = generate_ics([forecast], "Munich", prefs=prefs)
     events = _parse_events(ics_bytes)
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
     # Rain 17-23 and cold 17-23 overlap → single merged event
@@ -435,7 +435,7 @@ def test_generate_ics_summary_uses_prefs_cold_threshold():
         "show_allday_events": 1, "timed_events_enabled": 1,
         "allday_rain": 1, "allday_wind": 1, "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0,
     }
-    ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
+    ics_bytes = generate_ics([forecast], "Munich", prefs=prefs)
     events = _parse_events(ics_bytes)
     all_day = next(e for e in events if not hasattr(e["DTSTART"].dt, "hour"))
     assert "🥶" in str(all_day["SUMMARY"])

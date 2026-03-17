@@ -47,7 +47,7 @@ def _deterministic_weather_forecasts():
     return [
         Forecast(
             date="2099-06-01",
-            location="Munich, Germany",
+            location="Munich",
             high=25, low=14,
             summary="AM☀️18° / PM⛅25°",
             description="Mostly sunny, pleasant day",
@@ -61,7 +61,7 @@ def _deterministic_weather_forecasts():
         ),
         Forecast(
             date="2099-06-02",
-            location="Munich, Germany",
+            location="Munich",
             high=16, low=8,
             summary="☂️ Rainy all day",
             description="Rain expected throughout",
@@ -126,7 +126,7 @@ def _compare_or_update(snapshot_path: Path, actual: str):
 @pytest.mark.snapshot
 def test_weather_ics_matches_snapshot():
     forecasts = _deterministic_weather_forecasts()
-    ics_bytes = generate_ics(forecasts, "Munich, Germany")
+    ics_bytes = generate_ics(forecasts, "Munich")
     actual = _strip_volatile(ics_bytes.decode("utf-8"))
 
     snapshot_path = SNAPSHOT_DIR / "weather_feed.ics"

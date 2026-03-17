@@ -26,10 +26,10 @@ def test_get_schedule_time_rejects_invalid(monkeypatch):
 
 def test_main_runs_full_pipeline(monkeypatch):
     raw_forecasts = {
-        "Munich, Germany": [
+        "Munich": [
             Forecast(
                 date="2099-01-01",
-                location="Munich, Germany",
+                location="Munich",
                 high=20,
                 low=10,
                 times=["2099-01-01T12:00"],
@@ -39,10 +39,10 @@ def test_main_runs_full_pipeline(monkeypatch):
                 winds=[5],
             )
         ],
-        "Berlin, Germany": [
+        "Berlin": [
             Forecast(
                 date="2099-01-02",
-                location="Berlin, Germany",
+                location="Berlin",
                 high=15,
                 low=7,
                 times=["2099-01-02T12:00"],
@@ -60,8 +60,8 @@ def test_main_runs_full_pipeline(monkeypatch):
             saved_forecasts.append(forecast)
 
     monkeypatch.setattr(main, "get_locations", lambda: [
-        {"location": "Munich, Germany", "lat": 48.137, "lon": 11.576, "timezone": "Europe/Berlin"},
-        {"location": "Berlin, Germany", "lat": 52.520, "lon": 13.405, "timezone": "Europe/Berlin"},
+        {"location": "Munich", "lat": 48.137, "lon": 11.576, "timezone": "Europe/Berlin"},
+        {"location": "Berlin", "lat": 52.520, "lon": 13.405, "timezone": "Europe/Berlin"},
     ])
     monkeypatch.setattr(main, "ForecastStore", FakeStore)
     monkeypatch.setattr(
@@ -76,17 +76,17 @@ def test_main_runs_full_pipeline(monkeypatch):
     main.main()
 
     assert len(saved_forecasts) == 2
-    assert [forecast.location for forecast in saved_forecasts] == ["Munich, Germany", "Berlin, Germany"]
+    assert [forecast.location for forecast in saved_forecasts] == ["Munich", "Berlin"]
     assert all(forecast.summary.startswith("summary-") for forecast in saved_forecasts)
     assert all(forecast.description.startswith("description-") for forecast in saved_forecasts)
 
 
 def test_short_term_main_fetches_and_stores(monkeypatch):
     raw_forecasts = {
-        "Munich, Germany": [
+        "Munich": [
             Forecast(
                 date="2099-01-01",
-                location="Munich, Germany",
+                location="Munich",
                 high=20,
                 low=10,
                 times=["2099-01-01T12:00"],
@@ -96,10 +96,10 @@ def test_short_term_main_fetches_and_stores(monkeypatch):
                 winds=[5],
             )
         ],
-        "Berlin, Germany": [
+        "Berlin": [
             Forecast(
                 date="2099-01-01",
-                location="Berlin, Germany",
+                location="Berlin",
                 high=18,
                 low=8,
                 times=["2099-01-01T12:00"],
@@ -117,8 +117,8 @@ def test_short_term_main_fetches_and_stores(monkeypatch):
             saved_forecasts.append(forecast)
 
     monkeypatch.setattr(main, "get_locations", lambda: [
-        {"location": "Munich, Germany", "lat": 48.137, "lon": 11.576, "timezone": "Europe/Berlin"},
-        {"location": "Berlin, Germany", "lat": 52.520, "lon": 13.405, "timezone": "Europe/Berlin"},
+        {"location": "Munich", "lat": 48.137, "lon": 11.576, "timezone": "Europe/Berlin"},
+        {"location": "Berlin", "lat": 52.520, "lon": 13.405, "timezone": "Europe/Berlin"},
     ])
     monkeypatch.setattr(main, "ForecastStore", FakeStore)
     monkeypatch.setattr(
@@ -140,7 +140,7 @@ def test_short_term_main_continues_on_error(monkeypatch):
     """A fetch failure for one location should not abort the others."""
     good_forecast = Forecast(
         date="2099-01-01",
-        location="Berlin, Germany",
+        location="Berlin",
         high=15,
         low=5,
         times=["2099-01-01T12:00"],
@@ -156,13 +156,13 @@ def test_short_term_main_continues_on_error(monkeypatch):
             saved_forecasts.append(forecast)
 
     def fake_fetch(location, forecast_days, **kwargs):
-        if location == "Munich, Germany":
+        if location == "Munich":
             raise RuntimeError("fetch failed")
         return [good_forecast]
 
     monkeypatch.setattr(main, "get_locations", lambda: [
-        {"location": "Munich, Germany", "lat": 48.137, "lon": 11.576, "timezone": "Europe/Berlin"},
-        {"location": "Berlin, Germany", "lat": 52.520, "lon": 13.405, "timezone": "Europe/Berlin"},
+        {"location": "Munich", "lat": 48.137, "lon": 11.576, "timezone": "Europe/Berlin"},
+        {"location": "Berlin", "lat": 52.520, "lon": 13.405, "timezone": "Europe/Berlin"},
     ])
     monkeypatch.setattr(main, "ForecastStore", FakeStore)
     monkeypatch.setattr(main.ForecastService, "fetch_forecasts", fake_fetch)
@@ -172,7 +172,7 @@ def test_short_term_main_continues_on_error(monkeypatch):
     main.short_term_main()  # should not raise
 
     assert len(saved_forecasts) == 1
-    assert saved_forecasts[0].location == "Berlin, Germany"
+    assert saved_forecasts[0].location == "Berlin"
 
 
 def test_main_does_not_store_when_fetch_fails(monkeypatch):
@@ -190,7 +190,7 @@ def test_main_does_not_store_when_fetch_fails(monkeypatch):
         raise RuntimeError("upstream unavailable")
 
     monkeypatch.setattr(main, "get_locations", lambda: [
-        {"location": "Munich, Germany", "lat": 48.137, "lon": 11.576, "timezone": "Europe/Berlin"},
+        {"location": "Munich", "lat": 48.137, "lon": 11.576, "timezone": "Europe/Berlin"},
     ])
     monkeypatch.setattr(main, "ForecastStore", FakeStore)
     monkeypatch.setattr(main.ForecastService, "fetch_forecasts", fail_fetch)

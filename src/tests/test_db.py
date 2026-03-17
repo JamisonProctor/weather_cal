@@ -73,10 +73,10 @@ def test_check_password_wrong(db_path):
 
 def test_create_and_get_user_locations(db_path):
     user_id = create_user(db_path, "loc@example.com", "password123456")
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
     locations = get_user_locations(db_path, user_id)
     assert len(locations) == 1
-    assert locations[0]["location"] == "Munich, Germany"
+    assert locations[0]["location"] == "Munich"
     assert locations[0]["lat"] == pytest.approx(48.137)
     assert locations[0]["lon"] == pytest.approx(11.576)
     assert locations[0]["timezone"] == "Europe/Berlin"
@@ -99,12 +99,12 @@ def test_get_feed_token_by_user(db_path):
 
 def test_get_rows_by_token(db_path):
     user_id = create_user(db_path, "rows@example.com", "password123456")
-    set_user_location(db_path, user_id, "Berlin, Germany", 52.520, 13.405, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Berlin", 52.520, 13.405, "Europe/Berlin")
     token = create_feed_token(db_path, user_id)
     rows = get_rows_by_token(db_path, token)
     assert len(rows) == 1
     assert rows[0]["email"] == "rows@example.com"
-    assert rows[0]["location"] == "Berlin, Germany"
+    assert rows[0]["location"] == "Berlin"
 
 
 # --- Preferences ---
@@ -152,7 +152,7 @@ def test_log_feed_poll_inserts_rows(db_path):
 
 def test_admin_stats_include_poll_log_fields(db_path):
     user_id = create_user(db_path, "logstats@example.com", "password123456")
-    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Berlin", 52.52, 13.405, "Europe/Berlin")
     token = create_feed_token(db_path, user_id)
     log_feed_poll(db_path, token, "Agent")
     log_feed_poll(db_path, token, "Agent")
@@ -184,7 +184,7 @@ def test_get_admin_stats_empty_db(db_path):
 
 def test_get_admin_stats_with_user(db_path):
     user_id = create_user(db_path, "admin_stat@example.com", "password123456")
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
     token = create_feed_token(db_path, user_id)
     update_feed_poll(db_path, token, "CFNetwork/1.0 Darwin")
     stats = get_admin_stats(db_path)
@@ -194,7 +194,7 @@ def test_get_admin_stats_with_user(db_path):
     assert len(stats["users"]) == 1
     u = stats["users"][0]
     assert u["email"] == "admin_stat@example.com"
-    assert u["location"] == "Munich, Germany"
+    assert u["location"] == "Munich"
     assert u["poll_count"] == 1
     assert u["calendar_app"] == "Apple Calendar"
     assert u["changed_prefs"] is False
@@ -213,7 +213,7 @@ def _backdate_token(db_path, token, days_ago):
 def test_admin_stats_polls_last_24h_with_recent_polls(db_path):
     """Recent poll_log entries show up in polls_last_24h, not flagged."""
     user_id = create_user(db_path, "recent@example.com", "password123456")
-    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Berlin", 52.52, 13.405, "Europe/Berlin")
     token = create_feed_token(db_path, user_id)
     _backdate_token(db_path, token, 10)
     log_feed_poll(db_path, token, "CFNetwork/1.0")
@@ -227,7 +227,7 @@ def test_admin_stats_polls_last_24h_with_recent_polls(db_path):
 def test_admin_stats_low_polls_flag(db_path):
     """Account > 1 day old with 0 polls in last 24h → flagged."""
     user_id = create_user(db_path, "low@example.com", "password123456")
-    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Berlin", 52.52, 13.405, "Europe/Berlin")
     token = create_feed_token(db_path, user_id)
     _backdate_token(db_path, token, 5)
     # No poll_log entries in last 24h
@@ -240,7 +240,7 @@ def test_admin_stats_low_polls_flag(db_path):
 def test_admin_stats_new_account_not_flagged(db_path):
     """Account < 1 day old with 0 polls should NOT be flagged."""
     user_id = create_user(db_path, "new@example.com", "password123456")
-    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Berlin", 52.52, 13.405, "Europe/Berlin")
     create_feed_token(db_path, user_id)
     stats = get_admin_stats(db_path)
     u = stats["users"][0]
@@ -341,7 +341,7 @@ def test_save_feedback_inserts_row(db_path):
     save_feedback(
         db_path, user_id, "fb@example.com",
         feed_url="webcal://example.com/feed/abc/weather.ics",
-        locations="Munich, Germany",
+        locations="Munich",
         calendar_app="Apple Calendar",
         description="Love it!",
         user_agent="TestAgent/1.0",
@@ -366,16 +366,16 @@ def test_get_last_forecast_update_with_data(db_path):
     from src.models.forecast import Forecast
     store = ForecastStore(db_path=db_path)
     store.upsert_forecast(Forecast(
-        date="2099-01-01", location="Munich, Germany",
+        date="2099-01-01", location="Munich",
         high=10, low=2, summary="Test", description="Test",
         fetch_time="2099-01-01T12:00:00",
     ))
     store.upsert_forecast(Forecast(
-        date="2099-01-02", location="Munich, Germany",
+        date="2099-01-02", location="Munich",
         high=12, low=3, summary="Test2", description="Test2",
         fetch_time="2099-01-02T08:00:00",
     ))
-    result = get_last_forecast_update(db_path, ["Munich, Germany"])
+    result = get_last_forecast_update(db_path, ["Munich"])
     assert result == "2099-01-02T08:00:00"
 
 
@@ -384,7 +384,7 @@ def test_get_last_forecast_update_with_data(db_path):
 
 def test_admin_stats_includes_google_status_active(db_path):
     user_id = create_user(db_path, "gactive@example.com", "password123456")
-    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Berlin", 52.52, 13.405, "Europe/Berlin")
     create_feed_token(db_path, user_id)
     conn = sqlite3.connect(db_path)
     conn.execute(
@@ -400,7 +400,7 @@ def test_admin_stats_includes_google_status_active(db_path):
 
 def test_admin_stats_includes_google_status_revoked(db_path):
     user_id = create_user(db_path, "grevoked@example.com", "password123456")
-    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Berlin", 52.52, 13.405, "Europe/Berlin")
     create_feed_token(db_path, user_id)
     conn = sqlite3.connect(db_path)
     conn.execute(
@@ -416,7 +416,7 @@ def test_admin_stats_includes_google_status_revoked(db_path):
 
 def test_admin_stats_includes_google_status_none(db_path):
     user_id = create_user(db_path, "gnone@example.com", "password123456")
-    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Berlin", 52.52, 13.405, "Europe/Berlin")
     create_feed_token(db_path, user_id)
     stats = get_admin_stats(db_path)
     user = next(u for u in stats["users"] if u["email"] == "gnone@example.com")
@@ -426,15 +426,15 @@ def test_admin_stats_includes_google_status_none(db_path):
 def test_admin_stats_google_connected_count(db_path):
     # User 1: active
     uid1 = create_user(db_path, "gc1@example.com", "password123456")
-    set_user_location(db_path, uid1, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    set_user_location(db_path, uid1, "Berlin", 52.52, 13.405, "Europe/Berlin")
     create_feed_token(db_path, uid1)
     # User 2: revoked
     uid2 = create_user(db_path, "gc2@example.com", "password123456")
-    set_user_location(db_path, uid2, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    set_user_location(db_path, uid2, "Berlin", 52.52, 13.405, "Europe/Berlin")
     create_feed_token(db_path, uid2)
     # User 3: no google token
     uid3 = create_user(db_path, "gc3@example.com", "password123456")
-    set_user_location(db_path, uid3, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    set_user_location(db_path, uid3, "Berlin", 52.52, 13.405, "Europe/Berlin")
     create_feed_token(db_path, uid3)
     conn = sqlite3.connect(db_path)
     conn.execute(
@@ -488,7 +488,7 @@ def test_create_user_without_utm_params(db_path):
 
 def test_admin_stats_includes_utm_source(db_path):
     user_id = create_user(db_path, "utmadmin@example.com", "password123456", utm_source="reddit")
-    set_user_location(db_path, user_id, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Berlin", 52.52, 13.405, "Europe/Berlin")
     create_feed_token(db_path, user_id)
     stats = get_admin_stats(db_path)
     user = next(u for u in stats["users"] if u["email"] == "utmadmin@example.com")
@@ -601,7 +601,7 @@ def test_get_page_view_stats_empty(db_path):
 
 def test_get_admin_users_for_export_returns_expected_keys(db_path):
     uid = create_user(db_path, "exp@example.com", "password123456")
-    set_user_location(db_path, uid, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    set_user_location(db_path, uid, "Berlin", 52.52, 13.405, "Europe/Berlin")
     create_feed_token(db_path, uid)
     users = get_admin_users_for_export(db_path)
     assert len(users) == 1

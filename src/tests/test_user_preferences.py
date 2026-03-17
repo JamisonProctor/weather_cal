@@ -227,7 +227,7 @@ def test_upsert_includes_new_columns(db_path):
 def test_show_allday_events_false_suppresses_allday_event():
     forecast = _make_rainy_forecast()
     prefs = {**DEFAULT_PREFS, "show_allday_events": 0}
-    events = _parse_ics_events(generate_ics([forecast], "Munich, Germany", prefs=prefs))
+    events = _parse_ics_events(generate_ics([forecast], "Munich", prefs=prefs))
     allday = [e for e in events if not hasattr(e["DTSTART"].dt, "hour")]
     assert len(allday) == 0
 
@@ -235,7 +235,7 @@ def test_show_allday_events_false_suppresses_allday_event():
 def test_timed_events_enabled_false_suppresses_timed_events():
     forecast = _make_rainy_forecast()
     prefs = {**DEFAULT_PREFS, "timed_events_enabled": 0}
-    events = _parse_ics_events(generate_ics([forecast], "Munich, Germany", prefs=prefs))
+    events = _parse_ics_events(generate_ics([forecast], "Munich", prefs=prefs))
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
     assert len(timed) == 0
 
@@ -284,7 +284,7 @@ def test_allday_rain_false_hides_rain_icon_but_timed_event_remains():
     forecast = _make_rainy_forecast()
     # allday_rain=0 hides icon in all-day summary; warn_rain=1 keeps timed event
     prefs = {**DEFAULT_PREFS, "allday_rain": 0, "warn_rain": 1}
-    events = _parse_ics_events(generate_ics([forecast], "Munich, Germany", prefs=prefs))
+    events = _parse_ics_events(generate_ics([forecast], "Munich", prefs=prefs))
     allday = next(e for e in events if not hasattr(e["DTSTART"].dt, "hour"))
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
     assert "☂️" not in str(allday["SUMMARY"])

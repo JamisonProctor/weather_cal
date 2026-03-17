@@ -105,14 +105,14 @@ def test_weather_feed_works_alongside_events(client, db_path, insert_event):
     from src.models.forecast import Forecast
     from src.web.db import set_user_location, get_feed_token_by_user
     user_id = create_user(db_path, "weather@example.com", "supersecretpass1")
-    set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
     create_feed_token(db_path, user_id)
     token = get_feed_token_by_user(db_path, user_id)
 
     from src.services.forecast_store import ForecastStore
     store = ForecastStore(db_path=db_path)
     store.upsert_forecast(Forecast(
-        date="2099-01-01", location="Munich, Germany",
+        date="2099-01-01", location="Munich",
         high=10, low=2, summary="Test", description="Test forecast",
         times=["2099-01-01T12:00"], temps=[10], codes=[1], rain=[0], winds=[5],
         timezone="Europe/Berlin",

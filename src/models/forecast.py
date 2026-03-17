@@ -9,7 +9,7 @@ class Forecast:
     Weather forecast for a single day at a single location.
     """
     date: str                       # e.g. "2025-08-01"
-    location: str                   # e.g. "Munich, Germany"
+    location: str                   # e.g. "Munich"
     high: float                     # Daily high temperature
     low: float                      # Daily low temperature
     summary: Optional[str] = None                    # Short summary, e.g. "AM⛅15° / PM☁️19°"

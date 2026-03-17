@@ -12,7 +12,7 @@ from src.services.forecast_formatting import get_warning_windows, merge_overlapp
 from src.constants import DEFAULT_PREFS
 
 
-def _rainy_forecast(date="2026-03-11", location="Munich, Germany"):
+def _rainy_forecast(date="2026-03-11", location="Munich"):
     """Forecast with heavy rain windows that trigger timed warnings."""
     base = f"{date}T"
     times = [f"{base}{h:02d}:00" for h in range(6, 22)]
@@ -38,7 +38,7 @@ def _rainy_forecast(date="2026-03-11", location="Munich, Germany"):
     )
 
 
-def _mild_forecast(date="2026-03-12", location="Munich, Germany"):
+def _mild_forecast(date="2026-03-12", location="Munich"):
     """Forecast with no warnings — only all-day event expected."""
     base = f"{date}T"
     times = [f"{base}{h:02d}:00" for h in range(6, 22)]
@@ -195,7 +195,7 @@ class TestSummaryParity:
             assert ics_summary == g_summary
 
 
-def _cold_forecast(date="2026-03-13", location="Munich, Germany"):
+def _cold_forecast(date="2026-03-13", location="Munich"):
     """Forecast with temps at 8°C — triggers cold warning at threshold=10."""
     base = f"{date}T"
     times = [f"{base}{h:02d}:00" for h in range(6, 22)]
@@ -214,7 +214,7 @@ def _cold_forecast(date="2026-03-13", location="Munich, Germany"):
     )
 
 
-def _windy_rainy_forecast(date="2026-03-14", location="Munich, Germany"):
+def _windy_rainy_forecast(date="2026-03-14", location="Munich"):
     """Forecast with rain + high wind — triggers both warnings."""
     base = f"{date}T"
     times = [f"{base}{h:02d}:00" for h in range(6, 22)]

@@ -484,7 +484,7 @@ class TestPushForecastEventsSettingsUrl:
         tz = ZoneInfo("Europe/Berlin")
         forecast = Forecast(
             date="2026-03-15",
-            location="Munich, Germany",
+            location="Munich",
             high=18.0,
             low=8.0,
             summary="AM☀️10° / PM⛅15°",

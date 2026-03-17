@@ -11,7 +11,7 @@ def test_send_welcome_email_skips_when_unconfigured():
         send_welcome_email(
             "user@example.com",
             "webcal://example.com/feed/token/weather.ics",
-            "Munich, Germany",
+            "Munich",
         )
 
 
@@ -31,7 +31,7 @@ def test_send_welcome_email_calls_smtp():
             send_welcome_email(
                 "user@example.com",
                 "webcal://example.com/feed/token/weather.ics",
-                "Munich, Germany",
+                "Munich",
             )
 
     mock_smtp.sendmail.assert_called_once()

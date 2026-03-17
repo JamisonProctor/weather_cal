@@ -39,7 +39,7 @@ class TestWeatherPipeline:
         store = ForecastStore(db_path=db_path)
         store.upsert_forecast(Forecast(
             date="2099-06-01",
-            location="Munich, Germany",
+            location="Munich",
             high=25, low=14,
             summary="☀️ Sunny",
             description="Clear skies all day",
@@ -52,7 +52,7 @@ class TestWeatherPipeline:
         ))
         store.upsert_forecast(Forecast(
             date="2099-06-02",
-            location="Munich, Germany",
+            location="Munich",
             high=18, low=10,
             summary="☂️ Rainy",
             description="Rain expected",
@@ -68,7 +68,7 @@ class TestWeatherPipeline:
         forecasts = store.get_forecasts_future()
         assert len(forecasts) >= 2
 
-        ics_bytes = generate_ics(forecasts, "Munich, Germany")
+        ics_bytes = generate_ics(forecasts, "Munich")
         events = _parse_vevents(ics_bytes)
 
         # At minimum: 2 all-day events + 1 rain warning
@@ -78,7 +78,7 @@ class TestWeatherPipeline:
         assert any("☂️" in s for s in summaries)
 
         # Verify UID stability
-        ics_bytes2 = generate_ics(forecasts, "Munich, Germany")
+        ics_bytes2 = generate_ics(forecasts, "Munich")
         events2 = _parse_vevents(ics_bytes2)
         uids1 = {str(e["UID"]) for e in events}
         uids2 = {str(e["UID"]) for e in events2}
@@ -137,14 +137,14 @@ class TestUserLifecycle:
     def test_signup_to_feed(self, db_path):
         """create_user → set_location → create_feed_token → upsert forecasts → generate_ics."""
         user_id = create_user(db_path, "lifecycle@example.com", "supersecretpass1")
-        set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+        set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
         token = create_feed_token(db_path, user_id)
         assert token is not None
 
         store = ForecastStore(db_path=db_path)
         store.upsert_forecast(Forecast(
             date="2099-01-01",
-            location="Munich, Germany",
+            location="Munich",
             high=10, low=2,
             summary="Test",
             description="Test forecast",
@@ -156,7 +156,7 @@ class TestUserLifecycle:
         forecasts = store.get_forecasts_future()
         assert len(forecasts) >= 1
 
-        ics_bytes = generate_ics(forecasts, "Munich, Germany")
+        ics_bytes = generate_ics(forecasts, "Munich")
         events = _parse_vevents(ics_bytes)
         assert len(events) >= 1
 
@@ -196,13 +196,13 @@ class TestFeedRoutesE2E:
     def test_weather_feed_route(self, client, db_path, auth_cookies):
         """Full HTTP: create user → set location → insert forecasts → GET weather.ics → validate."""
         user_id, _ = auth_cookies()
-        set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+        set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
         token = create_feed_token(db_path, user_id)
 
         store = ForecastStore(db_path=db_path)
         store.upsert_forecast(Forecast(
             date="2099-01-01",
-            location="Munich, Germany",
+            location="Munich",
             high=10, low=2,
             summary="E2E Test",
             description="End-to-end test forecast",
@@ -242,7 +242,7 @@ def _rainy_forecast(date="2099-06-15"):
     times = [f"{base}{h:02d}:00" for h in range(6, 22)]
     return Forecast(
         date=date,
-        location="Munich, Germany",
+        location="Munich",
         high=20, low=10,
         summary="Rainy day",
         description="Rain all day",
@@ -262,7 +262,7 @@ def _cold_forecast(date="2099-01-15"):
     times = [f"{base}{h:02d}:00" for h in range(6, 22)]
     return Forecast(
         date=date,
-        location="Munich, Germany",
+        location="Munich",
         high=9, low=2,
         summary="Cold day",
         description="Very cold",
@@ -393,13 +393,13 @@ class TestPrefsToCalendar:
     def test_settings_post_to_feed_e2e(self, client, db_path, auth_cookies):
         """Full HTTP: POST /settings with show_allday_events unchecked → GET feed → no all-day event."""
         user_id, cookies = auth_cookies()
-        set_user_location(db_path, user_id, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+        set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
         token = create_feed_token(db_path, user_id)
 
         store = ForecastStore(db_path=db_path)
         store.upsert_forecast(Forecast(
             date="2099-01-01",
-            location="Munich, Germany",
+            location="Munich",
             high=10, low=2,
             summary="Test",
             description="Test forecast",

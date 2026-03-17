@@ -36,17 +36,17 @@ def _insert_location(db_path, user_id, location, lat, lon, tz):
 
 def test_load_locations_from_db_returns_active_locations(db_path):
     uid = _insert_user(db_path, "a@example.com")
-    _insert_location(db_path, uid, "Munich, Germany", 48.137, 11.576, "Europe/Berlin")
+    _insert_location(db_path, uid, "Munich", 48.137, 11.576, "Europe/Berlin")
     locs = load_locations_from_db(db_path)
     assert len(locs) == 1
-    assert locs[0]["location"] == "Munich, Germany"
+    assert locs[0]["location"] == "Munich"
     assert locs[0]["lat"] == pytest.approx(48.137)
     assert locs[0]["timezone"] == "Europe/Berlin"
 
 
 def test_load_locations_from_db_excludes_inactive_users(db_path):
     uid = _insert_user(db_path, "gone@example.com", is_active=0)
-    _insert_location(db_path, uid, "Berlin, Germany", 52.52, 13.405, "Europe/Berlin")
+    _insert_location(db_path, uid, "Berlin", 52.52, 13.405, "Europe/Berlin")
     locs = load_locations_from_db(db_path)
     assert locs == []
 

@@ -126,6 +126,21 @@ class ForecastStore:
                 PRIMARY KEY (path, view_date)
             )
         """)
+        # Migrate location labels: strip ", Country" suffix (one-time, idempotent)
+        cur.execute("""
+            UPDATE user_locations
+            SET location = SUBSTR(location, 1, INSTR(location, ',') - 1)
+            WHERE location LIKE '%,%'
+        """)
+        cur.execute("""
+            INSERT OR REPLACE INTO forecast
+                (date, location, high, low, summary, description, last_updated, hourly_json, timezone)
+            SELECT date, SUBSTR(location, 1, INSTR(location, ',') - 1),
+                   high, low, summary, description, last_updated, hourly_json, timezone
+            FROM forecast
+            WHERE location LIKE '%,%'
+        """)
+        cur.execute("DELETE FROM forecast WHERE location LIKE '%,%'")
         conn.commit()
         conn.close()
 

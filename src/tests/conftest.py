@@ -68,7 +68,7 @@ def auth_cookies(db_path):
 @pytest.fixture
 def make_forecast():
     """Factory fixture: returns callable with Forecast defaults + **kwargs."""
-    def _make(date="2026-03-10", location="Munich, Germany", timezone="Europe/Berlin", **kwargs):
+    def _make(date="2026-03-10", location="Munich", timezone="Europe/Berlin", **kwargs):
         defaults = dict(
             date=date,
             location=location,

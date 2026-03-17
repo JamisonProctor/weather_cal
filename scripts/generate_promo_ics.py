@@ -30,7 +30,7 @@ from src.services.calendar_events import build_calendar_events
 from src.integrations.ics_service import generate_ics
 
 TZ = ZoneInfo("Europe/Berlin")
-LOCATION = "Munich, Germany"
+LOCATION = "Munich"
 SETTINGS_URL = "https://weathercal.app/settings"
 OUT_DIR = Path(__file__).resolve().parent.parent / "src" / "web" / "static" / "promo"
 

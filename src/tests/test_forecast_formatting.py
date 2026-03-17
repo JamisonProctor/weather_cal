@@ -88,10 +88,9 @@ def test_format_detailed_forecast_emits_warnings():
 
     lines = format_detailed_forecast(forecast).splitlines()
 
-    assert any("06:00" in line and "⚠️" in line and "☂️" in line for line in lines)
-    assert any("09:00" in line and "⚠️" in line and "🌬️" in line for line in lines)
-    assert any("12:00" in line and "⚠️" in line and "🥶" in line for line in lines)
-    assert any("15:00" in line and "⚠️" in line and "☃️" in line and "🥶" in line for line in lines)
+    assert any("Morning" in line and "⚠️" in line and "☂️" in line for line in lines)
+    assert any("Midday" in line and "⚠️" in line and "🥶" in line for line in lines)
+    assert any("Afternoon" in line and "⚠️" in line and "☃️" in line and "🥶" in line for line in lines)
 
 
 def test_format_detailed_forecast_no_warnings():

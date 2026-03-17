@@ -36,7 +36,7 @@ def test_format_summary_with_warnings():
 
     summary = format_summary(forecast)
 
-    assert summary == "⚠️☂️🌬️🥶 AM6° / 13°"
+    assert summary == "⚠️☂️🌬️🥶 6° → 13°"
 
 
 def test_format_summary_without_warnings():
@@ -60,7 +60,7 @@ def test_format_summary_without_warnings():
 
     summary = format_summary(forecast)
 
-    assert summary == "AM🌤️6° / PM⛅13°"
+    assert summary == "🌤️6° → ⛅13°"
 
 
 def test_format_detailed_forecast_emits_warnings():
@@ -502,3 +502,72 @@ def test_merge_overlapping_windows_adjacent_not_merged():
     ]
     merged = merge_overlapping_windows(windows)
     assert len(merged) == 2
+
+
+# --- Structural invariant tests ---
+# These enforce the summary design contract regardless of exact strings,
+# preventing silent regressions when format code is modified.
+
+
+def _warning_forecast():
+    """Forecast that triggers warnings (rain + wind + cold)."""
+    return _make_forecast(
+        times=[
+            "2025-08-01T06:00", "2025-08-01T07:00",
+            "2025-08-01T09:00", "2025-08-01T10:00",
+            "2025-08-01T12:00", "2025-08-01T13:00",
+            "2025-08-01T15:00", "2025-08-01T16:00",
+        ],
+        temps=[7, 7, 7, 1, 13, 13, 13, 13],
+        codes=[61, 61, 1, 1, 1, 1, 1, 1],
+        rain=[60, 45, 0, 0, 0, 0, 0, 0],
+        winds=[12, 10, 35, 32, 8, 7, 12, 10],
+        precipitation=[1.5, 0.8, 0, 0, 0, 0, 0, 0],
+    )
+
+
+def _calm_forecast():
+    """Forecast with no warnings."""
+    return _make_forecast(
+        times=["2025-08-01T06:00", "2025-08-01T09:00",
+               "2025-08-01T12:00", "2025-08-01T15:00"],
+        temps=[6, 6, 13, 13],
+        codes=[1, 1, 2, 2],
+        rain=[5, 5, 0, 0],
+        winds=[10, 12, 8, 6],
+    )
+
+
+def test_summary_always_contains_arrow_separator():
+    """Both warning and no-warning summaries must use arrow separator."""
+    assert "→" in format_summary(_warning_forecast())
+    assert "→" in format_summary(_calm_forecast())
+
+
+def test_summary_always_has_two_temperatures():
+    """Both code paths must show exactly two temperature values (morning + afternoon)."""
+    for forecast in [_warning_forecast(), _calm_forecast()]:
+        summary = format_summary(forecast)
+        assert summary.count("°") == 2, f"Expected 2 temperatures in: {summary}"
+
+
+def test_summary_warnings_path_starts_with_warning_emoji():
+    """When warnings are present, summary must start with the warning indicator."""
+    summary = format_summary(_warning_forecast())
+    assert summary.startswith("⚠️"), f"Warning summary must start with ⚠️: {summary}"
+
+
+def test_summary_no_warnings_has_weather_emojis():
+    """When no warnings, summary should contain weather emojis, not warning icons."""
+    summary = format_summary(_calm_forecast())
+    assert "⚠️" not in summary
+    # Should contain at least one weather emoji (from map_code_to_emoji)
+    assert any(e in summary for e in ["☀️", "🌤️", "⛅", "☁️", "🌧️", "❄️", "🌦️", "⛈️"])
+
+
+def test_summary_no_am_pm():
+    """Neither code path should contain AM or PM labels."""
+    for forecast in [_warning_forecast(), _calm_forecast()]:
+        summary = format_summary(forecast)
+        assert "AM" not in summary, f"Summary should not contain AM: {summary}"
+        assert "PM" not in summary, f"Summary should not contain PM: {summary}"

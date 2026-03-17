@@ -33,6 +33,7 @@ class CalendarEvent:
     start: date_type | datetime    # date for all-day, tz-aware datetime for timed
     end: date_type | datetime
     transparency: str = "transparent"
+    reminder_minutes: int | None = None
 
 
 # --- UID helpers ---
@@ -153,6 +154,10 @@ def build_calendar_events(forecast: Forecast, prefs=None, settings_url: str = No
     except ZoneInfoNotFoundError:
         tz = timezone.utc
 
+    # Reminder preferences
+    allday_reminder_hour = prefs.get("reminder_allday_hour", -1) if prefs else -1
+    timed_reminder_mins = prefs.get("reminder_timed_minutes", -1) if prefs else -1
+
     # All-day event
     show_allday = prefs.get("show_allday_events", 1) if prefs else 1
     if show_allday:
@@ -168,6 +173,7 @@ def build_calendar_events(forecast: Forecast, prefs=None, settings_url: str = No
             is_allday=True,
             start=event_date,
             end=event_date + timedelta(days=1),
+            reminder_minutes=allday_reminder_hour * 60 if allday_reminder_hour >= 0 else None,
         ))
 
     # Timed warning events
@@ -188,6 +194,7 @@ def build_calendar_events(forecast: Forecast, prefs=None, settings_url: str = No
                 is_allday=False,
                 start=datetime.fromisoformat(merged.start_time).replace(tzinfo=tz),
                 end=datetime.fromisoformat(merged.end_time).replace(tzinfo=tz),
+                reminder_minutes=timed_reminder_mins if timed_reminder_mins >= 0 else None,
             ))
 
     return events

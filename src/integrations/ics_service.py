@@ -1,7 +1,7 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import List
 
-from icalendar import Calendar, Event
+from icalendar import Alarm, Calendar, Event
 
 from src.models.forecast import Forecast
 from src.services.calendar_events import (
@@ -40,6 +40,15 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, sett
             event.add("dtend", ce.end)
             event.add("transp", "TRANSPARENT")
             event.add("dtstamp", now)
+            if ce.reminder_minutes is not None and ce.reminder_minutes >= 0:
+                alarm = Alarm()
+                alarm.add("action", "DISPLAY")
+                alarm.add("description", ce.summary)
+                if ce.is_allday:
+                    alarm.add("trigger", timedelta(hours=ce.reminder_minutes // 60))
+                else:
+                    alarm.add("trigger", timedelta(minutes=-ce.reminder_minutes))
+                event.add_component(alarm)
             cal.add_component(event)
 
     cal.add_missing_timezones()

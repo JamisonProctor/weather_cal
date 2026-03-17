@@ -52,6 +52,7 @@ from src.web.db import (
     get_rows_by_token,
     get_user_by_email,
     get_user_by_id,
+    get_user_calendar_app,
     get_user_locations,
     get_user_preferences,
     increment_page_view,
@@ -403,6 +404,8 @@ async def settings(
     else:
         last_updated = None
 
+    calendar_app = get_user_calendar_app(DB_PATH, user_id)
+
     return _template("settings.html", request, {
         "user": user,
         "feed_token": feed_token,
@@ -416,6 +419,7 @@ async def settings(
         "is_admin": _is_admin(user_id),
         "google_oauth_enabled": google_oauth_enabled(),
         "google_connected": is_google_connected(DB_PATH, user_id),
+        "calendar_app": calendar_app,
     })
 
 
@@ -442,6 +446,8 @@ async def settings_post(
     allday_hot: str = Form(default=""),
     warn_hot: str = Form(default=""),
     temp_unit: str = Form(default="C"),
+    reminder_allday_hour: int = Form(default=-1),
+    reminder_timed_minutes: int = Form(default=-1),
 ):
     user_id = _require_login(request)
 
@@ -473,6 +479,8 @@ async def settings_post(
         allday_sunny=_on(allday_sunny),
         allday_hot=_on(allday_hot),
         temp_unit=temp_unit,
+        reminder_allday_hour=reminder_allday_hour,
+        reminder_timed_minutes=reminder_timed_minutes,
     )
     if is_google_connected(DB_PATH, user_id):
         background_tasks.add_task(_google_push_initial, DB_PATH, user_id)

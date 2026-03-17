@@ -49,7 +49,7 @@ def _deterministic_weather_forecasts():
             date="2099-06-01",
             location="Munich",
             high=25, low=14,
-            summary="AM☀️18° / PM⛅25°",
+            summary="☀️18° → ⛅25°",
             description="Mostly sunny, pleasant day",
             times=["2099-06-01T06:00", "2099-06-01T09:00", "2099-06-01T12:00", "2099-06-01T15:00"],
             temps=[14, 18, 25, 23],

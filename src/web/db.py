@@ -245,6 +245,8 @@ def create_user_preferences_table(db_path: str) -> None:
             "warm_threshold      REAL    DEFAULT 14.0",
             "hot_threshold       REAL    DEFAULT 28.0",
             "temp_unit           TEXT    DEFAULT 'C'",
+            "reminder_allday_hour   INTEGER DEFAULT -1",
+            "reminder_timed_minutes INTEGER DEFAULT -1",
         ]
         for col_def in new_columns:
             try:
@@ -288,6 +290,8 @@ def upsert_user_preferences(
     allday_hot: int = 1,
     warn_hot: int = 1,
     temp_unit: str = "C",
+    reminder_allday_hour: int = -1,
+    reminder_timed_minutes: int = -1,
 ) -> None:
     updated_at = datetime.now().isoformat()
     conn = _conn(db_path)
@@ -298,8 +302,9 @@ def upsert_user_preferences(
                 (user_id, cold_threshold, warn_in_allday, warn_rain, warn_wind, warn_cold, warn_snow, warn_sunny,
                  show_allday_events, timed_events_enabled, allday_rain, allday_wind, allday_cold, allday_snow, allday_sunny,
                  warm_threshold, hot_threshold, allday_hot, warn_hot, temp_unit,
+                 reminder_allday_hour, reminder_timed_minutes,
                  updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(user_id) DO UPDATE SET
                 cold_threshold       = excluded.cold_threshold,
                 warn_in_allday       = excluded.warn_in_allday,
@@ -320,11 +325,14 @@ def upsert_user_preferences(
                 allday_hot           = excluded.allday_hot,
                 warn_hot             = excluded.warn_hot,
                 temp_unit            = excluded.temp_unit,
+                reminder_allday_hour   = excluded.reminder_allday_hour,
+                reminder_timed_minutes = excluded.reminder_timed_minutes,
                 updated_at           = excluded.updated_at
             """,
             (user_id, cold_threshold, warn_in_allday, warn_rain, warn_wind, warn_cold, warn_snow, warn_sunny,
              show_allday_events, timed_events_enabled, allday_rain, allday_wind, allday_cold, allday_snow, allday_sunny,
              warm_threshold, hot_threshold, allday_hot, warn_hot, temp_unit,
+             reminder_allday_hour, reminder_timed_minutes,
              updated_at),
         )
         conn.commit()
@@ -470,6 +478,22 @@ def _combined_calendar_app(user_agent: str, google_status: str | None) -> str:
     if google_active:
         return "Google Calendar"
     return feed_app
+
+
+def get_user_calendar_app(db_path: str, user_id: int) -> str:
+    """Detect which calendar app a user is using from their feed token's User-Agent."""
+    conn = _conn(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT last_user_agent FROM feed_tokens WHERE user_id = ? LIMIT 1",
+            (user_id,),
+        )
+        row = cur.fetchone()
+        ua = row["last_user_agent"] if row and row["last_user_agent"] else ""
+        return _detect_calendar_app(ua)
+    finally:
+        conn.close()
 
 
 def _get_feed_poll_count(db_path: str, token: str) -> int:

@@ -36,7 +36,7 @@ def test_format_summary_with_warnings():
 
     summary = format_summary(forecast)
 
-    assert summary == "⚠️☂️🌬️🥶 6° → 13°"
+    assert summary == "⚠️☂️🌬️🥶 6° → 13°C"
 
 
 def test_format_summary_without_warnings():
@@ -60,7 +60,7 @@ def test_format_summary_without_warnings():
 
     summary = format_summary(forecast)
 
-    assert summary == "🌤️6° → ⛅13°"
+    assert summary == "🌤️6° → ⛅13°C"
 
 
 def test_format_detailed_forecast_emits_warnings():

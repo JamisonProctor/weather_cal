@@ -75,9 +75,9 @@ def format_summary(forecast: Forecast, prefs=None) -> str:
     afternoon_value = _fmt_temp(afternoon_temp, unit)
 
     if warnings:
-        return f"⚠️{warnings} {morning_value}° → {afternoon_value}°"
+        return f"⚠️{warnings} {morning_value}° → {afternoon_value}°{unit}"
 
-    return f"{morning_emoji}{morning_value}° → {afternoon_emoji}{afternoon_value}°"
+    return f"{morning_emoji}{morning_value}° → {afternoon_emoji}{afternoon_value}°{unit}"
 
 def _collect_warnings(block: List[Tuple[str, float, int, float, float, float]], prefs=None) -> str:
     """

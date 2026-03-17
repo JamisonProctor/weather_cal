@@ -365,9 +365,6 @@ def test_timed_event_description_contains_hourly_weather():
     assert "°C" in desc
     # Should contain rain indicator for high rain
     assert "💧" in desc
-    # Should contain high/low summary
-    assert "High:" in desc
-    assert "Low:" in desc
 
 
 def test_timed_event_description_fahrenheit():

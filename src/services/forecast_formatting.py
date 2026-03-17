@@ -302,16 +302,12 @@ def format_detailed_forecast(forecast: Forecast, prefs=None) -> str:
         block = [d for d in data if datetime.fromisoformat(d[0]).hour in (start, start+1, start+2)]
         if not block:
             continue
-        start_temp = _fmt_temp(block[0][1], unit)
-        mid_temp = _fmt_temp(block[-1][1], unit) if len(block) > 1 else start_temp
+        avg_temp = _fmt_temp(mean([d[1] for d in block]), unit)
         dominant_code = Counter([d[2] for d in block]).most_common(1)[0][0]
         emoji = map_code_to_emoji(dominant_code)
         warnings = _collect_warnings(block, prefs)
-        line = f"{start:02d}:00 {emoji} {start_temp}°~{mid_temp}°{unit}"
+        line = f"{start:02d}:00 {emoji} {avg_temp}°{unit}"
         if warnings:
             line += f" ⚠️{warnings}"
         description_lines.append(line)
-    high = _fmt_temp(forecast.high, unit)
-    low = _fmt_temp(forecast.low, unit)
-    description_lines.append(f"\nHigh: {high}°{unit} | Low: {low}°{unit}")
     return "\n".join(description_lines)

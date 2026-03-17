@@ -127,14 +127,6 @@ def _format_window_description(forecast: Forecast, window, prefs=None) -> str:
             parts.append(f"\U0001f4a8{round(wind)}km/h")
         lines.append("  ".join(parts))
 
-    temps_in_range = [
-        temp for t, temp in zip(forecast.times, forecast.temps)
-        if start <= datetime.fromisoformat(t) < end
-    ]
-    if temps_in_range:
-        hi = _fmt_temp(max(temps_in_range), unit)
-        lo = _fmt_temp(min(temps_in_range), unit)
-        lines.append(f"\nHigh: {hi}\u00b0{unit} | Low: {lo}\u00b0{unit}")
     return "\n".join(lines)
 
 

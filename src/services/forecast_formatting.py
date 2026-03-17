@@ -286,27 +286,35 @@ def merge_overlapping_windows(windows: List[WarningWindow]) -> List[MergedWarnin
     return merged
 
 
+DAYPART_BLOCKS = [
+    ("Morning", range(6, 10)),
+    ("Midday", range(10, 14)),
+    ("Afternoon", range(14, 18)),
+    ("Evening", range(18, 21)),
+    ("Night", range(21, 24)),
+]
+
+
 def format_detailed_forecast(forecast: Forecast, prefs=None) -> str:
     """
     Returns a multiline string with detailed forecast information,
-    grouped by core daypart start hours (6, 9, 12, 15, 18, 21).
-    Each line shows time, dominant emoji, temperature range, and optional warning icons.
-    Final line summarizes daily high/low.
+    grouped by named dayparts (Morning, Midday, Afternoon, Evening, Night).
+    Each line shows the daypart label, dominant emoji, average temperature,
+    and optional warning icons.
     """
     unit = prefs.get("temp_unit", "C") if prefs else "C"
-    slots = [6, 9, 12, 15, 18, 21]
     description_lines = []
     data = list(zip(forecast.times, forecast.temps, forecast.codes, forecast.rain,
                     forecast.winds, forecast.precipitation or [0]*len(forecast.times)))
-    for start in slots:
-        block = [d for d in data if datetime.fromisoformat(d[0]).hour in (start, start+1, start+2)]
+    for label, hour_range in DAYPART_BLOCKS:
+        block = [d for d in data if datetime.fromisoformat(d[0]).hour in hour_range]
         if not block:
             continue
         avg_temp = _fmt_temp(mean([d[1] for d in block]), unit)
         dominant_code = Counter([d[2] for d in block]).most_common(1)[0][0]
         emoji = map_code_to_emoji(dominant_code)
         warnings = _collect_warnings(block, prefs)
-        line = f"{start:02d}:00 {emoji} {avg_temp}°{unit}"
+        line = f"{label} {emoji} {avg_temp}°{unit}"
         if warnings:
             line += f" ⚠️{warnings}"
         description_lines.append(line)

@@ -467,6 +467,19 @@ def _detect_calendar_app(user_agent: str) -> str:
     return "Other"
 
 
+def _combined_calendar_app(user_agent: str, google_status: str | None) -> str:
+    """Combine ICS feed User-Agent detection with Google OAuth status."""
+    feed_app = _detect_calendar_app(user_agent)
+    google_active = google_status == "active"
+    feed_known = feed_app not in ("Unknown", "Other")
+
+    if google_active and feed_known:
+        return f"{feed_app} + Google Calendar"
+    if google_active:
+        return "Google Calendar"
+    return feed_app
+
+
 def get_user_calendar_app(db_path: str, user_id: int) -> str:
     """Detect which calendar app a user is using from their feed token's User-Agent."""
     conn = _conn(db_path)
@@ -722,7 +735,7 @@ def _get_per_user_stats(cur, now) -> list[dict]:
             "poll_count": r["poll_count"],
             "polls_last_24h": polls_last_24h,
             "low_polls": low_polls,
-            "calendar_app": _detect_calendar_app(ua),
+            "calendar_app": _combined_calendar_app(ua, r["google_status"]),
             "settings_clicks": r["settings_clicks"],
             "changed_prefs": bool(r["changed_prefs"]),
             "google_status": r["google_status"],

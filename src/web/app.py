@@ -21,7 +21,7 @@ from src.integrations.google_push import (
     is_google_connected,
     push_events_for_user,
 )
-from src.integrations.ics_service import generate_ics
+from src.integrations.ics_service import generate_google_active_ics, generate_ics
 from src.services.email_service import send_welcome_email
 from src.services.forecast_store import ForecastStore
 from src.services.forecast_service import ForecastService
@@ -757,6 +757,18 @@ async def feed(request: Request, token: str):
         log_funnel_event(DB_PATH, user_id, "feed_subscribed")
     update_feed_poll(DB_PATH, token, ua)
     log_feed_poll(DB_PATH, token, ua)
+
+    settings_url = str(request.base_url).rstrip("/") + "/settings?ref=cal"
+
+    # When Google Calendar is connected, stop serving weather via ICS
+    if is_google_connected(DB_PATH, user_id):
+        ics_content = generate_google_active_ics(settings_url)
+        return Response(
+            content=ics_content,
+            media_type="text/calendar; charset=utf-8",
+            headers={"Content-Disposition": 'inline; filename="weather.ics"'},
+        )
+
     locations = list({row["location"] for row in rows})
     store = ForecastStore(db_path=DB_PATH)
     forecasts = store.get_forecasts_for_locations(locations, days=14)
@@ -764,7 +776,6 @@ async def feed(request: Request, token: str):
     location_name = locations[0] if locations else "Unknown"
     prefs_row = get_user_preferences(DB_PATH, user_id)
     prefs = resolve_prefs(prefs_row)
-    settings_url = str(request.base_url).rstrip("/") + "/settings?ref=cal"
     ics_content = generate_ics(forecasts, location_name, prefs=prefs, settings_url=settings_url)
 
     return Response(

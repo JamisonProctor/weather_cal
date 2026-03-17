@@ -1330,3 +1330,92 @@ def test_admin_shows_export_csv_link(client, db_path, monkeypatch, auth_cookies)
     resp = client.get("/admin", cookies=cookies)
     assert resp.status_code == 200
     assert "/admin/export.csv" in resp.text
+
+
+# --- Dual-calendar: feed gating when Google is connected ---
+
+def test_feed_returns_info_ics_when_google_connected(client, db_path, auth_cookies):
+    from datetime import datetime as _dt, timedelta, timezone as _tz
+    from unittest.mock import MagicMock
+
+    user_id, _ = auth_cookies()
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
+    token = create_feed_token(db_path, user_id)
+
+    store = ForecastStore(db_path=db_path)
+    store.upsert_forecast(Forecast(
+        date="2099-01-01", location="Munich", high=10, low=2,
+        summary="Test", description="Test",
+        times=["2099-01-01T12:00"], temps=[10], codes=[1], rain=[0], winds=[5],
+        timezone="Europe/Berlin",
+    ))
+
+    # Connect Google Calendar
+    cred = MagicMock()
+    cred.token = "tok"
+    cred.refresh_token = "ref"
+    cred.expiry = _dt.now(_tz.utc) + timedelta(hours=1)
+    store_google_tokens(db_path, user_id, cred, "cal123")
+
+    resp = client.get(f"/feed/{token}/weather.ics")
+    assert resp.status_code == 200
+    assert "text/calendar" in resp.headers["content-type"]
+    assert b"google-active@weathercal.app" in resp.content
+    assert b"Google Calendar" in resp.content
+
+
+def test_feed_returns_weather_when_google_not_connected(client, db_path, auth_cookies):
+    user_id, _ = auth_cookies()
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
+    token = create_feed_token(db_path, user_id)
+
+    store = ForecastStore(db_path=db_path)
+    store.upsert_forecast(Forecast(
+        date="2099-01-01", location="Munich", high=10, low=2,
+        summary="Test", description="Test",
+        times=["2099-01-01T12:00"], temps=[10], codes=[1], rain=[0], winds=[5],
+        timezone="Europe/Berlin",
+    ))
+
+    resp = client.get(f"/feed/{token}/weather.ics")
+    assert resp.status_code == 200
+    assert b"google-active@weathercal.app" not in resp.content
+
+
+# --- Dual-calendar: settings UI hides subscription when Google connected ---
+
+def test_settings_hides_subscription_when_google_connected(client, db_path, auth_cookies, monkeypatch):
+    from datetime import datetime as _dt, timedelta, timezone as _tz
+    from unittest.mock import MagicMock
+
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "fake-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "fake-secret")
+
+    user_id, cookies = auth_cookies()
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
+    create_feed_token(db_path, user_id)
+
+    # Connect Google
+    cred = MagicMock()
+    cred.token = "tok"
+    cred.refresh_token = "ref"
+    cred.expiry = _dt.now(_tz.utc) + timedelta(hours=1)
+    store_google_tokens(db_path, user_id, cred, "cal123")
+
+    resp = client.get("/settings", cookies=cookies)
+    assert resp.status_code == 200
+    assert "Subscribe with a calendar link" not in resp.text
+    assert "Disconnect Google Calendar" in resp.text
+
+
+def test_settings_shows_subscription_when_google_not_connected(client, db_path, auth_cookies, monkeypatch):
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "fake-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "fake-secret")
+
+    user_id, cookies = auth_cookies()
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
+    create_feed_token(db_path, user_id)
+
+    resp = client.get("/settings", cookies=cookies)
+    assert resp.status_code == 200
+    assert "Subscribe with a calendar link" in resp.text

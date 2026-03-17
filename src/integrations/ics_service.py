@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import List
 
 from icalendar import Alarm, Calendar, Event
@@ -52,4 +52,36 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, sett
             cal.add_component(event)
 
     cal.add_missing_timezones()
+    return cal.to_ical()
+
+
+def generate_google_active_ics(settings_url: str) -> bytes:
+    """Return a minimal ICS indicating weather is synced via Google Calendar."""
+    cal = Calendar()
+    cal.add("prodid", "-//WeatherCal//weathercal.app//EN")
+    cal.add("version", "2.0")
+    cal.add("calscale", "GREGORIAN")
+    cal.add("method", "PUBLISH")
+    cal.add("X-WR-CALNAME", "WeatherCal")
+    cal.add("REFRESH-INTERVAL;VALUE=DURATION", "PT12H")
+    cal.add("X-PUBLISHED-TTL", "PT12H")
+
+    today = date.today()
+    now = datetime.now(timezone.utc)
+
+    event = Event()
+    event.add("uid", "google-active@weathercal.app")
+    event.add("summary", "WeatherCal synced via Google Calendar")
+    event.add(
+        "description",
+        "Your weather forecast is being delivered directly to Google Calendar.\n\n"
+        "You can safely remove this calendar subscription.\n\n"
+        f"Manage your connection: {settings_url}",
+    )
+    event.add("dtstart", today)
+    event.add("dtend", today)
+    event.add("transp", "TRANSPARENT")
+    event.add("dtstamp", now)
+    cal.add_component(event)
+
     return cal.to_ical()

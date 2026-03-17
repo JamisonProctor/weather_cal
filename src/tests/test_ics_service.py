@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from icalendar import Calendar
 
-from src.integrations.ics_service import generate_ics
+from src.integrations.ics_service import generate_google_active_ics, generate_ics
 from src.models.forecast import Forecast
 
 
@@ -548,3 +548,30 @@ def test_timed_event_no_alarm_by_default():
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
     assert len(timed) >= 1
     assert len(_parse_alarms(timed[0])) == 0
+
+
+# --- Google active ICS ---
+
+def test_google_active_ics_is_valid():
+    ics_bytes = generate_google_active_ics("https://weathercal.app/settings?ref=cal")
+    cal = Calendar.from_ical(ics_bytes)
+    events = [c for c in cal.walk() if c.name == "VEVENT"]
+    assert len(events) == 1
+
+
+def test_google_active_ics_contains_info_event():
+    ics_bytes = generate_google_active_ics("https://weathercal.app/settings?ref=cal")
+    cal = Calendar.from_ical(ics_bytes)
+    events = [c for c in cal.walk() if c.name == "VEVENT"]
+    event = events[0]
+    assert "Google Calendar" in str(event["SUMMARY"])
+    assert "google-active@weathercal.app" == str(event["UID"])
+    assert str(event["TRANSP"]) == "TRANSPARENT"
+
+
+def test_google_active_ics_includes_settings_url():
+    url = "https://weathercal.app/settings?ref=cal"
+    ics_bytes = generate_google_active_ics(url)
+    cal = Calendar.from_ical(ics_bytes)
+    events = [c for c in cal.walk() if c.name == "VEVENT"]
+    assert url in str(events[0]["DESCRIPTION"])

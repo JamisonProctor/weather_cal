@@ -935,5 +935,31 @@
     })();
   })();
   </script>
+
+  <!-- Ensure promo videos always autoplay -->
+  <script>
+  (function() {
+    var videos = document.querySelectorAll('.lp-phone-frame video');
+    for (var i = 0; i < videos.length; i++) {
+      (function(video) {
+        // Force play on load — catches browsers that ignore the autoplay attribute
+        function tryPlay() {
+          var p = video.play();
+          if (p && p.catch) p.catch(function() {});
+        }
+        if (video.readyState >= 2) {
+          tryPlay();
+        } else {
+          video.addEventListener('loadeddata', tryPlay);
+        }
+        // Also retry when scrolled into view — iOS Safari sometimes pauses off-screen videos
+        var obs = new IntersectionObserver(function(entries) {
+          if (entries[0].isIntersecting && video.paused) tryPlay();
+        }, { threshold: 0.1 });
+        obs.observe(video);
+      })(videos[i]);
+    }
+  })();
+  </script>
 </body>
 </html>

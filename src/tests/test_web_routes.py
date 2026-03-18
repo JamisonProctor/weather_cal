@@ -136,6 +136,37 @@ def test_settings_post_saves_reminder_preferences(client, db_path, auth_cookies)
     assert prefs["reminder_timed_minutes"] == 15
 
 
+def test_settings_post_saves_evening_reminder(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies()
+    resp = client.post(
+        "/settings",
+        data={
+            "cold_threshold": "3.0",
+            "reminder_evening_hour": "20",
+        },
+        cookies=cookies,
+    )
+    assert resp.status_code == 303
+    prefs = get_user_preferences(db_path, user_id)
+    assert prefs["reminder_evening_hour"] == 20
+
+
+def test_settings_post_midnight_checkbox_sets_allday_hour_zero(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies()
+    resp = client.post(
+        "/settings",
+        data={
+            "cold_threshold": "3.0",
+            "reminder_allday_hour": "-1",
+            "reminder_allday_midnight": "on",
+        },
+        cookies=cookies,
+    )
+    assert resp.status_code == 303
+    prefs = get_user_preferences(db_path, user_id)
+    assert prefs["reminder_allday_hour"] == 0
+
+
 def test_settings_post_reminder_defaults_to_minus_one(client, db_path, auth_cookies):
     user_id, cookies = auth_cookies()
     resp = client.post(
@@ -146,6 +177,7 @@ def test_settings_post_reminder_defaults_to_minus_one(client, db_path, auth_cook
     assert resp.status_code == 303
     prefs = get_user_preferences(db_path, user_id)
     assert prefs["reminder_allday_hour"] == -1
+    assert prefs["reminder_evening_hour"] == -1
     assert prefs["reminder_timed_minutes"] == -1
 
 
@@ -633,6 +665,50 @@ def test_settings_feedback_post_redirects(client, db_path, auth_cookies):
     conn.close()
     assert row[0] == "Bug report"
     assert row[1] == "[Bug report] Something broke"
+
+
+def test_settings_feedback_post_sends_notification(client, db_path, monkeypatch, auth_cookies):
+    calls = []
+    monkeypatch.setattr(web_app, "send_feedback_notification", lambda **kw: calls.append(kw))
+    user_id, cookies = auth_cookies(email="notify@example.com")
+    create_feed_token(db_path, user_id)
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
+    client.post(
+        "/settings/feedback",
+        data={"topic": "Feature request", "description": "Add dark mode"},
+        cookies=cookies,
+    )
+    assert len(calls) == 1
+    assert calls[0]["topic"] == "Feature request"
+    assert calls[0]["description"] == "Add dark mode"
+    assert calls[0]["email"] == "notify@example.com"
+
+
+def test_admin_feedback_status_update(client, db_path, monkeypatch, auth_cookies):
+    user_id, cookies = auth_cookies(email="admin-status@example.com")
+    monkeypatch.setattr(web_app, "_is_admin", lambda uid: uid == user_id)
+    create_feed_token(db_path, user_id)
+    from src.web.db import save_feedback, create_feedback_table
+    create_feedback_table(db_path)
+    save_feedback(
+        db_path, user_id, "admin-status@example.com",
+        feed_url="", locations="Munich", calendar_app="",
+        description="Track me", user_agent="", platform="",
+        screen_width="", screen_height="", timezone="",
+    )
+    conn = sqlite3.connect(db_path)
+    fid = conn.execute("SELECT id FROM feedback WHERE user_id = ?", (user_id,)).fetchone()[0]
+    conn.close()
+    resp = client.post(
+        f"/admin/feedback/{fid}/status",
+        data={"status": "responded"},
+        cookies=cookies,
+    )
+    assert resp.status_code == 303
+    conn = sqlite3.connect(db_path)
+    status = conn.execute("SELECT status FROM feedback WHERE id = ?", (fid,)).fetchone()[0]
+    conn.close()
+    assert status == "responded"
 
 
 def test_geocode_short_query_returns_empty(client):

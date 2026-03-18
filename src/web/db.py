@@ -153,6 +153,11 @@ def create_feedback_table(db_path: str) -> None:
                 created_at TEXT
             )
         """)
+        # Add status column if missing (migration for existing DBs)
+        try:
+            conn.execute("ALTER TABLE feedback ADD COLUMN status TEXT DEFAULT 'new'")
+        except sqlite3.OperationalError:
+            pass  # column already exists
         conn.commit()
     finally:
         conn.close()
@@ -188,11 +193,24 @@ def save_feedback(
         conn.close()
 
 
+def update_feedback_status(db_path: str, feedback_id: int, status: str) -> None:
+    conn = _conn(db_path)
+    try:
+        conn.execute(
+            "UPDATE feedback SET status = ? WHERE id = ?",
+            (status, feedback_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def get_feedback(db_path: str) -> list:
     conn = _conn(db_path)
     try:
         rows = conn.execute(
-            """SELECT f.email, f.description, f.locations, f.created_at,
+            """SELECT f.id, f.email, f.description, f.locations, f.created_at,
+                      COALESCE(f.status, 'new') AS status,
                       COALESCE(ft.last_user_agent, '') AS last_user_agent
                FROM feedback f
                LEFT JOIN feed_tokens ft ON f.user_id = ft.user_id
@@ -246,6 +264,7 @@ def create_user_preferences_table(db_path: str) -> None:
             "hot_threshold       REAL    DEFAULT 28.0",
             "temp_unit           TEXT    DEFAULT 'C'",
             "reminder_allday_hour   INTEGER DEFAULT -1",
+            "reminder_evening_hour  INTEGER DEFAULT -1",
             "reminder_timed_minutes INTEGER DEFAULT -1",
         ]
         for col_def in new_columns:
@@ -291,6 +310,7 @@ def upsert_user_preferences(
     warn_hot: int = 1,
     temp_unit: str = "C",
     reminder_allday_hour: int = -1,
+    reminder_evening_hour: int = -1,
     reminder_timed_minutes: int = -1,
 ) -> None:
     updated_at = datetime.now().isoformat()
@@ -302,9 +322,9 @@ def upsert_user_preferences(
                 (user_id, cold_threshold, warn_in_allday, warn_rain, warn_wind, warn_cold, warn_snow, warn_sunny,
                  show_allday_events, timed_events_enabled, allday_rain, allday_wind, allday_cold, allday_snow, allday_sunny,
                  warm_threshold, hot_threshold, allday_hot, warn_hot, temp_unit,
-                 reminder_allday_hour, reminder_timed_minutes,
+                 reminder_allday_hour, reminder_evening_hour, reminder_timed_minutes,
                  updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(user_id) DO UPDATE SET
                 cold_threshold       = excluded.cold_threshold,
                 warn_in_allday       = excluded.warn_in_allday,
@@ -326,13 +346,14 @@ def upsert_user_preferences(
                 warn_hot             = excluded.warn_hot,
                 temp_unit            = excluded.temp_unit,
                 reminder_allday_hour   = excluded.reminder_allday_hour,
+                reminder_evening_hour  = excluded.reminder_evening_hour,
                 reminder_timed_minutes = excluded.reminder_timed_minutes,
                 updated_at           = excluded.updated_at
             """,
             (user_id, cold_threshold, warn_in_allday, warn_rain, warn_wind, warn_cold, warn_snow, warn_sunny,
              show_allday_events, timed_events_enabled, allday_rain, allday_wind, allday_cold, allday_snow, allday_sunny,
              warm_threshold, hot_threshold, allday_hot, warn_hot, temp_unit,
-             reminder_allday_hour, reminder_timed_minutes,
+             reminder_allday_hour, reminder_evening_hour, reminder_timed_minutes,
              updated_at),
         )
         conn.commit()
@@ -481,7 +502,7 @@ def _combined_calendar_app(user_agent: str, google_status: str | None) -> str:
 
 
 def get_user_calendar_app(db_path: str, user_id: int) -> str:
-    """Detect which calendar app a user is using from their feed token's User-Agent."""
+    """Detect which calendar app a user is using from feed UA + Google OAuth status."""
     conn = _conn(db_path)
     try:
         cur = conn.cursor()
@@ -491,7 +512,15 @@ def get_user_calendar_app(db_path: str, user_id: int) -> str:
         )
         row = cur.fetchone()
         ua = row["last_user_agent"] if row and row["last_user_agent"] else ""
-        return _detect_calendar_app(ua)
+
+        cur.execute(
+            "SELECT status FROM google_tokens WHERE user_id = ? LIMIT 1",
+            (user_id,),
+        )
+        g_row = cur.fetchone()
+        google_status = g_row["status"] if g_row else None
+
+        return _combined_calendar_app(ua, google_status)
     finally:
         conn.close()
 

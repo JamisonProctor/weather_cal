@@ -34,6 +34,7 @@ class CalendarEvent:
     end: date_type | datetime
     transparency: str = "transparent"
     reminder_minutes: int | None = None
+    reminder_minutes_evening: int | None = None
 
 
 # --- UID helpers ---
@@ -148,6 +149,7 @@ def build_calendar_events(forecast: Forecast, prefs=None, settings_url: str = No
 
     # Reminder preferences
     allday_reminder_hour = prefs.get("reminder_allday_hour", -1) if prefs else -1
+    evening_reminder_hour = prefs.get("reminder_evening_hour", -1) if prefs else -1
     timed_reminder_mins = prefs.get("reminder_timed_minutes", -1) if prefs else -1
 
     # All-day event
@@ -157,6 +159,7 @@ def build_calendar_events(forecast: Forecast, prefs=None, settings_url: str = No
         description = format_detailed_forecast(forecast, prefs) if prefs is not None else (forecast.description or "")
         if settings_url:
             description += f"\n\n\u2699\ufe0f Change your settings: {settings_url}"
+            description += "\n\u2709\ufe0f Feedback? hello@weathercal.app"
         events.append(CalendarEvent(
             uid=stable_uid(forecast.date, forecast.location),
             summary=summary,
@@ -166,6 +169,7 @@ def build_calendar_events(forecast: Forecast, prefs=None, settings_url: str = No
             start=event_date,
             end=event_date + timedelta(days=1),
             reminder_minutes=allday_reminder_hour * 60 if allday_reminder_hour >= 0 else None,
+            reminder_minutes_evening=(24 - evening_reminder_hour) * 60 if evening_reminder_hour >= 0 else None,
         ))
 
     # Timed warning events
@@ -178,6 +182,7 @@ def build_calendar_events(forecast: Forecast, prefs=None, settings_url: str = No
             description = _format_window_description(forecast, merged, prefs)
             if settings_url:
                 description += f"\n\n\u2699\ufe0f Change your settings: {settings_url}"
+                description += "\n\u2709\ufe0f Feedback? hello@weathercal.app"
             events.append(CalendarEvent(
                 uid=merged_warning_uid(merged.start_time, forecast.location, merged.warning_types),
                 summary=summary,

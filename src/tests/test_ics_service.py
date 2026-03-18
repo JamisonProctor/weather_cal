@@ -185,6 +185,32 @@ def test_timed_event_description_contains_settings_url():
     assert settings_url in description
 
 
+def test_allday_event_description_contains_feedback_email():
+    forecast = _make_forecast(description="Nice day")
+    ics_bytes = generate_ics([forecast], "Munich", settings_url="https://weathercal.app/settings")
+    events = _parse_events(ics_bytes)
+    all_day = next(e for e in events if not hasattr(e["DTSTART"].dt, "hour"))
+    description = str(all_day.get("DESCRIPTION", ""))
+    assert "hello@weathercal.app" in description
+
+
+def test_timed_event_description_contains_feedback_email():
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00"],
+        temps=[12, 12],
+        codes=[61, 61],
+        rain=[70, 70],
+        precipitation=[2.0, 3.0],
+        winds=[5, 5],
+    )
+    ics_bytes = generate_ics([forecast], "Munich", settings_url="https://weathercal.app/settings")
+    events = _parse_events(ics_bytes)
+    timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
+    assert timed, "Expected at least one timed warning event"
+    description = str(timed[0].get("DESCRIPTION", ""))
+    assert "hello@weathercal.app" in description
+
+
 def test_vtimezone_present_when_timed_events_exist():
     forecast = _make_forecast(
         times=["2026-03-10T10:00", "2026-03-10T11:00"],
@@ -545,6 +571,56 @@ def test_timed_event_no_alarm_by_default():
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
     assert len(timed) >= 1
     assert len(_parse_alarms(timed[0])) == 0
+
+
+def test_allday_event_evening_alarm():
+    forecast = _make_forecast(
+        times=["2026-03-10T06:00", "2026-03-10T12:00"],
+        temps=[10, 15],
+        codes=[0, 1],
+        rain=[0, 0],
+        winds=[5, 5],
+    )
+    prefs = {
+        "warn_in_allday": 1, "warn_rain": 1, "warn_wind": 1,
+        "warn_cold": 1, "warn_snow": 1, "warn_sunny": 0, "cold_threshold": 3.0,
+        "show_allday_events": 1, "timed_events_enabled": 1,
+        "allday_rain": 1, "allday_wind": 1, "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0,
+        "reminder_evening_hour": 20,  # 8 PM the day before
+    }
+    ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
+    events = _parse_events(ics_bytes)
+    all_day = next(e for e in events if not hasattr(e["DTSTART"].dt, "hour"))
+    alarms = _parse_alarms(all_day)
+    assert len(alarms) == 1
+    # 8 PM = 4 hours before midnight = -240 minutes
+    assert alarms[0]["TRIGGER"].dt == timedelta(minutes=-240)
+
+
+def test_allday_event_both_evening_and_morning_alarms():
+    forecast = _make_forecast(
+        times=["2026-03-10T06:00", "2026-03-10T12:00"],
+        temps=[10, 15],
+        codes=[0, 1],
+        rain=[0, 0],
+        winds=[5, 5],
+    )
+    prefs = {
+        "warn_in_allday": 1, "warn_rain": 1, "warn_wind": 1,
+        "warn_cold": 1, "warn_snow": 1, "warn_sunny": 0, "cold_threshold": 3.0,
+        "show_allday_events": 1, "timed_events_enabled": 1,
+        "allday_rain": 1, "allday_wind": 1, "allday_cold": 1, "allday_snow": 1, "allday_sunny": 0,
+        "reminder_evening_hour": 19,  # 7 PM
+        "reminder_allday_hour": 7,    # 7 AM
+    }
+    ics_bytes = generate_ics([forecast], "Munich, Germany", prefs=prefs)
+    events = _parse_events(ics_bytes)
+    all_day = next(e for e in events if not hasattr(e["DTSTART"].dt, "hour"))
+    alarms = _parse_alarms(all_day)
+    assert len(alarms) == 2
+    triggers = sorted([a["TRIGGER"].dt for a in alarms])
+    # -300 min = 5 hours before midnight (7 PM), +7 hours after midnight (7 AM)
+    assert triggers == [timedelta(minutes=-300), timedelta(hours=7)]
 
 
 # --- Google active ICS ---

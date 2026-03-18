@@ -301,6 +301,29 @@ def test_combined_calendar_app_fantastical_plus_google():
     assert _combined_calendar_app("Fantastical/3.0", "active") == "Fantastical + Google Calendar"
 
 
+# --- get_user_calendar_app (uses _combined_calendar_app internally) ---
+
+def test_get_user_calendar_app_google_oauth(db_path):
+    from unittest.mock import MagicMock
+    from datetime import datetime, timedelta, timezone as tz
+    from src.web.db import get_user_calendar_app
+    from src.integrations.google_push import store_google_tokens, create_google_tokens_table
+
+    user_id = create_user(db_path, "guser@example.com", "supersecretpass1")
+    create_google_tokens_table(db_path)
+
+    # No feed poll, no Google → Unknown
+    assert get_user_calendar_app(db_path, user_id) == "Unknown"
+
+    # Connect Google OAuth
+    cred = MagicMock()
+    cred.token = "t"
+    cred.refresh_token = "r"
+    cred.expiry = datetime.now(tz.utc) + timedelta(hours=1)
+    store_google_tokens(db_path, user_id, cred, "cal123")
+    assert get_user_calendar_app(db_path, user_id) == "Google Calendar"
+
+
 # --- Account management ---
 
 def test_update_user_email_success(db_path):
@@ -383,6 +406,41 @@ def test_save_feedback_inserts_row(db_path):
     row = conn.execute("SELECT description FROM feedback WHERE user_id = ?", (user_id,)).fetchone()
     conn.close()
     assert row[0] == "Love it!"
+
+
+def test_feedback_status_column_defaults_to_new(db_path):
+    from src.web.db import save_feedback, get_feedback, create_feedback_table, create_feed_token
+    create_feedback_table(db_path)
+    user_id = create_user(db_path, "status@example.com", "password123456")
+    create_feed_token(db_path, user_id)
+    save_feedback(
+        db_path, user_id, "status@example.com",
+        feed_url="", locations="Munich", calendar_app="",
+        description="Test feedback", user_agent="", platform="",
+        screen_width="", screen_height="", timezone="",
+    )
+    feedback = get_feedback(db_path)
+    assert len(feedback) >= 1
+    assert feedback[0]["status"] == "new"
+
+
+def test_update_feedback_status(db_path):
+    from src.web.db import save_feedback, get_feedback, create_feedback_table, create_feed_token, update_feedback_status
+    create_feedback_table(db_path)
+    user_id = create_user(db_path, "upd@example.com", "password123456")
+    create_feed_token(db_path, user_id)
+    save_feedback(
+        db_path, user_id, "upd@example.com",
+        feed_url="", locations="Munich", calendar_app="",
+        description="Update me", user_agent="", platform="",
+        screen_width="", screen_height="", timezone="",
+    )
+    feedback = get_feedback(db_path)
+    fid = feedback[0]["id"]
+    update_feedback_status(db_path, fid, "responded")
+    feedback = get_feedback(db_path)
+    match = next(f for f in feedback if f["id"] == fid)
+    assert match["status"] == "responded"
 
 
 def test_get_last_forecast_update_empty_locations(db_path):

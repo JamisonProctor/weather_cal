@@ -736,15 +736,15 @@
     driftLayer.id = 'drift-cloud-layer';
     driftLayer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;';
     driftLayer.appendChild(driftFrag);
-    emojiLayer.appendChild(driftLayer);
-    var cloudsActive = false;
 
-    // Sun emoji — arcs across the sky from left to right
+    // Sun emoji — arcs across the sky from left to right (appended before clouds so it renders behind them)
     var sunEl = document.createElement('span');
     sunEl.className = 'emoji-particle zone-drift';
     sunEl.style.cssText = 'top:85%;left:-10%;font-size:' + (isMobile ? '6' : '9') + 'rem;opacity:0';
     sunEl.textContent = '\u2600\uFE0F';
     emojiLayer.appendChild(sunEl);
+    emojiLayer.appendChild(driftLayer);
+    var cloudsActive = false;
 
     // Track last cloud opacity to avoid redundant style writes
     var lastCloudOpacity = -1;

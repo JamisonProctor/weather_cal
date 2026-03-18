@@ -508,9 +508,9 @@ class TestPushForecastEventsSettingsUrl:
 # --- Reminders in Google Calendar events ---
 
 class TestGoogleCalendarReminders:
-    """Verify _calendar_event_to_google_body includes reminders correctly."""
+    """Verify _calendar_event_to_google_body builds reminder overrides correctly."""
 
-    def test_event_with_reminder_includes_override(self):
+    def test_evening_reminder_override(self):
         from src.integrations.google_push import _calendar_event_to_google_body
         from src.services.calendar_events import CalendarEvent
         from datetime import date
@@ -523,15 +523,58 @@ class TestGoogleCalendarReminders:
             is_allday=True,
             start=date(2026, 3, 15),
             end=date(2026, 3, 16),
-            reminder_minutes=420,  # 7 hours = 7 AM
+            reminder_minutes_evening=240,  # 8 PM the day before
         )
         body = _calendar_event_to_google_body(ce, "Europe/Berlin")
         assert body["reminders"] == {
             "useDefault": False,
-            "overrides": [{"method": "popup", "minutes": 420}],
+            "overrides": [{"method": "popup", "minutes": 240}],
         }
 
-    def test_event_without_reminder_disables_default(self):
+    def test_midnight_reminder_override(self):
+        from src.integrations.google_push import _calendar_event_to_google_body
+        from src.services.calendar_events import CalendarEvent
+        from datetime import date
+
+        ce = CalendarEvent(
+            uid="test@weathercal.app",
+            summary="Test",
+            description="Test desc",
+            location="Munich",
+            is_allday=True,
+            start=date(2026, 3, 15),
+            end=date(2026, 3, 16),
+            reminder_minutes=0,  # midnight
+        )
+        body = _calendar_event_to_google_body(ce, "Europe/Berlin")
+        assert body["reminders"] == {
+            "useDefault": False,
+            "overrides": [{"method": "popup", "minutes": 0}],
+        }
+
+    def test_both_evening_and_midnight_reminders(self):
+        from src.integrations.google_push import _calendar_event_to_google_body
+        from src.services.calendar_events import CalendarEvent
+        from datetime import date
+
+        ce = CalendarEvent(
+            uid="test@weathercal.app",
+            summary="Test",
+            description="Test desc",
+            location="Munich",
+            is_allday=True,
+            start=date(2026, 3, 15),
+            end=date(2026, 3, 16),
+            reminder_minutes=0,
+            reminder_minutes_evening=300,  # 7 PM
+        )
+        body = _calendar_event_to_google_body(ce, "Europe/Berlin")
+        assert body["reminders"]["useDefault"] is False
+        assert len(body["reminders"]["overrides"]) == 2
+        assert {"method": "popup", "minutes": 300} in body["reminders"]["overrides"]
+        assert {"method": "popup", "minutes": 0} in body["reminders"]["overrides"]
+
+    def test_no_reminders_disables_default(self):
         from src.integrations.google_push import _calendar_event_to_google_body
         from src.services.calendar_events import CalendarEvent
         from datetime import date
@@ -549,7 +592,7 @@ class TestGoogleCalendarReminders:
         assert body["reminders"] == {"useDefault": False}
         assert "overrides" not in body["reminders"]
 
-    def test_timed_event_with_15min_reminder(self):
+    def test_timed_event_with_reminder(self):
         from src.integrations.google_push import _calendar_event_to_google_body
         from src.services.calendar_events import CalendarEvent
         from datetime import datetime

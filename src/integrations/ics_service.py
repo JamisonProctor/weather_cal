@@ -40,6 +40,12 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, sett
             event.add("dtend", ce.end)
             event.add("transp", "TRANSPARENT")
             event.add("dtstamp", now)
+            if ce.reminder_minutes_evening is not None and ce.reminder_minutes_evening >= 0:
+                alarm = Alarm()
+                alarm.add("action", "DISPLAY")
+                alarm.add("description", ce.summary)
+                alarm.add("trigger", timedelta(minutes=-ce.reminder_minutes_evening))
+                event.add_component(alarm)
             if ce.reminder_minutes is not None and ce.reminder_minutes >= 0:
                 alarm = Alarm()
                 alarm.add("action", "DISPLAY")

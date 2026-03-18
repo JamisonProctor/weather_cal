@@ -447,6 +447,8 @@ async def settings_post(
     warn_hot: str = Form(default=""),
     temp_unit: str = Form(default="C"),
     reminder_allday_hour: int = Form(default=-1),
+    reminder_allday_midnight: str = Form(default=""),
+    reminder_evening_hour: int = Form(default=-1),
     reminder_timed_minutes: int = Form(default=-1),
 ):
     user_id = _require_login(request)
@@ -457,6 +459,10 @@ async def settings_post(
         )
 
     def _on(val): return 1 if val == "on" else 0
+
+    # Google users: midnight checkbox overrides the hidden allday_hour field
+    if reminder_allday_midnight == "on":
+        reminder_allday_hour = 0
 
     upsert_user_preferences(
         DB_PATH, user_id,
@@ -480,6 +486,7 @@ async def settings_post(
         allday_hot=_on(allday_hot),
         temp_unit=temp_unit,
         reminder_allday_hour=reminder_allday_hour,
+        reminder_evening_hour=reminder_evening_hour,
         reminder_timed_minutes=reminder_timed_minutes,
     )
     if is_google_connected(DB_PATH, user_id):

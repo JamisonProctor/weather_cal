@@ -136,6 +136,37 @@ def test_settings_post_saves_reminder_preferences(client, db_path, auth_cookies)
     assert prefs["reminder_timed_minutes"] == 15
 
 
+def test_settings_post_saves_evening_reminder(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies()
+    resp = client.post(
+        "/settings",
+        data={
+            "cold_threshold": "3.0",
+            "reminder_evening_hour": "20",
+        },
+        cookies=cookies,
+    )
+    assert resp.status_code == 303
+    prefs = get_user_preferences(db_path, user_id)
+    assert prefs["reminder_evening_hour"] == 20
+
+
+def test_settings_post_midnight_checkbox_sets_allday_hour_zero(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies()
+    resp = client.post(
+        "/settings",
+        data={
+            "cold_threshold": "3.0",
+            "reminder_allday_hour": "-1",
+            "reminder_allday_midnight": "on",
+        },
+        cookies=cookies,
+    )
+    assert resp.status_code == 303
+    prefs = get_user_preferences(db_path, user_id)
+    assert prefs["reminder_allday_hour"] == 0
+
+
 def test_settings_post_reminder_defaults_to_minus_one(client, db_path, auth_cookies):
     user_id, cookies = auth_cookies()
     resp = client.post(
@@ -146,6 +177,7 @@ def test_settings_post_reminder_defaults_to_minus_one(client, db_path, auth_cook
     assert resp.status_code == 303
     prefs = get_user_preferences(db_path, user_id)
     assert prefs["reminder_allday_hour"] == -1
+    assert prefs["reminder_evening_hour"] == -1
     assert prefs["reminder_timed_minutes"] == -1
 
 

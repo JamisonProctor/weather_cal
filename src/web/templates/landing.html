@@ -735,14 +735,14 @@
     var driftLayer = document.createElement('div');
     driftLayer.id = 'drift-cloud-layer';
     driftLayer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;';
-    driftLayer.appendChild(driftFrag);
 
-    // Sun emoji — arcs across the sky from left to right (appended before clouds so it renders behind them)
+    // Sun emoji — added to drift layer BEFORE clouds so it renders behind them within the same compositing group
     var sunEl = document.createElement('span');
     sunEl.className = 'emoji-particle zone-drift';
     sunEl.style.cssText = 'top:85%;left:-10%;font-size:' + (isMobile ? '6' : '9') + 'rem;opacity:0';
     sunEl.textContent = '\u2600\uFE0F';
-    emojiLayer.appendChild(sunEl);
+    driftLayer.appendChild(sunEl);
+    driftLayer.appendChild(driftFrag);
     emojiLayer.appendChild(driftLayer);
     var cloudsActive = false;
 
@@ -832,9 +832,9 @@
           var sunX = sunProgress * (cachedWindowWidth * 1.2);
           var peakHeight = vh * 0.7;
           var sunY = -4 * peakHeight * sunProgress * (1 - sunProgress);
-          var sunOpacity = sunProgress < 0.15 ? (sunProgress / 0.15) * 0.45
-            : sunProgress > 0.85 ? ((1 - sunProgress) / 0.15) * 0.45
-            : 0.45;
+          var sunOpacity = sunProgress < 0.15 ? (sunProgress / 0.15)
+            : sunProgress > 0.85 ? ((1 - sunProgress) / 0.15)
+            : 1;
           sunEl.style.opacity = sunOpacity;
           sunEl.style.transform = 'translate3d(' + sunX.toFixed(1) + 'px,' + sunY.toFixed(1) + 'px,0)';
         } else {

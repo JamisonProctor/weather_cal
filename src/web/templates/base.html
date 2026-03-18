@@ -26,9 +26,9 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    .layout-narrow { max-width: 520px; margin: 0 auto; padding: 24px; position: relative; z-index: 1; }
-    .layout-medium { max-width: 720px; margin: 0 auto; padding: 24px; position: relative; z-index: 1; }
-    .layout-wide   { max-width: 960px; margin: 0 auto; padding: 24px; position: relative; z-index: 1; }
+    .layout-narrow { max-width: 520px; margin: 0 auto; padding: 24px; position: relative; z-index: 1; display: flex; flex-direction: column; min-height: 100vh; }
+    .layout-medium { max-width: 720px; margin: 0 auto; padding: 24px; position: relative; z-index: 1; display: flex; flex-direction: column; min-height: 100vh; }
+    .layout-wide   { max-width: 960px; margin: 0 auto; padding: 24px; position: relative; z-index: 1; display: flex; flex-direction: column; min-height: 100vh; }
 
     nav { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 32px; flex-wrap: wrap; gap: 8px; }
     .brand { font-size: 1.1rem; font-weight: 700; color: var(--accent); text-decoration: none; }
@@ -99,7 +99,7 @@
     </nav>
     {% block content %}{% endblock %}
     {% block footer %}
-    <footer style="margin-top:48px;padding-top:16px;border-top:1px solid var(--border);font-size:0.78rem;display:flex;justify-content:space-between">
+    <footer style="margin-top:auto;padding-top:48px;border-top:1px solid var(--border);font-size:0.78rem;display:flex;justify-content:space-between">
       <a href="/impressum" style="color:var(--text-muted);text-decoration:none">Impressum</a>
       <a href="/terms" style="color:var(--text-muted);text-decoration:none">Terms</a>
       <a href="/privacy" style="color:var(--text-muted);text-decoration:none">Privacy</a>

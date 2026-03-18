@@ -153,11 +153,6 @@ def create_feedback_table(db_path: str) -> None:
                 created_at TEXT
             )
         """)
-        # Add status column if missing (migration for existing DBs)
-        try:
-            conn.execute("ALTER TABLE feedback ADD COLUMN status TEXT DEFAULT 'new'")
-        except sqlite3.OperationalError:
-            pass  # column already exists
         conn.commit()
     finally:
         conn.close()
@@ -193,24 +188,11 @@ def save_feedback(
         conn.close()
 
 
-def update_feedback_status(db_path: str, feedback_id: int, status: str) -> None:
-    conn = _conn(db_path)
-    try:
-        conn.execute(
-            "UPDATE feedback SET status = ? WHERE id = ?",
-            (status, feedback_id),
-        )
-        conn.commit()
-    finally:
-        conn.close()
-
-
 def get_feedback(db_path: str) -> list:
     conn = _conn(db_path)
     try:
         rows = conn.execute(
-            """SELECT f.id, f.email, f.description, f.locations, f.created_at,
-                      COALESCE(f.status, 'new') AS status,
+            """SELECT f.email, f.description, f.locations, f.created_at,
                       COALESCE(ft.last_user_agent, '') AS last_user_agent
                FROM feedback f
                LEFT JOIN feed_tokens ft ON f.user_id = ft.user_id

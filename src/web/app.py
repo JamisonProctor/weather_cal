@@ -22,7 +22,7 @@ from src.integrations.google_push import (
     push_events_for_user,
 )
 from src.integrations.ics_service import generate_google_active_ics, generate_ics
-from src.services.email_service import send_feedback_notification, send_welcome_email
+from src.services.email_service import send_welcome_email
 from src.services.forecast_store import ForecastStore
 from src.services.forecast_service import ForecastService
 from jose import jwt
@@ -59,9 +59,7 @@ from src.web.db import (
     increment_settings_clicks,
     log_feed_poll,
     log_funnel_event,
-    save_feedback,
     update_feed_poll,
-    update_feedback_status,
     update_user_email,
     update_user_password,
     upsert_user_preferences,
@@ -563,90 +561,9 @@ async def settings_delete_post(
     return response
 
 
-@app.post("/settings/feedback")
-async def settings_feedback_post(
-    request: Request,
-    topic: str = Form(default=""),
-    description: str = Form(default=""),
-    user_agent: str = Form(default=""),
-    platform: str = Form(default=""),
-    screen_width: str = Form(default=""),
-    screen_height: str = Form(default=""),
-    timezone: str = Form(default=""),
-):
-    user_id = _require_login(request)
-
-    user = get_user_by_id(DB_PATH, user_id)
-    email = user["email"] if user else ""
-    feed_token = get_feed_token_by_user(DB_PATH, user_id)
-    webcal_url, _ = _build_feed_urls(request, feed_token) if feed_token else (None, None)
-    locations = get_user_locations(DB_PATH, user_id)
-    locations_str = ", ".join(loc["location"] for loc in locations)
-
-    full_description = f"[{topic}] {description}" if topic else description
-
-    save_feedback(
-        DB_PATH, user_id, email,
-        feed_url=webcal_url or "",
-        locations=locations_str,
-        calendar_app=topic,
-        description=full_description,
-        user_agent=user_agent,
-        platform=platform,
-        screen_width=screen_width,
-        screen_height=screen_height,
-        timezone=timezone,
-    )
-    send_feedback_notification(
-        email=email, topic=topic, description=description,
-        locations=locations_str, platform=platform, user_agent=user_agent,
-    )
-    return RedirectResponse(url="/settings?success=feedback#feedback", status_code=303)
-
-
-@app.get("/feedback", response_class=HTMLResponse)
-async def feedback_get(request: Request):
-    user_id = _get_user_id(request)
-    if user_id:
-        return RedirectResponse(url="/settings?tab=feedback", status_code=303)
-    return RedirectResponse(url="/login", status_code=303)
-
-
-@app.post("/feedback", response_class=HTMLResponse)
-async def feedback_post(
-    request: Request,
-    calendar_app: str = Form(default=""),
-    description: str = Form(default=""),
-    user_agent: str = Form(default=""),
-    platform: str = Form(default=""),
-    screen_width: str = Form(default=""),
-    screen_height: str = Form(default=""),
-    timezone: str = Form(default=""),
-    feed_url: str = Form(default=""),
-    locations: str = Form(default=""),
-):
-    user_id = _require_login(request)
-
-    user = get_user_by_id(DB_PATH, user_id)
-    email = user["email"] if user else ""
-
-    save_feedback(
-        DB_PATH, user_id, email, feed_url, locations,
-        calendar_app, description, user_agent, platform,
-        screen_width, screen_height, timezone,
-    )
-    send_feedback_notification(
-        email=email, topic=calendar_app, description=description,
-        locations=locations, platform=platform, user_agent=user_agent,
-    )
-
-    user_locations = get_user_locations(DB_PATH, user_id)
-    feed_token = get_feed_token_by_user(DB_PATH, user_id)
-    webcal_url, _ = _build_feed_urls(request, feed_token) if feed_token else (None, None)
-
-    return _template("feedback.html", request, {
-        "webcal_url": webcal_url, "locations": user_locations, "sent": True,
-    })
+@app.get("/feedback")
+async def feedback_redirect(request: Request):
+    return RedirectResponse(url="mailto:hello@weathercal.app", status_code=303)
 
 
 def _google_push_initial(db_path, user_id):
@@ -860,17 +777,6 @@ async def admin(request: Request, days: int = Query(default=30)):
         "funnel_by_source": funnel_by_source,
         "page_views": page_views,
     })
-
-
-@app.post("/admin/feedback/{feedback_id}/status")
-async def admin_feedback_status(request: Request, feedback_id: int, status: str = Form(...)):
-    user_id = _require_login(request)
-    if not _is_admin(user_id):
-        return Response(content="Forbidden", status_code=403)
-    if status not in ("new", "responded", "resolved"):
-        return Response(content="Bad status", status_code=400)
-    update_feedback_status(DB_PATH, feedback_id, status)
-    return RedirectResponse(url="/admin#feedback", status_code=303)
 
 
 @app.get("/admin/export.csv")

@@ -67,7 +67,7 @@ def send_welcome_email(to_email: str, webcal_url: str, location: str) -> None:
       </div>
     </div>
     <div style="padding:20px 32px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center">
-      <p style="margin:0 0 6px;font-size:0.85rem;color:#6b7280">Questions or feedback? <a href="mailto:hello@weathercal.app" style="color:#2563eb;text-decoration:none">hello@weathercal.app</a></p>
+      <p style="margin:0 0 6px;font-size:0.85rem;color:#6b7280">Respond to this email or reach out anytime at <a href="mailto:hello@weathercal.app" style="color:#2563eb;text-decoration:none">hello@weathercal.app</a></p>
       <p style="margin:0;font-size:0.8rem;color:#9ca3af">weathercal.app \u2014 weather in your calendar</p>
     </div>
   </div>
@@ -86,61 +86,10 @@ What to expect:
 - Warning events for rain, wind, cold, snow, and heat
 - Timed events showing exactly when bad weather arrives
 
-Questions or feedback? hello@weathercal.app
+Respond to this email or reach out anytime at hello@weathercal.app
 
 -- weathercal.app"""
 
     send_email(to_email, subject, html_body, text_body)
 
 
-def send_feedback_notification(
-    email: str,
-    topic: str,
-    description: str,
-    locations: str,
-    platform: str,
-    user_agent: str,
-) -> None:
-    """Notify hello@weathercal.app when a user submits feedback."""
-    notify_to = os.getenv("FEEDBACK_NOTIFY_EMAIL", "hello@weathercal.app")
-    dash = "\u2014"
-    subject = f"[WeatherCal Feedback] {topic or 'General'} \u2014 {email or 'unknown'}"
-
-    loc = locations or dash
-    plat = platform or dash
-    ua = user_agent or dash
-
-    text_body = (
-        f"New feedback from {email or 'unknown user'}\n\n"
-        f"Topic: {topic or 'General'}\n"
-        f"Location: {loc}\n"
-        f"Platform: {plat}\n"
-        f"User agent: {ua}\n\n"
-        f"---\n{description}\n"
-    )
-
-    html_body = (
-        '<!DOCTYPE html>'
-        '<html><head><meta charset="UTF-8"></head>'
-        '<body style="margin:0;padding:0;background:#f9fafb;font-family:system-ui,-apple-system,sans-serif">'
-        '<div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb">'
-        '<div style="background:#2563eb;padding:20px 32px">'
-        '<h1 style="margin:0;color:#ffffff;font-size:1.2rem;font-weight:700">New Feedback</h1>'
-        '</div>'
-        '<div style="padding:24px 32px">'
-        '<table style="width:100%;font-size:0.95rem;color:#374151;line-height:1.6">'
-        f'<tr><td style="font-weight:600;padding:4px 12px 4px 0;vertical-align:top">From:</td><td>{email or "unknown"}</td></tr>'
-        f'<tr><td style="font-weight:600;padding:4px 12px 4px 0;vertical-align:top">Topic:</td><td>{topic or "General"}</td></tr>'
-        f'<tr><td style="font-weight:600;padding:4px 12px 4px 0;vertical-align:top">Location:</td><td>{loc}</td></tr>'
-        f'<tr><td style="font-weight:600;padding:4px 12px 4px 0;vertical-align:top">Platform:</td><td>{plat}</td></tr>'
-        '</table>'
-        '<div style="margin-top:20px;padding:16px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb">'
-        f'<p style="margin:0;font-size:0.95rem;color:#111;white-space:pre-wrap">{description}</p>'
-        '</div>'
-        '</div>'
-        '</div>'
-        '</body>'
-        '</html>'
-    )
-
-    send_email(notify_to, subject, html_body, text_body)

@@ -955,7 +955,7 @@
         // Also retry when scrolled into view — iOS Safari sometimes pauses off-screen videos
         var obs = new IntersectionObserver(function(entries) {
           if (entries[0].isIntersecting && video.paused) tryPlay();
-        }, { threshold: 0.1 });
+        }, { threshold: 0 });
         obs.observe(video);
       })(videos[i]);
     }

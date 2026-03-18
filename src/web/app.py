@@ -563,7 +563,19 @@ async def settings_delete_post(
 
 @app.get("/feedback", response_class=HTMLResponse)
 async def feedback_page(request: Request):
-    return _template("feedback.html", request, {})
+    user_id = _get_user_id(request)
+    ctx = {"is_admin": False, "last_updated": None}
+    if user_id:
+        ctx["is_admin"] = _is_admin(user_id)
+        location_names = [loc["location"] for loc in get_user_locations(DB_PATH, user_id)]
+        last_updated_raw = get_last_forecast_update(DB_PATH, location_names)
+        if last_updated_raw:
+            from datetime import datetime as _dt
+            try:
+                ctx["last_updated"] = _dt.fromisoformat(last_updated_raw).strftime("%-d %b %Y, %H:%M UTC")
+            except Exception:
+                ctx["last_updated"] = last_updated_raw
+    return _template("feedback.html", request, ctx)
 
 
 def _google_push_initial(db_path, user_id):

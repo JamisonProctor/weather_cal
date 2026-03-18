@@ -159,6 +159,7 @@ def build_calendar_events(forecast: Forecast, prefs=None, settings_url: str = No
         description = format_detailed_forecast(forecast, prefs) if prefs is not None else (forecast.description or "")
         if settings_url:
             description += f"\n\n\u2699\ufe0f Change your settings: {settings_url}"
+            description += "\n\u2709\ufe0f Feedback? hello@weathercal.app"
         events.append(CalendarEvent(
             uid=stable_uid(forecast.date, forecast.location),
             summary=summary,
@@ -181,6 +182,7 @@ def build_calendar_events(forecast: Forecast, prefs=None, settings_url: str = No
             description = _format_window_description(forecast, merged, prefs)
             if settings_url:
                 description += f"\n\n\u2699\ufe0f Change your settings: {settings_url}"
+                description += "\n\u2709\ufe0f Feedback? hello@weathercal.app"
             events.append(CalendarEvent(
                 uid=merged_warning_uid(merged.start_time, forecast.location, merged.warning_types),
                 summary=summary,

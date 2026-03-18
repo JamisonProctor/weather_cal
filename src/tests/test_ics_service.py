@@ -185,6 +185,32 @@ def test_timed_event_description_contains_settings_url():
     assert settings_url in description
 
 
+def test_allday_event_description_contains_feedback_email():
+    forecast = _make_forecast(description="Nice day")
+    ics_bytes = generate_ics([forecast], "Munich", settings_url="https://weathercal.app/settings")
+    events = _parse_events(ics_bytes)
+    all_day = next(e for e in events if not hasattr(e["DTSTART"].dt, "hour"))
+    description = str(all_day.get("DESCRIPTION", ""))
+    assert "hello@weathercal.app" in description
+
+
+def test_timed_event_description_contains_feedback_email():
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00"],
+        temps=[12, 12],
+        codes=[61, 61],
+        rain=[70, 70],
+        precipitation=[2.0, 3.0],
+        winds=[5, 5],
+    )
+    ics_bytes = generate_ics([forecast], "Munich", settings_url="https://weathercal.app/settings")
+    events = _parse_events(ics_bytes)
+    timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
+    assert timed, "Expected at least one timed warning event"
+    description = str(timed[0].get("DESCRIPTION", ""))
+    assert "hello@weathercal.app" in description
+
+
 def test_vtimezone_present_when_timed_events_exist():
     forecast = _make_forecast(
         times=["2026-03-10T10:00", "2026-03-10T11:00"],

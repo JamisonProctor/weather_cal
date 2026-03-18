@@ -408,6 +408,41 @@ def test_save_feedback_inserts_row(db_path):
     assert row[0] == "Love it!"
 
 
+def test_feedback_status_column_defaults_to_new(db_path):
+    from src.web.db import save_feedback, get_feedback, create_feedback_table, create_feed_token
+    create_feedback_table(db_path)
+    user_id = create_user(db_path, "status@example.com", "password123456")
+    create_feed_token(db_path, user_id)
+    save_feedback(
+        db_path, user_id, "status@example.com",
+        feed_url="", locations="Munich", calendar_app="",
+        description="Test feedback", user_agent="", platform="",
+        screen_width="", screen_height="", timezone="",
+    )
+    feedback = get_feedback(db_path)
+    assert len(feedback) >= 1
+    assert feedback[0]["status"] == "new"
+
+
+def test_update_feedback_status(db_path):
+    from src.web.db import save_feedback, get_feedback, create_feedback_table, create_feed_token, update_feedback_status
+    create_feedback_table(db_path)
+    user_id = create_user(db_path, "upd@example.com", "password123456")
+    create_feed_token(db_path, user_id)
+    save_feedback(
+        db_path, user_id, "upd@example.com",
+        feed_url="", locations="Munich", calendar_app="",
+        description="Update me", user_agent="", platform="",
+        screen_width="", screen_height="", timezone="",
+    )
+    feedback = get_feedback(db_path)
+    fid = feedback[0]["id"]
+    update_feedback_status(db_path, fid, "responded")
+    feedback = get_feedback(db_path)
+    match = next(f for f in feedback if f["id"] == fid)
+    assert match["status"] == "responded"
+
+
 def test_get_last_forecast_update_empty_locations(db_path):
     from src.web.db import get_last_forecast_update
     assert get_last_forecast_update(db_path, []) is None

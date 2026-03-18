@@ -2,19 +2,65 @@
 
 {% block title %}Feedback — WeatherCal{% endblock %}
 
-{% block body_class %}layout-narrow{% endblock %}
+{% block body_class %}layout-wide{% endblock %}
 
 {% block extra_style %}
 <style>
-  h1 { margin-bottom: 0.4rem; }
+  .settings-layout { display: flex; gap: 40px; align-items: flex-start; }
+
+  .sidebar { width: 180px; flex-shrink: 0; display: flex; flex-direction: column; }
+  .sidebar-link { display: block; padding: 10px 14px; color: var(--text); text-decoration: none; border-radius: 6px; font-size: 0.95rem; margin-bottom: 2px; }
+  .sidebar-link:hover { background: var(--bg-subtle); }
+  .sidebar-link.active { background: rgba(230,81,0,0.1); color: var(--accent); font-weight: 600; }
+  .sidebar-footer { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border); font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; padding-left: 4px; }
+
+  .content { flex: 1; min-width: 0; }
+  .content h1 { margin-bottom: 0.4rem; }
   .subtitle { color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem; line-height: 1.6; }
   .email-link { display: inline-block; padding: 14px 28px; background: var(--accent); color: #fff; text-decoration: none; border-radius: 8px; font-size: 1rem; font-weight: 600; }
   .email-link:hover { background: var(--accent-hover); }
+
+  @media (max-width: 640px) {
+    .settings-layout { flex-direction: column; gap: 0; }
+    .sidebar {
+      width: auto;
+      flex-direction: row;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      margin-bottom: 24px;
+      gap: 2px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(255,248,225,0.85);
+      backdrop-filter: blur(4px);
+    }
+    .sidebar-link { white-space: nowrap; padding: 8px 12px; font-size: 0.9rem; }
+    .sidebar-footer { display: none; }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-  <h1>We'd love to hear from you</h1>
-  <p class="subtitle">Got a bug, idea, or something on your mind? Send us an email and we'll get back to you.</p>
-  <a href="mailto:hello@weathercal.app" class="email-link">hello@weathercal.app</a>
+  <div class="settings-layout">
+    <aside class="sidebar">
+      <a href="/settings#preferences" class="sidebar-link">Preferences</a>
+      <a href="/settings#personal" class="sidebar-link">Personal</a>
+      <a href="/settings#reconnect" class="sidebar-link">Reconnect</a>
+      <a href="/feedback" class="sidebar-link active">Feedback</a>
+      {% if is_admin %}
+      <a href="/admin" class="sidebar-link">Admin</a>
+      {% endif %}
+      {% if last_updated %}
+      <div class="sidebar-footer">Last updated<br>{{ last_updated }}</div>
+      {% endif %}
+    </aside>
+
+    <main class="content">
+      <h1>We'd love to hear from you</h1>
+      <p class="subtitle">Got a bug, idea, or something on your mind? Send us an email and we'll get back to you.</p>
+      <a href="mailto:hello@weathercal.app" class="email-link">hello@weathercal.app</a>
+    </main>
+  </div>
 {% endblock %}

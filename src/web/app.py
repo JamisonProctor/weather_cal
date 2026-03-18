@@ -561,9 +561,9 @@ async def settings_delete_post(
     return response
 
 
-@app.get("/feedback")
-async def feedback_redirect(request: Request):
-    return RedirectResponse(url="mailto:hello@weathercal.app", status_code=303)
+@app.get("/feedback", response_class=HTMLResponse)
+async def feedback_page(request: Request):
+    return _template("feedback.html", request, {})
 
 
 def _google_push_initial(db_path, user_id):

@@ -607,38 +607,10 @@ def test_connect_page_requires_auth(client):
     assert resp.headers["location"] == "/login"
 
 
-def test_feedback_get_redirects_to_mailto():
-    """GET /feedback returns 303 redirect to mailto:hello@weathercal.app."""
-    import asyncio
-    from src.web.app import app
-
-    async def _call():
-        scope = {
-            "type": "http",
-            "method": "GET",
-            "path": "/feedback",
-            "query_string": b"",
-            "headers": [],
-            "root_path": "",
-        }
-        status_code = None
-        headers = {}
-
-        async def receive():
-            return {"type": "http.request", "body": b""}
-
-        async def send(message):
-            nonlocal status_code, headers
-            if message["type"] == "http.response.start":
-                status_code = message["status"]
-                headers = {k.decode(): v.decode() for k, v in message.get("headers", [])}
-
-        await app(scope, receive, send)
-        return status_code, headers
-
-    status_code, headers = asyncio.get_event_loop().run_until_complete(_call())
-    assert status_code == 303
-    assert headers["location"] == "mailto:hello@weathercal.app"
+def test_feedback_page_renders(client):
+    resp = client.get("/feedback")
+    assert resp.status_code == 200
+    assert b"hello@weathercal.app" in resp.content
 
 
 def test_geocode_short_query_returns_empty(client):

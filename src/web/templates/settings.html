@@ -120,7 +120,7 @@
       <a href="#preferences" class="sidebar-link">Preferences</a>
       <a href="#personal" class="sidebar-link">Personal</a>
       <a href="#reconnect" class="sidebar-link">Reconnect</a>
-      <a href="#feedback" class="sidebar-link">Feedback</a>
+      <a href="mailto:hello@weathercal.app" class="sidebar-link">Feedback</a>
       {% if is_admin %}
       <a href="/admin" class="sidebar-link">Admin</a>
       {% endif %}
@@ -439,42 +439,6 @@
 
       </div>
 
-      <!-- Feedback tab -->
-      <div id="panel-feedback" class="panel">
-        <h1 class="panel-title">Feedback</h1>
-
-        {% if success == 'feedback' %}
-        <div class="alert alert-success">Thanks — we got your message. We'll follow up at your email if needed.</div>
-        {% endif %}
-
-        <div class="section">
-          <h2>Feedback</h2>
-          <p style="color:var(--text);margin-bottom:1.5rem;font-size:0.95rem">Got a bug, idea, or something on your mind? We'd love to hear it.</p>
-          <form method="post" action="/settings/feedback" id="feedback-form">
-            <input type="hidden" name="user_agent" id="f-user-agent">
-            <input type="hidden" name="platform" id="f-platform">
-            <input type="hidden" name="screen_width" id="f-screen-width">
-            <input type="hidden" name="screen_height" id="f-screen-height">
-            <input type="hidden" name="timezone" id="f-timezone">
-            <div class="form-group">
-              <label for="topic">What's this about?</label>
-              <select name="topic" id="topic" class="form-input" style="max-width:380px">
-                <option value="">General feedback</option>
-                <option value="Bug report">Bug report</option>
-                <option value="Feature request">Feature request</option>
-                <option value="Calendar connection issue">Calendar connection issue</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="description">Tell us more</label>
-              <textarea name="description" id="description" required placeholder="What happened? What would you like to see?" style="width:100%;max-width:500px;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:0.95rem;font-family:inherit;resize:vertical;min-height:120px"></textarea>
-            </div>
-            <button type="submit" class="btn-primary" data-loading-text="Sending...">Send feedback</button>
-          </form>
-        </div>
-
-      </div>
-
       <!-- Reconnect tab -->
       <div id="panel-reconnect" class="panel">
         <h1 class="panel-title">Connect</h1>
@@ -546,7 +510,7 @@
 {% block extra_script %}
 <script>
   (function () {
-    var tabs = ['preferences', 'personal', 'reconnect', 'feedback'];
+    var tabs = ['preferences', 'personal', 'reconnect'];
 
     function showTab(name) {
       tabs.forEach(function (t) {
@@ -563,7 +527,6 @@
       var tab = params.get('tab');
       if (tab && tabs.indexOf(tab) !== -1) return tab;
       if (params.get('success') === 'prefs') return 'preferences';
-      if (params.get('success') === 'feedback') return 'feedback';
       if (params.get('success') === 'email' || params.get('success') === 'password') return 'personal';
       if (params.get('success') === 'google_connected' || params.get('success') === 'google_disconnected') return 'reconnect';
       if (params.get('error')) return 'personal';
@@ -645,15 +608,6 @@
       update();
     });
 
-    // Feedback form auto-fill
-    var fFeedback = document.getElementById('feedback-form');
-    if (fFeedback) {
-      document.getElementById('f-user-agent').value = navigator.userAgent;
-      document.getElementById('f-platform').value = navigator.platform;
-      document.getElementById('f-screen-width').value = screen.width;
-      document.getElementById('f-screen-height').value = screen.height;
-      document.getElementById('f-timezone').value = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    }
   })();
 </script>
 {% endblock %}

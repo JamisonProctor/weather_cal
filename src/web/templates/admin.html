@@ -237,7 +237,6 @@
           <th>Message</th>
           <th>Location</th>
           <th>Calendar app</th>
-          <th>Status</th>
         </tr>
       </thead>
       <tbody>
@@ -248,15 +247,6 @@
           <td>{{ f.description }}</td>
           <td>{{ f.locations or '—' }}</td>
           <td>{{ f.calendar_app or '—' }}</td>
-          <td>
-            <form method="post" action="/admin/feedback/{{ f.id }}/status" style="margin:0">
-              <select name="status" onchange="this.form.submit()" style="font-size:0.85rem;padding:2px 4px;border-radius:4px;border:1px solid #ccc">
-                <option value="new" {% if f.status == 'new' %}selected{% endif %}>new</option>
-                <option value="responded" {% if f.status == 'responded' %}selected{% endif %}>responded</option>
-                <option value="resolved" {% if f.status == 'resolved' %}selected{% endif %}>resolved</option>
-              </select>
-            </form>
-          </td>
         </tr>
         {% endfor %}
       </tbody>

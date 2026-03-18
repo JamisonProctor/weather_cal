@@ -607,108 +607,38 @@ def test_connect_page_requires_auth(client):
     assert resp.headers["location"] == "/login"
 
 
-def test_feedback_get_redirects_to_settings(client, db_path, auth_cookies):
-    _, cookies = auth_cookies(email="fbget@example.com")
-    resp = client.get("/feedback", cookies=cookies)
-    assert resp.status_code == 303
-    assert resp.headers["location"] == "/settings?tab=feedback"
+def test_feedback_get_redirects_to_mailto():
+    """GET /feedback returns 303 redirect to mailto:hello@weathercal.app."""
+    import asyncio
+    from src.web.app import app
 
+    async def _call():
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/feedback",
+            "query_string": b"",
+            "headers": [],
+            "root_path": "",
+        }
+        status_code = None
+        headers = {}
 
-def test_feedback_get_unauthenticated_redirects_to_login(client):
-    resp = client.get("/feedback")
-    assert resp.status_code == 303
-    assert resp.headers["location"] == "/login"
+        async def receive():
+            return {"type": "http.request", "body": b""}
 
+        async def send(message):
+            nonlocal status_code, headers
+            if message["type"] == "http.response.start":
+                status_code = message["status"]
+                headers = {k.decode(): v.decode() for k, v in message.get("headers", [])}
 
-def test_feedback_post_saves_and_shows_sent(client, db_path, auth_cookies):
-    user_id, cookies = auth_cookies(email="fbpost@example.com")
-    create_feed_token(db_path, user_id)
-    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
-    resp = client.post(
-        "/feedback",
-        data={
-            "calendar_app": "Apple Calendar",
-            "description": "Great app!",
-            "user_agent": "TestAgent",
-            "platform": "macOS",
-            "screen_width": "1920",
-            "screen_height": "1080",
-            "timezone": "Europe/Berlin",
-            "feed_url": "",
-            "locations": "Munich",
-        },
-        cookies=cookies,
-    )
-    assert resp.status_code == 200
-    assert b"sent" in resp.content.lower() or resp.status_code == 200
-    conn = sqlite3.connect(db_path)
-    row = conn.execute("SELECT description FROM feedback WHERE user_id = ?", (user_id,)).fetchone()
-    conn.close()
-    assert row[0] == "Great app!"
+        await app(scope, receive, send)
+        return status_code, headers
 
-
-def test_settings_feedback_post_redirects(client, db_path, auth_cookies):
-    user_id, cookies = auth_cookies(email="sfb@example.com")
-    create_feed_token(db_path, user_id)
-    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
-    resp = client.post(
-        "/settings/feedback",
-        data={"topic": "Bug report", "description": "Something broke"},
-        cookies=cookies,
-    )
-    assert resp.status_code == 303
-    assert "success=feedback" in resp.headers["location"]
-    conn = sqlite3.connect(db_path)
-    row = conn.execute(
-        "SELECT calendar_app, description FROM feedback WHERE user_id = ?", (user_id,)
-    ).fetchone()
-    conn.close()
-    assert row[0] == "Bug report"
-    assert row[1] == "[Bug report] Something broke"
-
-
-def test_settings_feedback_post_sends_notification(client, db_path, monkeypatch, auth_cookies):
-    calls = []
-    monkeypatch.setattr(web_app, "send_feedback_notification", lambda **kw: calls.append(kw))
-    user_id, cookies = auth_cookies(email="notify@example.com")
-    create_feed_token(db_path, user_id)
-    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
-    client.post(
-        "/settings/feedback",
-        data={"topic": "Feature request", "description": "Add dark mode"},
-        cookies=cookies,
-    )
-    assert len(calls) == 1
-    assert calls[0]["topic"] == "Feature request"
-    assert calls[0]["description"] == "Add dark mode"
-    assert calls[0]["email"] == "notify@example.com"
-
-
-def test_admin_feedback_status_update(client, db_path, monkeypatch, auth_cookies):
-    user_id, cookies = auth_cookies(email="admin-status@example.com")
-    monkeypatch.setattr(web_app, "_is_admin", lambda uid: uid == user_id)
-    create_feed_token(db_path, user_id)
-    from src.web.db import save_feedback, create_feedback_table
-    create_feedback_table(db_path)
-    save_feedback(
-        db_path, user_id, "admin-status@example.com",
-        feed_url="", locations="Munich", calendar_app="",
-        description="Track me", user_agent="", platform="",
-        screen_width="", screen_height="", timezone="",
-    )
-    conn = sqlite3.connect(db_path)
-    fid = conn.execute("SELECT id FROM feedback WHERE user_id = ?", (user_id,)).fetchone()[0]
-    conn.close()
-    resp = client.post(
-        f"/admin/feedback/{fid}/status",
-        data={"status": "responded"},
-        cookies=cookies,
-    )
-    assert resp.status_code == 303
-    conn = sqlite3.connect(db_path)
-    status = conn.execute("SELECT status FROM feedback WHERE id = ?", (fid,)).fetchone()[0]
-    conn.close()
-    assert status == "responded"
+    status_code, headers = asyncio.get_event_loop().run_until_complete(_call())
+    assert status_code == 303
+    assert headers["location"] == "mailto:hello@weathercal.app"
 
 
 def test_geocode_short_query_returns_empty(client):

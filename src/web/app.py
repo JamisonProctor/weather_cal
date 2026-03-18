@@ -22,7 +22,7 @@ from src.integrations.google_push import (
     push_events_for_user,
 )
 from src.integrations.ics_service import generate_google_active_ics, generate_ics
-from src.services.email_service import send_welcome_email
+from src.services.email_service import send_feedback_notification, send_welcome_email
 from src.services.forecast_store import ForecastStore
 from src.services.forecast_service import ForecastService
 from jose import jwt
@@ -61,6 +61,7 @@ from src.web.db import (
     log_funnel_event,
     save_feedback,
     update_feed_poll,
+    update_feedback_status,
     update_user_email,
     update_user_password,
     upsert_user_preferences,
@@ -447,6 +448,8 @@ async def settings_post(
     warn_hot: str = Form(default=""),
     temp_unit: str = Form(default="C"),
     reminder_allday_hour: int = Form(default=-1),
+    reminder_allday_midnight: str = Form(default=""),
+    reminder_evening_hour: int = Form(default=-1),
     reminder_timed_minutes: int = Form(default=-1),
 ):
     user_id = _require_login(request)
@@ -457,6 +460,10 @@ async def settings_post(
         )
 
     def _on(val): return 1 if val == "on" else 0
+
+    # Google users: midnight checkbox overrides the hidden allday_hour field
+    if reminder_allday_midnight == "on":
+        reminder_allday_hour = 0
 
     upsert_user_preferences(
         DB_PATH, user_id,
@@ -480,6 +487,7 @@ async def settings_post(
         allday_hot=_on(allday_hot),
         temp_unit=temp_unit,
         reminder_allday_hour=reminder_allday_hour,
+        reminder_evening_hour=reminder_evening_hour,
         reminder_timed_minutes=reminder_timed_minutes,
     )
     if is_google_connected(DB_PATH, user_id):
@@ -589,6 +597,10 @@ async def settings_feedback_post(
         screen_height=screen_height,
         timezone=timezone,
     )
+    send_feedback_notification(
+        email=email, topic=topic, description=description,
+        locations=locations_str, platform=platform, user_agent=user_agent,
+    )
     return RedirectResponse(url="/settings?success=feedback#feedback", status_code=303)
 
 
@@ -622,6 +634,10 @@ async def feedback_post(
         DB_PATH, user_id, email, feed_url, locations,
         calendar_app, description, user_agent, platform,
         screen_width, screen_height, timezone,
+    )
+    send_feedback_notification(
+        email=email, topic=calendar_app, description=description,
+        locations=locations, platform=platform, user_agent=user_agent,
     )
 
     user_locations = get_user_locations(DB_PATH, user_id)
@@ -844,6 +860,17 @@ async def admin(request: Request, days: int = Query(default=30)):
         "funnel_by_source": funnel_by_source,
         "page_views": page_views,
     })
+
+
+@app.post("/admin/feedback/{feedback_id}/status")
+async def admin_feedback_status(request: Request, feedback_id: int, status: str = Form(...)):
+    user_id = _require_login(request)
+    if not _is_admin(user_id):
+        return Response(content="Forbidden", status_code=403)
+    if status not in ("new", "responded", "resolved"):
+        return Response(content="Bad status", status_code=400)
+    update_feedback_status(DB_PATH, feedback_id, status)
+    return RedirectResponse(url="/admin#feedback", status_code=303)
 
 
 @app.get("/admin/export.csv")

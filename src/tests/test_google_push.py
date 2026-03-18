@@ -568,3 +568,46 @@ class TestGoogleCalendarReminders:
         )
         body = _calendar_event_to_google_body(ce, "Europe/Berlin")
         assert body["reminders"]["overrides"] == [{"method": "popup", "minutes": 15}]
+
+    def test_evening_reminder_override(self):
+        from src.integrations.google_push import _calendar_event_to_google_body
+        from src.services.calendar_events import CalendarEvent
+        from datetime import date
+
+        ce = CalendarEvent(
+            uid="test@weathercal.app",
+            summary="Test",
+            description="Test desc",
+            location="Munich",
+            is_allday=True,
+            start=date(2026, 3, 15),
+            end=date(2026, 3, 16),
+            reminder_minutes_evening=240,  # 8 PM the day before
+        )
+        body = _calendar_event_to_google_body(ce, "Europe/Berlin")
+        assert body["reminders"] == {
+            "useDefault": False,
+            "overrides": [{"method": "popup", "minutes": 240}],
+        }
+
+    def test_both_evening_and_midnight_reminders(self):
+        from src.integrations.google_push import _calendar_event_to_google_body
+        from src.services.calendar_events import CalendarEvent
+        from datetime import date
+
+        ce = CalendarEvent(
+            uid="test@weathercal.app",
+            summary="Test",
+            description="Test desc",
+            location="Munich",
+            is_allday=True,
+            start=date(2026, 3, 15),
+            end=date(2026, 3, 16),
+            reminder_minutes=0,
+            reminder_minutes_evening=300,  # 7 PM
+        )
+        body = _calendar_event_to_google_body(ce, "Europe/Berlin")
+        assert body["reminders"]["useDefault"] is False
+        assert len(body["reminders"]["overrides"]) == 2
+        assert {"method": "popup", "minutes": 300} in body["reminders"]["overrides"]
+        assert {"method": "popup", "minutes": 0} in body["reminders"]["overrides"]

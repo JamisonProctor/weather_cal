@@ -59,6 +59,6 @@ def test_default_prefs_has_all_expected_keys():
         "allday_rain", "allday_wind", "allday_cold", "allday_snow",
         "allday_sunny", "allday_hot",
         "warm_threshold", "hot_threshold", "temp_unit",
-        "reminder_allday_hour", "reminder_timed_minutes",
+        "reminder_allday_hour", "reminder_evening_hour", "reminder_timed_minutes",
     }
     assert set(DEFAULT_PREFS.keys()) == expected_keys

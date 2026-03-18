@@ -301,6 +301,29 @@ def test_combined_calendar_app_fantastical_plus_google():
     assert _combined_calendar_app("Fantastical/3.0", "active") == "Fantastical + Google Calendar"
 
 
+# --- get_user_calendar_app (uses _combined_calendar_app internally) ---
+
+def test_get_user_calendar_app_google_oauth(db_path):
+    from unittest.mock import MagicMock
+    from datetime import datetime, timedelta, timezone as tz
+    from src.web.db import get_user_calendar_app
+    from src.integrations.google_push import store_google_tokens, create_google_tokens_table
+
+    user_id = create_user(db_path, "guser@example.com", "supersecretpass1")
+    create_google_tokens_table(db_path)
+
+    # No feed poll, no Google → Unknown
+    assert get_user_calendar_app(db_path, user_id) == "Unknown"
+
+    # Connect Google OAuth
+    cred = MagicMock()
+    cred.token = "t"
+    cred.refresh_token = "r"
+    cred.expiry = datetime.now(tz.utc) + timedelta(hours=1)
+    store_google_tokens(db_path, user_id, cred, "cal123")
+    assert get_user_calendar_app(db_path, user_id) == "Google Calendar"
+
+
 # --- Account management ---
 
 def test_update_user_email_success(db_path):

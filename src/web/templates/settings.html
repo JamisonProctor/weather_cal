@@ -224,7 +224,10 @@
 
             {% if calendar_app == 'Google Calendar' or calendar_app is string and 'Google Calendar' in calendar_app %}
             <div class="reminder-row">
-              <span>Evening before</span>
+              <span>Alerts</span>
+            </div>
+            <div class="reminder-row">
+              <span>Notify me about tomorrow's weather at</span>
               <select name="reminder_evening_hour">
                 <option value="-1" {% if prefs.reminder_evening_hour == -1 or prefs.reminder_evening_hour is none %}selected{% endif %}>None</option>
                 <option value="17" {% if prefs.reminder_evening_hour == 17 %}selected{% endif %}>5:00 PM</option>
@@ -234,30 +237,31 @@
                 <option value="21" {% if prefs.reminder_evening_hour == 21 %}selected{% endif %}>9:00 PM</option>
                 <option value="22" {% if prefs.reminder_evening_hour == 22 %}selected{% endif %}>10:00 PM</option>
               </select>
-              <span class="pref-note">Get tomorrow's forecast the night before.</span>
             </div>
             <div class="reminder-row">
-              <span>Day of</span>
               <label class="check-label" style="margin:0">
                 <input type="checkbox" name="reminder_allday_midnight" {% if prefs.reminder_allday_hour == 0 %}checked{% endif %}>
                 <span class="checkmark"></span>
-                Notify me first thing
+                Notify me the day of
               </label>
               <input type="hidden" name="reminder_allday_hour" value="-1">
-              <span class="pref-note">Triggers at midnight — consider using evening-before if you silence your phone overnight.</span>
+              <span class="pref-note">Triggers at midnight, so you see it when you wake up.</span>
             </div>
 
             {% elif calendar_app == 'Unknown' or calendar_app == 'Other' %}
             <div class="reminder-row">
-              <span>Notification</span>
-              <span class="pref-note">Notifications require a direct calendar connection. <a href="#reconnect" class="link-blue">Connect your calendar</a> to enable notifications.</span>
+              <span>Alerts</span>
+              <span class="pref-note">Alerts require a direct calendar connection. <a href="#reconnect" class="link-blue">Connect your calendar</a> to enable alerts.</span>
               <input type="hidden" name="reminder_allday_hour" value="{{ prefs.reminder_allday_hour | default(-1) }}">
               <input type="hidden" name="reminder_evening_hour" value="{{ prefs.reminder_evening_hour | default(-1) }}">
             </div>
 
             {% else %}
             <div class="reminder-row">
-              <span>Evening before</span>
+              <span>Alerts</span>
+            </div>
+            <div class="reminder-row">
+              <span>Notify me about tomorrow's weather at</span>
               <select name="reminder_evening_hour">
                 <option value="-1" {% if prefs.reminder_evening_hour == -1 or prefs.reminder_evening_hour is none %}selected{% endif %}>None</option>
                 <option value="17" {% if prefs.reminder_evening_hour == 17 %}selected{% endif %}>5:00 PM</option>
@@ -267,10 +271,9 @@
                 <option value="21" {% if prefs.reminder_evening_hour == 21 %}selected{% endif %}>9:00 PM</option>
                 <option value="22" {% if prefs.reminder_evening_hour == 22 %}selected{% endif %}>10:00 PM</option>
               </select>
-              <span class="pref-note">Get tomorrow's forecast the night before.</span>
             </div>
             <div class="reminder-row">
-              <span>Morning of</span>
+              <span>Notify me the morning of</span>
               <select name="reminder_allday_hour">
                 <option value="-1" {% if prefs.reminder_allday_hour == -1 or prefs.reminder_allday_hour is none %}selected{% endif %}>None</option>
                 <option value="6" {% if prefs.reminder_allday_hour == 6 %}selected{% endif %}>6:00 AM</option>
@@ -327,23 +330,15 @@
             </div>
 
             <div class="reminder-row">
-              <span>Notification</span>
-              {% if calendar_app == 'Google Calendar' %}
-                <select name="reminder_timed_minutes" disabled>
-                  <option value="-1" selected>Not supported</option>
-                </select>
-                <input type="hidden" name="reminder_timed_minutes" value="{{ prefs.reminder_timed_minutes | default(-1) }}">
-                <span class="pref-note">Google Calendar ignores notifications from subscribed calendars.</span>
-              {% else %}
-                <select name="reminder_timed_minutes">
-                  <option value="-1" {% if prefs.reminder_timed_minutes == -1 or prefs.reminder_timed_minutes is none %}selected{% endif %}>None</option>
-                  <option value="0" {% if prefs.reminder_timed_minutes == 0 %}selected{% endif %}>At time of event</option>
-                  <option value="5" {% if prefs.reminder_timed_minutes == 5 %}selected{% endif %}>5 minutes before</option>
-                  <option value="15" {% if prefs.reminder_timed_minutes == 15 %}selected{% endif %}>15 minutes before</option>
-                  <option value="30" {% if prefs.reminder_timed_minutes == 30 %}selected{% endif %}>30 minutes before</option>
-                  <option value="60" {% if prefs.reminder_timed_minutes == 60 %}selected{% endif %}>1 hour before</option>
-                </select>
-              {% endif %}
+              <span>Notify me</span>
+              <select name="reminder_timed_minutes">
+                <option value="-1" {% if prefs.reminder_timed_minutes == -1 or prefs.reminder_timed_minutes is none %}selected{% endif %}>None</option>
+                <option value="0" {% if prefs.reminder_timed_minutes == 0 %}selected{% endif %}>At time of event</option>
+                <option value="5" {% if prefs.reminder_timed_minutes == 5 %}selected{% endif %}>5 minutes before</option>
+                <option value="15" {% if prefs.reminder_timed_minutes == 15 %}selected{% endif %}>15 minutes before</option>
+                <option value="30" {% if prefs.reminder_timed_minutes == 30 %}selected{% endif %}>30 minutes before</option>
+                <option value="60" {% if prefs.reminder_timed_minutes == 60 %}selected{% endif %}>1 hour before</option>
+              </select>
             </div>
           </div>
 

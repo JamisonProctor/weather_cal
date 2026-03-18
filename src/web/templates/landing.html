@@ -725,14 +725,18 @@
       var def = driftDefs[i];
       var dc = document.createElement('span');
       dc.className = 'emoji-particle zone-drift';
-      dc.style.cssText = 'top:' + def.top + '%;left:-20%;font-size:' + def.size + 'rem;opacity:0;'
+      dc.style.cssText = 'top:' + def.top + '%;left:-20%;font-size:' + def.size + 'rem;'
         + 'animation:cloud-drift ' + def.duration + 's linear ' + def.delay + 's infinite;'
         + 'animation-play-state:paused;';
       dc.textContent = '\u2601\uFE0F';
       driftEls.push(dc);
       driftFrag.appendChild(dc);
     }
-    emojiLayer.appendChild(driftFrag);
+    var driftLayer = document.createElement('div');
+    driftLayer.id = 'drift-cloud-layer';
+    driftLayer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;';
+    driftLayer.appendChild(driftFrag);
+    emojiLayer.appendChild(driftLayer);
     var cloudsActive = false;
 
     // Sun emoji — arcs across the sky from left to right
@@ -816,9 +820,7 @@
         }
         if (cloudOpacity !== lastCloudOpacity) {
           lastCloudOpacity = cloudOpacity;
-          for (var di = 0; di < driftEls.length; di++) {
-            driftEls[di].style.opacity = cloudOpacity;
-          }
+          driftLayer.style.opacity = cloudOpacity;
         }
 
         // Sun emoji — arcs across the sky, starts with clouds, sets at bottom

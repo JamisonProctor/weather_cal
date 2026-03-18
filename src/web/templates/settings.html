@@ -120,7 +120,7 @@
       <a href="#preferences" class="sidebar-link">Preferences</a>
       <a href="#personal" class="sidebar-link">Personal</a>
       <a href="#reconnect" class="sidebar-link">Reconnect</a>
-      <a href="mailto:hello@weathercal.app" class="sidebar-link">Feedback</a>
+      <a href="/feedback" class="sidebar-link">Feedback</a>
       {% if is_admin %}
       <a href="/admin" class="sidebar-link">Admin</a>
       {% endif %}
@@ -224,9 +224,6 @@
 
             {% if calendar_app == 'Google Calendar' or calendar_app is string and 'Google Calendar' in calendar_app %}
             <div class="reminder-row">
-              <span>Alerts</span>
-            </div>
-            <div class="reminder-row">
               <span>Notify me about tomorrow's weather at</span>
               <select name="reminder_evening_hour">
                 <option value="-1" {% if prefs.reminder_evening_hour == -1 or prefs.reminder_evening_hour is none %}selected{% endif %}>None</option>
@@ -239,10 +236,10 @@
               </select>
             </div>
             <div class="reminder-row">
+              <span>Notify me the day of</span>
               <label class="check-label" style="margin:0">
                 <input type="checkbox" name="reminder_allday_midnight" {% if prefs.reminder_allday_hour == 0 %}checked{% endif %}>
                 <span class="checkmark"></span>
-                Notify me the day of
               </label>
               <input type="hidden" name="reminder_allday_hour" value="-1">
               <span class="pref-note">Triggers at midnight, so you see it when you wake up.</span>
@@ -250,16 +247,12 @@
 
             {% elif calendar_app == 'Unknown' or calendar_app == 'Other' %}
             <div class="reminder-row">
-              <span>Alerts</span>
               <span class="pref-note">Alerts require a direct calendar connection. <a href="#reconnect" class="link-blue">Connect your calendar</a> to enable alerts.</span>
               <input type="hidden" name="reminder_allday_hour" value="{{ prefs.reminder_allday_hour | default(-1) }}">
               <input type="hidden" name="reminder_evening_hour" value="{{ prefs.reminder_evening_hour | default(-1) }}">
             </div>
 
             {% else %}
-            <div class="reminder-row">
-              <span>Alerts</span>
-            </div>
             <div class="reminder-row">
               <span>Notify me about tomorrow's weather at</span>
               <select name="reminder_evening_hour">

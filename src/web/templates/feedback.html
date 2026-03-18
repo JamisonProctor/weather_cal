@@ -1,75 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}Having trouble — WeatherCal{% endblock %}
+{% block title %}Feedback — WeatherCal{% endblock %}
 
 {% block body_class %}layout-narrow{% endblock %}
 
 {% block extra_style %}
 <style>
   h1 { margin-bottom: 0.4rem; }
-  .subtitle { color: var(--text-muted); margin-bottom: 1.5rem; }
-  label { display: block; margin: 16px 0 4px; font-weight: 500; font-size: 0.95rem; }
-  select, textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; font-size: 1rem; font-family: inherit; }
-  select:focus, textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
-  textarea { resize: vertical; min-height: 120px; }
-  button[type="submit"] { margin-top: 24px; width: 100%; padding: 14px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; }
-  button[type="submit"]:hover { background: var(--accent-hover); }
-  .back-link { display: block; margin-top: 20px; color: var(--text-muted); text-decoration: none; font-size: 0.9rem; }
-  .back-link:hover { color: var(--text); text-decoration: underline; }
-  .success { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; color: #166534; }
-  .success h2 { margin: 0 0 8px; font-size: 1.1rem; }
-  .success p { margin: 0; font-size: 0.95rem; }
+  .subtitle { color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem; line-height: 1.6; }
+  .email-link { display: inline-block; padding: 14px 28px; background: var(--accent); color: #fff; text-decoration: none; border-radius: 8px; font-size: 1rem; font-weight: 600; }
+  .email-link:hover { background: var(--accent-hover); }
 </style>
 {% endblock %}
 
 {% block content %}
-  {% if sent %}
-  <div class="success">
-    <h2>Thanks, we got your message.</h2>
-    <p>We'll follow up at your email if needed.</p>
-  </div>
-  <a href="/connect" class="back-link">&larr; Back to Connect</a>
-  {% else %}
-  <h1>Having trouble?</h1>
-  <p class="subtitle">Tell us what happened and we'll look into it.</p>
-
-  <form method="post" action="/feedback" id="feedback-form">
-    <input type="hidden" name="feed_url" value="{{ webcal_url or '' }}">
-    <input type="hidden" name="locations" value="{{ locations | join(', ', attribute='location') }}">
-    <input type="hidden" name="user_agent" id="f-user-agent">
-    <input type="hidden" name="platform" id="f-platform">
-    <input type="hidden" name="screen_width" id="f-screen-width">
-    <input type="hidden" name="screen_height" id="f-screen-height">
-    <input type="hidden" name="timezone" id="f-timezone">
-
-    <label for="calendar_app">Which app were you trying to add to?</label>
-    <select name="calendar_app" id="calendar_app" required>
-      <option value="" disabled selected>Select an app…</option>
-      <option value="Apple Calendar">Apple Calendar</option>
-      <option value="Google Calendar">Google Calendar</option>
-      <option value="Outlook">Outlook</option>
-      <option value="Other">Other</option>
-    </select>
-
-    <label for="description">What went wrong? What did you see?</label>
-    <textarea name="description" id="description" required placeholder="Describe what happened…"></textarea>
-
-    <button type="submit">Send feedback</button>
-  </form>
-
-  <a href="/connect" class="back-link">&larr; Back to Connect</a>
-  {% endif %}
-{% endblock %}
-
-{% block extra_script %}
-<script>
-  var ua = document.getElementById('f-user-agent');
-  if (ua) {
-    ua.value = navigator.userAgent;
-    document.getElementById('f-platform').value = navigator.platform;
-    document.getElementById('f-screen-width').value = screen.width;
-    document.getElementById('f-screen-height').value = screen.height;
-    document.getElementById('f-timezone').value = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  }
-</script>
+  <h1>We'd love to hear from you</h1>
+  <p class="subtitle">Got a bug, idea, or something on your mind? Send us an email and we'll get back to you.</p>
+  <a href="mailto:hello@weathercal.app" class="email-link">hello@weathercal.app</a>
 {% endblock %}

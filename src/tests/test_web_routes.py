@@ -1560,4 +1560,4 @@ def test_settings_shows_subscription_when_google_not_connected(client, db_path, 
 
     resp = client.get("/settings", cookies=cookies)
     assert resp.status_code == 200
-    assert "Subscribe with a calendar link" in resp.text
+    assert "Add to another calendar" in resp.text

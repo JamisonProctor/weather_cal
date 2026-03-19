@@ -648,3 +648,52 @@ def test_google_active_ics_includes_settings_url():
     cal = Calendar.from_ical(ics_bytes)
     events = [c for c in cal.walk() if c.name == "VEVENT"]
     assert url in str(events[0]["DESCRIPTION"])
+
+
+# --- Cold temp scoping in merged summaries ---
+
+
+def test_merged_summary_cold_plus_rain_shows_cold_temps_only():
+    """Combined cold+rain summary uses only cold-qualifying temps for the range."""
+    from src.services.calendar_events import _merged_window_summary
+    from src.services.forecast_formatting import MergedWarningWindow
+    merged = MergedWarningWindow(
+        warning_types=["rain", "cold"], emojis=["☂️", "🥶"],
+        start_time="2026-03-10T10:00", end_time="2026-03-10T14:00",
+    )
+    # Hours: 10=2°C (cold), 11=6°C (not cold), 12=7°C (not cold), 13=1°C (cold)
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00", "2026-03-10T12:00", "2026-03-10T13:00"],
+        temps=[2, 6, 7, 1],
+        codes=[61, 61, 63, 61],
+        rain=[50, 70, 60, 50],
+        winds=[5, 5, 5, 5],
+        precipitation=[1.0, 1.5, 2.0, 0.8],
+    )
+    result = _merged_window_summary(merged, forecast)
+    # Should show only cold temps (1, 2) → "1 ~ 2°C", not "1 ~ 7°C"
+    assert "☂️" in result
+    assert "🥶" in result
+    assert "1 ~ 2°C" in result
+
+
+def test_merged_summary_single_cold_temp_no_tilde():
+    """When all cold temps round to same value, no ~ in output."""
+    from src.services.calendar_events import _merged_window_summary
+    from src.services.forecast_formatting import MergedWarningWindow
+    merged = MergedWarningWindow(
+        warning_types=["rain", "cold"], emojis=["☂️", "🥶"],
+        start_time="2026-03-10T10:00", end_time="2026-03-10T13:00",
+    )
+    # Only one cold hour: 10=2.4°C (rounds to 2), rest are warm
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00", "2026-03-10T12:00"],
+        temps=[2.4, 6, 7],
+        codes=[61, 61, 63],
+        rain=[50, 70, 60],
+        winds=[5, 5, 5],
+        precipitation=[1.0, 1.5, 2.0],
+    )
+    result = _merged_window_summary(merged, forecast)
+    assert "~" not in result
+    assert "2°C" in result

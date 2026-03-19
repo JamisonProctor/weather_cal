@@ -11,6 +11,7 @@ from typing import List
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from src.models.forecast import Forecast
+from src.constants import COLD_TEMP_THRESHOLD, HOT_TEMP_THRESHOLD
 from src.services.forecast_formatting import (
     MergedWarningWindow,
     _fmt_temp,
@@ -95,12 +96,27 @@ def _merged_window_summary(merged: MergedWarningWindow, forecast: Forecast, pref
         if wtype in ("cold", "snow", "hot", "sunny") and temps_in_window:
             lo = _fmt_temp(min(temps_in_window), unit)
             hi = _fmt_temp(max(temps_in_window), unit)
+            if lo == hi:
+                return f"{emoji_str} {lo}\u00b0{unit}"
             return f"{emoji_str} {lo} ~ {hi}\u00b0{unit}"
 
-    # Combined types: always show temp range
+    # Combined types: scope temp range to cold/hot hours when present
     if temps_in_window:
-        lo = _fmt_temp(min(temps_in_window), unit)
-        hi = _fmt_temp(max(temps_in_window), unit)
+        display_temps = temps_in_window
+        if "cold" in merged.warning_types and len(merged.warning_types) > 1:
+            cold_threshold = prefs.get("cold_threshold", COLD_TEMP_THRESHOLD) if prefs else COLD_TEMP_THRESHOLD
+            cold_temps = [t for t in temps_in_window if t < cold_threshold]
+            if cold_temps:
+                display_temps = cold_temps
+        elif "hot" in merged.warning_types and len(merged.warning_types) > 1:
+            hot_threshold = prefs.get("hot_threshold", HOT_TEMP_THRESHOLD) if prefs else HOT_TEMP_THRESHOLD
+            hot_temps = [t for t in temps_in_window if t > hot_threshold]
+            if hot_temps:
+                display_temps = hot_temps
+        lo = _fmt_temp(min(display_temps), unit)
+        hi = _fmt_temp(max(display_temps), unit)
+        if lo == hi:
+            return f"{emoji_str} {lo}\u00b0{unit}"
         return f"{emoji_str} {lo} ~ {hi}\u00b0{unit}"
 
     return emoji_str

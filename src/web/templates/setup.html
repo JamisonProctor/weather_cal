@@ -42,6 +42,7 @@
     <input type="hidden" name="lat" id="lat">
     <input type="hidden" name="lon" id="lon">
     <input type="hidden" name="timezone" id="timezone">
+    <input type="hidden" name="admin1" id="admin1">
     <input type="hidden" name="country" id="country">
 
     <button type="submit" id="submit-btn">Set location</button>
@@ -64,21 +65,25 @@
   let results = [];
   let debounceTimer;
 
+  const hiddenAdmin1 = document.getElementById('admin1');
+
   function clearSelection() {
     hiddenLocation.value = '';
     hiddenLat.value = '';
     hiddenLon.value = '';
     hiddenTz.value = '';
+    hiddenAdmin1.value = '';
     hiddenCountry.value = '';
   }
 
   function selectResult(r) {
-    const label = r.name;
-    input.value = label;
-    hiddenLocation.value = label;
+    const parts = [r.name, r.admin1, r.country].filter(Boolean);
+    input.value = parts.join(', ');
+    hiddenLocation.value = r.name;
     hiddenLat.value = r.lat;
     hiddenLon.value = r.lon;
     hiddenTz.value = r.timezone;
+    hiddenAdmin1.value = r.admin1 || '';
     hiddenCountry.value = r.country;
     closeDropdown();
     hint.textContent = '';
@@ -101,8 +106,8 @@
     }
     data.forEach((r, i) => {
       const li = document.createElement('li');
-      const region = r.country;
-      li.innerHTML = `<span class="city">${r.name}</span><span class="region">${region}</span>`;
+      const regionParts = [r.admin1, r.country].filter(Boolean);
+      li.innerHTML = `<span class="city">${r.name}</span><span class="region">${regionParts.join(', ')}</span>`;
       li.addEventListener('mousedown', (e) => { e.preventDefault(); selectResult(r); });
       dropdown.appendChild(li);
     });

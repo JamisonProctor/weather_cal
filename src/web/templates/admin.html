@@ -100,7 +100,8 @@
       <thead>
         <tr>
           <th>Email</th>
-          <th>Location</th>
+          <th>City</th>
+          <th>Country</th>
           <th>Source</th>
           <th>Signed up</th>
           <th>Last poll</th>
@@ -115,7 +116,8 @@
         {% for u in stats.users %}
         <tr>
           <td>{{ u.email }}</td>
-          <td>{{ u.location or '—' }}</td>
+          <td>{{ u.city or '—' }}</td>
+          <td>{{ u.country or '—' }}</td>
           <td>{{ u.utm_source or '—' }}</td>
           <td>{{ u.created_at or '—' }}</td>
           <td>{{ u.last_polled_at or '—' }}</td>

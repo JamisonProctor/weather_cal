@@ -878,13 +878,14 @@ async def admin_export_csv(request: Request):
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow([
-        "Email", "Location", "Source", "Signed up", "Last poll",
+        "Email", "City", "Country", "Source", "Signed up", "Last poll",
         "Last 24h", "Calendar app", "Google", "Prefs changed", "Settings clicks",
     ])
     for u in users:
         writer.writerow([
             u["email"],
-            u["location"],
+            u["city"],
+            u["country"],
             u["utm_source"] or "",
             u["created_at"],
             u["last_polled_at"],

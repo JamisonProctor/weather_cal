@@ -38,7 +38,8 @@
 
   /* Preference cards */
   .pref-card { background: rgba(255,245,214,0.6); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
-  .pref-card-title { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 0 0 4px; }
+  .pref-card-title { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 0 0 4px; display: flex; align-items: center; justify-content: space-between; }
+  .save-status { font-size: 0.82rem; font-weight: 400; opacity: 0; transition: opacity 0.3s; white-space: nowrap; }
   .pref-card-desc { font-size: 0.85rem; color: var(--text-muted); margin: 0 0 16px; }
 
   /* Custom checkboxes */
@@ -147,7 +148,7 @@
         <form method="post" action="/settings">
 
           <div class="pref-card" style="margin-bottom:20px">
-            <p class="pref-card-title">Temperature units</p>
+            <p class="pref-card-title">Temperature units <span class="save-status"></span></p>
             <label style="margin-right:16px;font-size:0.95rem;cursor:pointer">
               <input type="radio" name="temp_unit" value="C" {% if prefs.temp_unit != 'F' %}checked{% endif %}> °C
             </label>
@@ -157,7 +158,7 @@
           </div>
 
           <div class="pref-card" style="margin-bottom:20px">
-            <p class="pref-card-title">Warning temperature</p>
+            <p class="pref-card-title">Warning temperature <span class="save-status"></span></p>
             <div class="threshold-row" style="margin-bottom:0">
               <span>🥶 Warn me when the temp is below</span>
               <input type="number" name="cold_threshold" value="{{ prefs.cold_threshold }}" step="0.5" min="-100" max="150">
@@ -177,7 +178,7 @@
 
           <!-- All-day events card -->
           <div class="pref-card">
-            <p class="pref-card-title">All-day events</p>
+            <p class="pref-card-title">All-day events <span class="save-status"></span></p>
             <p class="pref-card-desc">Controls the all-day event that appears at the top of each day in your calendar.</p>
 
             <label class="check-label">
@@ -279,7 +280,7 @@
 
           <!-- Timed events card -->
           <div class="pref-card">
-            <p class="pref-card-title">Timed events during the day</p>
+            <p class="pref-card-title">Timed events during the day <span class="save-status"></span></p>
             <p class="pref-card-desc">Controls separate timed events that appear on your calendar when conditions like rain or wind are expected.</p>
 
             <label class="check-label">
@@ -335,7 +336,6 @@
           </div>
 
           <button type="submit" class="btn-primary" id="save-btn" data-loading-text="Saving...">Save preferences</button>
-          <span id="save-status" style="display:none;font-size:0.9rem;margin-left:12px;vertical-align:middle"></span>
         </form>
 
       </div>
@@ -602,56 +602,65 @@
       if (!form) return;
 
       var saveBtn = document.getElementById('save-btn');
-      var status = document.getElementById('save-status');
-
-      // Hide submit button, show status area
       saveBtn.style.display = 'none';
-      status.style.display = 'inline';
 
       var timer = null;
       var fadeTimer = null;
+      var lastChangedInput = null;
+      var activeStatusSpan = null;
+
+      function clearStatus() {
+        if (fadeTimer) clearTimeout(fadeTimer);
+        if (activeStatusSpan) {
+          activeStatusSpan.textContent = '';
+          activeStatusSpan.style.opacity = '0';
+          activeStatusSpan = null;
+        }
+      }
+
+      function getStatusSpan(el) {
+        var card = el ? el.closest('.pref-card') : null;
+        if (card) return card.querySelector('.save-status');
+        // Fallback: first card
+        return form.querySelector('.save-status');
+      }
 
       function showStatus(text, color) {
-        if (fadeTimer) clearTimeout(fadeTimer);
-        status.textContent = text;
-        status.style.color = color || 'var(--text-muted)';
-        status.style.opacity = '1';
+        clearStatus();
+        var span = getStatusSpan(lastChangedInput);
+        if (!span) return;
+        activeStatusSpan = span;
+        span.textContent = text;
+        span.style.color = color || 'var(--text-muted)';
+        span.style.opacity = '1';
       }
 
       function fadeStatus() {
+        var span = activeStatusSpan;
+        if (!span) return;
         fadeTimer = setTimeout(function () {
-          status.style.transition = 'opacity 0.5s';
-          status.style.opacity = '0';
-          setTimeout(function () {
-            status.style.transition = '';
-            status.textContent = '';
-          }, 500);
+          span.style.opacity = '0';
+          setTimeout(function () { span.textContent = ''; }, 300);
         }, 2000);
       }
 
       function collectFormData() {
         var data = {};
-        // Checkboxes
         form.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
           if (cb.name) data[cb.name] = cb.checked;
         });
-        // Radios
         form.querySelectorAll('input[type="radio"]:checked').forEach(function (r) {
           if (r.name) data[r.name] = r.value;
         });
-        // Number inputs
         form.querySelectorAll('input[type="number"]').forEach(function (n) {
           if (n.name) data[n.name] = parseFloat(n.value);
         });
-        // Selects
         form.querySelectorAll('select').forEach(function (s) {
           if (s.name) data[s.name] = parseInt(s.value, 10);
         });
-        // Hidden inputs (for reminder_allday_hour fallback etc.)
         form.querySelectorAll('input[type="hidden"]').forEach(function (h) {
           if (h.name && !(h.name in data)) data[h.name] = h.value;
         });
-        // midnight checkbox → allday_hour conversion
         if (data.reminder_allday_midnight) {
           data.reminder_allday_hour = 0;
         }
@@ -686,23 +695,19 @@
         timer = setTimeout(doSave, delay);
       }
 
-      // Listen to all form input changes
       form.addEventListener('change', function (e) {
-        var tag = e.target.tagName;
-        var type = e.target.type;
-        // Longer debounce for number inputs
-        var delay = (type === 'number') ? 1000 : 500;
+        lastChangedInput = e.target;
+        var delay = (e.target.type === 'number') ? 1000 : 500;
         scheduleAutosave(delay);
       });
 
-      // Also listen for direct typing in number inputs
       form.addEventListener('input', function (e) {
         if (e.target.type === 'number') {
+          lastChangedInput = e.target;
           scheduleAutosave(1000);
         }
       });
 
-      // Fallback: intercept form submit (e.g. Enter key)
       form.addEventListener('submit', function (e) {
         e.preventDefault();
         if (timer) clearTimeout(timer);

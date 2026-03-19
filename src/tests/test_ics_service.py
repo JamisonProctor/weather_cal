@@ -624,14 +624,14 @@ def test_allday_event_both_evening_and_morning_alarms():
 # --- Google active ICS ---
 
 def test_google_active_ics_is_valid():
-    ics_bytes = generate_google_active_ics("https://weathercal.app/settings?ref=cal")
+    ics_bytes = generate_google_active_ics("https://weathercal.app/settings")
     cal = Calendar.from_ical(ics_bytes)
     events = [c for c in cal.walk() if c.name == "VEVENT"]
     assert len(events) == 1
 
 
 def test_google_active_ics_contains_info_event():
-    ics_bytes = generate_google_active_ics("https://weathercal.app/settings?ref=cal")
+    ics_bytes = generate_google_active_ics("https://weathercal.app/settings")
     cal = Calendar.from_ical(ics_bytes)
     events = [c for c in cal.walk() if c.name == "VEVENT"]
     event = events[0]
@@ -641,7 +641,7 @@ def test_google_active_ics_contains_info_event():
 
 
 def test_google_active_ics_includes_settings_url():
-    url = "https://weathercal.app/settings?ref=cal"
+    url = "https://weathercal.app/settings"
     ics_bytes = generate_google_active_ics(url)
     cal = Calendar.from_ical(ics_bytes)
     events = [c for c in cal.walk() if c.name == "VEVENT"]

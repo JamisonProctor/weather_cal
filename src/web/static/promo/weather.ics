@@ -72,8 +72,8 @@ DTEND;VALUE=DATE:20260317
 DTSTAMP:20260316T130656Z
 UID:b95c60daf5acd979@weathercal.app
 DESCRIPTION:Morning ☁️ 9°C\nMidday ☀️ 14°C\nAfternoon ☁️ 11°C\n
- Evening ☁️ 8°C\n\n⚙️ Change your settings: https://weathercal.app/s
- ettings\n✉️ Feedback? hello@weathercal.app
+ Evening ☁️ 8°C\n\n⚙️ https://weathercal.app/s
+ ettings\n✉️ hello@weathercal.app
 LOCATION:Munich\, Germany
 TRANSP:TRANSPARENT
 END:VEVENT
@@ -84,8 +84,8 @@ DTEND;VALUE=DATE:20260318
 DTSTAMP:20260316T130656Z
 UID:961a068727615940@weathercal.app
 DESCRIPTION:Morning ☁️ 7°C\nMidday ⛅ 11°C\nAfternoon ☁️ 9°C\nE
- vening ☁️ 7°C\n\n⚙️ Change your settings: https://weathercal.app/se
- ttings\n✉️ Feedback? hello@weathercal.app
+ vening ☁️ 7°C\n\n⚙️ https://weathercal.app/se
+ ttings\n✉️ hello@weathercal.app
 LOCATION:Munich\, Germany
 TRANSP:TRANSPARENT
 END:VEVENT
@@ -96,8 +96,8 @@ DTEND;VALUE=DATE:20260319
 DTSTAMP:20260316T130656Z
 UID:52ede92730de1601@weathercal.app
 DESCRIPTION:Morning 🌦️ 9°C\nMidday ☀️ 14°C\nAfternoon ⛅ 11°C\n
- Evening ☁️ 8°C\n\n⚙️ Change your settings: https://weathercal.app/s
- ettings\n✉️ Feedback? hello@weathercal.app
+ Evening ☁️ 8°C\n\n⚙️ https://weathercal.app/s
+ ettings\n✉️ hello@weathercal.app
 LOCATION:Munich\, Germany
 TRANSP:TRANSPARENT
 END:VEVENT
@@ -108,8 +108,8 @@ DTEND;VALUE=DATE:20260320
 DTSTAMP:20260316T130656Z
 UID:949b8d97ee2336a9@weathercal.app
 DESCRIPTION:Morning ☁️ 8°C\nMidday 🌧️ 10°C ⚠️☂️\nAfternoon
-  ☁️ 9°C\nEvening ☁️ 6°C\n\n⚙️ Change your settings: https://weath
- ercal.app/settings\n✉️ Feedback? hello@weathercal.app
+  ☁️ 9°C\nEvening ☁️ 6°C\n\n⚙️ https://weath
+ ercal.app/settings\n✉️ hello@weathercal.app
 LOCATION:Munich\, Germany
 TRANSP:TRANSPARENT
 END:VEVENT
@@ -122,8 +122,8 @@ UID:e0a18dddc62322f4@weathercal.app
 DESCRIPTION:09:00 🌧️ 9°C  💧1.0mm (85%)\n10:00 🌧️ 10°C  💧
  0.9mm (82%)\n11:00 🌧️ 10°C  💧0.7mm (78%)\n12:00 🌧️ 11°C
  💧0.6mm (75%)\n13:00 🌧️ 11°C  💧0.5mm (70%)\n14:00 🌧️ 10°C
-   💧0.5mm (65%)\n\n⚙️ Change your settings: https://weathercal.app/s
- ettings\n✉️ Feedback? hello@weathercal.app
+   💧0.5mm (65%)\n\n⚙️ https://weathercal.app/s
+ ettings\n✉️ hello@weathercal.app
 LOCATION:Munich\, Germany
 TRANSP:TRANSPARENT
 END:VEVENT
@@ -134,8 +134,8 @@ DTEND;VALUE=DATE:20260321
 DTSTAMP:20260316T130656Z
 UID:bd55f94277c7b11b@weathercal.app
 DESCRIPTION:Morning ⛅ 9°C\nMidday ☀️ 16°C\nAfternoon ⛅ 14°C ⚠️
- 🌬️\nEvening ☁️ 10°C\n\n⚙️ Change your settings: https://weatherca
- l.app/settings\n✉️ Feedback? hello@weathercal.app
+ 🌬️\nEvening ☁️ 10°C\n\n⚙️ https://weatherca
+ l.app/settings\n✉️ hello@weathercal.app
 LOCATION:Munich\, Germany
 TRANSP:TRANSPARENT
 END:VEVENT
@@ -146,7 +146,7 @@ DTEND;TZID=Europe/Berlin:20260320T170000
 DTSTAMP:20260316T130656Z
 UID:a84d691447128210@weathercal.app
 DESCRIPTION:15:00 ☀️ 15°C  💨32km/h\n16:00 ⛅ 14°C  💨35km/h\n\
- n⚙️ Change your settings: https://weathercal.app/settings\n✉️ Feedba
+ n⚙️ https://weathercal.app/settings\n✉️ Feedba
  ck? hello@weathercal.app
 LOCATION:Munich\, Germany
 TRANSP:TRANSPARENT
@@ -158,8 +158,8 @@ DTEND;VALUE=DATE:20260322
 DTSTAMP:20260316T130656Z
 UID:a7bed47dd1adb481@weathercal.app
 DESCRIPTION:Morning ⛅ 12°C\nMidday ☀️ 19°C\nAfternoon 🌤️ 17°C\n
- Evening ⛅ 13°C\n\n⚙️ Change your settings: https://weathercal.app/s
- ettings\n✉️ Feedback? hello@weathercal.app
+ Evening ⛅ 13°C\n\n⚙️ https://weathercal.app/s
+ ettings\n✉️ hello@weathercal.app
 LOCATION:Munich\, Germany
 TRANSP:TRANSPARENT
 END:VEVENT
@@ -170,8 +170,8 @@ DTEND;VALUE=DATE:20260323
 DTSTAMP:20260316T130656Z
 UID:dfdda74ae62325bf@weathercal.app
 DESCRIPTION:Morning ☀️ 15°C\nMidday ☀️ 24°C\nAfternoon ☀️ 24°C\n
- Evening ☀️ 19°C\n\n⚙️ Change your settings: https://weathercal.app/
- settings\n✉️ Feedback? hello@weathercal.app
+ Evening ☀️ 19°C\n\n⚙️ https://weathercal.app/
+ settings\n✉️ hello@weathercal.app
 LOCATION:Munich\, Germany
 TRANSP:TRANSPARENT
 END:VEVENT
@@ -182,8 +182,8 @@ DTEND;TZID=Europe/Berlin:20260322T150000
 DTSTAMP:20260316T130656Z
 UID:091ea5cc3523c89c@weathercal.app
 DESCRIPTION:11:00 ☀️ 22°C\n12:00 ☀️ 23°C\n13:00 ☀️ 24°C\n14
- :00 ☀️ 25°C\n\n⚙️ Change your settings: https://weathercal.app/set
- tings\n✉️ Feedback? hello@weathercal.app
+ :00 ☀️ 25°C\n\n⚙️ https://weathercal.app/set
+ tings\n✉️ hello@weathercal.app
 LOCATION:Munich\, Germany
 TRANSP:TRANSPARENT
 END:VEVENT

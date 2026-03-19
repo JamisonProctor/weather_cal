@@ -398,7 +398,10 @@
         <div class="section">
           <h2>Location</h2>
           {% for loc in locations %}
-          <span class="location-tag">&#128205; {{ loc["location"] }}</span>
+          {% set display = loc["location"] %}
+          {% if loc["admin1"] %}{% set display = display ~ ", " ~ loc["admin1"] %}{% endif %}
+          {% if loc["country"] %}{% set display = display ~ ", " ~ loc["country"] %}{% endif %}
+          <span class="location-tag">&#128205; {{ display }}</span>
           {% else %}
           <p style="color:var(--text-muted);font-size:0.95rem">No location set.</p>
           {% endfor %}
@@ -463,11 +466,11 @@
           {% if not google_connected %}
           <hr class="connect-divider">
 
-          <!-- Subscribe with a calendar link -->
-          <p class="connect-section-label">Subscribe with a calendar link</p>
+          <!-- Add to another calendar -->
+          <p class="connect-section-label">Add to another calendar</p>
           <div class="connect-btn-row">
             <div class="connect-btn-wrapper">
-              <a href="{{ webcal_url }}" class="btn-connect btn-cal-neutral">&#128197; Add to calendar</a>
+              <a href="{{ webcal_url }}" class="btn-connect btn-cal-neutral">&#128197; Add to another calendar</a>
               <span class="connect-btn-note">Works with Apple Calendar, Outlook, and any app that supports subscriptions &mdash; updates approx every 4 hours.</span>
             </div>
           </div>
@@ -479,9 +482,6 @@
             <p class="copy-hint">Or copy the link and paste it into any calendar app.</p>
           </div>
 
-          <hr class="connect-divider">
-
-          <p class="connect-help-text">Calendar links refresh every few hours. Apple Calendar users can speed this up: right-click WeatherCal &#8594; Get Info &#8594; set Auto-refresh to Every Hour.</p>
           {% endif %}
           {% else %}
           <p style="color:var(--text-muted)">No feed token found. Please contact support.</p>

@@ -1461,7 +1461,8 @@ def test_csv_export_returns_csv_with_data(client, db_path, monkeypatch, auth_coo
     assert "Content-Disposition" in resp.headers
     lines = resp.text.strip().split("\n")
     assert "Email" in lines[0]
-    assert "Location" in lines[0]
+    assert "City" in lines[0]
+    assert "Country" in lines[0]
     assert len(lines) >= 3  # header + at least 2 users
 
 
@@ -1559,4 +1560,4 @@ def test_settings_shows_subscription_when_google_not_connected(client, db_path, 
 
     resp = client.get("/settings", cookies=cookies)
     assert resp.status_code == 200
-    assert "Subscribe with a calendar link" in resp.text
+    assert "Add to another calendar" in resp.text

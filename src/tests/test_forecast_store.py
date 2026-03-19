@@ -208,3 +208,17 @@ def test_init_db_migrates_old_location_format(tmp_path):
     old_rows = conn.execute("SELECT COUNT(*) FROM forecast WHERE location LIKE '%,%'").fetchone()[0]
     assert old_rows == 0
     conn.close()
+
+
+def test_init_db_creates_admin1_and_country_columns(tmp_path):
+    """user_locations table has admin1 and country columns after init."""
+    import sqlite3
+
+    db_path = str(tmp_path / "columns.db")
+    ForecastStore(db_path=db_path)
+
+    conn = sqlite3.connect(db_path)
+    cols = [row[1] for row in conn.execute("PRAGMA table_info(user_locations)").fetchall()]
+    conn.close()
+    assert "admin1" in cols
+    assert "country" in cols

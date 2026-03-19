@@ -75,6 +75,12 @@ class ForecastStore:
                 cur.execute(f"ALTER TABLE forecast ADD COLUMN {col_def}")
             except sqlite3.OperationalError:
                 pass  # column already exists
+        # Location detail columns on user_locations (idempotent)
+        for col_def in ["admin1 TEXT DEFAULT ''", "country TEXT DEFAULT ''"]:
+            try:
+                cur.execute(f"ALTER TABLE user_locations ADD COLUMN {col_def}")
+            except sqlite3.OperationalError:
+                pass  # column already exists
         # UTM tracking columns on users (idempotent)
         for col_def in ["utm_source TEXT", "utm_medium TEXT", "utm_campaign TEXT", "referrer TEXT"]:
             try:

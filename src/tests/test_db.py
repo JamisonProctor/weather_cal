@@ -74,13 +74,25 @@ def test_check_password_wrong(db_path):
 
 def test_create_and_get_user_locations(db_path):
     user_id = create_user(db_path, "loc@example.com", "password123456")
-    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin", admin1="Bavaria", country="Germany")
     locations = get_user_locations(db_path, user_id)
     assert len(locations) == 1
     assert locations[0]["location"] == "Munich"
     assert locations[0]["lat"] == pytest.approx(48.137)
     assert locations[0]["lon"] == pytest.approx(11.576)
     assert locations[0]["timezone"] == "Europe/Berlin"
+    assert locations[0]["admin1"] == "Bavaria"
+    assert locations[0]["country"] == "Germany"
+
+
+def test_set_user_location_without_admin1_country_defaults_empty(db_path):
+    """Backward compat: omitting admin1/country stores empty strings."""
+    user_id = create_user(db_path, "noregion@example.com", "password123456")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
+    locations = get_user_locations(db_path, user_id)
+    assert len(locations) == 1
+    assert locations[0]["admin1"] == ""
+    assert locations[0]["country"] == ""
 
 
 # --- Feed token functions ---
@@ -185,7 +197,7 @@ def test_get_admin_stats_empty_db(db_path):
 
 def test_get_admin_stats_with_user(db_path):
     user_id = create_user(db_path, "admin_stat@example.com", "password123456")
-    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin", admin1="Bavaria", country="Germany")
     token = create_feed_token(db_path, user_id)
     update_feed_poll(db_path, token, "CFNetwork/1.0 Darwin")
     stats = get_admin_stats(db_path)
@@ -195,11 +207,23 @@ def test_get_admin_stats_with_user(db_path):
     assert len(stats["users"]) == 1
     u = stats["users"][0]
     assert u["email"] == "admin_stat@example.com"
-    assert u["location"] == "Munich"
+    assert u["city"] == "Munich"
+    assert u["country"] == "Germany"
     assert u["poll_count"] == 1
     assert u["calendar_app"] == "Apple Calendar"
     assert u["changed_prefs"] is False
     assert u["low_polls"] is False
+
+
+def test_admin_stats_city_country_empty_for_legacy_users(db_path):
+    """Users without admin1/country show empty strings in admin stats."""
+    user_id = create_user(db_path, "legacy@example.com", "password123456")
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
+    create_feed_token(db_path, user_id)
+    stats = get_admin_stats(db_path)
+    u = stats["users"][0]
+    assert u["city"] == "Munich"
+    assert u["country"] == ""
 
 
 def _backdate_token(db_path, token, days_ago):

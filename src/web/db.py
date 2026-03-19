@@ -57,15 +57,16 @@ def get_user_by_id(db_path: str, user_id: int):
 
 
 def set_user_location(
-    db_path: str, user_id: int, location: str, lat: float, lon: float, timezone: str
+    db_path: str, user_id: int, location: str, lat: float, lon: float, timezone: str,
+    admin1: str = "", country: str = "",
 ) -> None:
     created_at = datetime.now().isoformat()
     conn = _conn(db_path)
     try:
         conn.execute("DELETE FROM user_locations WHERE user_id = ?", (user_id,))
         conn.execute(
-            "INSERT INTO user_locations (user_id, location, lat, lon, timezone, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (user_id, location, lat, lon, timezone, created_at),
+            "INSERT INTO user_locations (user_id, location, lat, lon, timezone, admin1, country, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (user_id, location, lat, lon, timezone, admin1, country, created_at),
         )
         conn.commit()
     finally:
@@ -601,7 +602,7 @@ def export_user_data(db_path: str, user_id: int) -> dict:
     try:
         cur = conn.cursor()
 
-        cur.execute("SELECT location, lat, lon, timezone, created_at FROM user_locations WHERE user_id = ?", (user_id,))
+        cur.execute("SELECT location, lat, lon, timezone, admin1, country, created_at FROM user_locations WHERE user_id = ?", (user_id,))
         locations = [dict(r) for r in cur.fetchall()]
 
         cur.execute("SELECT * FROM user_preferences WHERE user_id = ?", (user_id,))
@@ -706,6 +707,8 @@ def _get_per_user_stats(cur, now) -> list[dict]:
         f"""SELECT
                 u.email,
                 ul.location,
+                ul.admin1,
+                ul.country,
                 u.created_at,
                 ft.last_polled_at,
                 COALESCE(ft.poll_count, 0) AS poll_count,
@@ -741,6 +744,8 @@ def _get_per_user_stats(cur, now) -> list[dict]:
         users.append({
             "email": r["email"],
             "location": r["location"] or "",
+            "city": r["location"] or "",
+            "country": r["country"] or "",
             "created_at": (r["created_at"] or "")[:10],
             "last_polled_at": last_poll[:10] if last_poll else "",
             "poll_count": r["poll_count"],

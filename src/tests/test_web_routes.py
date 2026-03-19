@@ -307,11 +307,37 @@ def test_setup_post_first_time_redirects_to_connect(client, db_path, auth_cookie
             "lat": "48.137",
             "lon": "11.576",
             "timezone": "Europe/Berlin",
+            "admin1": "Bavaria",
+            "country": "Germany",
         },
         cookies=cookies,
     )
     assert resp.status_code == 303
     assert resp.headers["location"] == "/connect?from=setup"
+
+
+def test_setup_post_stores_admin1_and_country(client, db_path, auth_cookies):
+    """Setup stores admin1 and country in user_locations."""
+    from src.web.db import get_user_locations
+
+    user_id, cookies = auth_cookies(email="loc_detail@example.com")
+    client.post(
+        "/setup",
+        data={
+            "location": "Munich",
+            "lat": "48.137",
+            "lon": "11.576",
+            "timezone": "Europe/Berlin",
+            "admin1": "Bavaria",
+            "country": "Germany",
+        },
+        cookies=cookies,
+    )
+    locations = get_user_locations(db_path, user_id)
+    assert len(locations) == 1
+    assert locations[0]["location"] == "Munich"
+    assert locations[0]["admin1"] == "Bavaria"
+    assert locations[0]["country"] == "Germany"
 
 
 def test_setup_post_location_change_redirects_to_settings(client, db_path, auth_cookies):
@@ -409,10 +435,11 @@ def test_setup_us_location_sets_fahrenheit(client, db_path, auth_cookies):
     client.post(
         "/setup",
         data={
-            "location": "New York, New York, United States",
+            "location": "New York",
             "lat": "40.713",
             "lon": "-74.006",
             "timezone": "America/New_York",
+            "admin1": "New York",
             "country": "United States",
         },
         cookies=cookies,
@@ -428,10 +455,11 @@ def test_setup_non_us_location_does_not_set_fahrenheit(client, db_path, auth_coo
     client.post(
         "/setup",
         data={
-            "location": "Munich, Bavaria, Germany",
+            "location": "Munich",
             "lat": "48.137",
             "lon": "11.576",
             "timezone": "Europe/Berlin",
+            "admin1": "Bavaria",
             "country": "Germany",
         },
         cookies=cookies,
@@ -1433,7 +1461,8 @@ def test_csv_export_returns_csv_with_data(client, db_path, monkeypatch, auth_coo
     assert "Content-Disposition" in resp.headers
     lines = resp.text.strip().split("\n")
     assert "Email" in lines[0]
-    assert "Location" in lines[0]
+    assert "City" in lines[0]
+    assert "Country" in lines[0]
     assert len(lines) >= 3  # header + at least 2 users
 
 

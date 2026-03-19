@@ -37,7 +37,7 @@ def test_format_summary_with_warnings():
 
     summary = format_summary(forecast)
 
-    assert summary == "⚠️☂️🌬️🥶 6° → 13°C"
+    assert summary == "☂️🌬️🥶6° → 🌤️13°C"
 
 
 def test_format_summary_without_warnings():
@@ -561,10 +561,14 @@ def test_summary_always_has_two_temperatures():
         assert summary.count("°") == 2, f"Expected 2 temperatures in: {summary}"
 
 
-def test_summary_warnings_path_starts_with_warning_emoji():
-    """When warnings are present, summary must start with the warning indicator."""
+def test_summary_warnings_replace_weather_emoji():
+    """When warnings are present, warning emoji replace the weather emoji for that half."""
     summary = format_summary(_warning_forecast())
-    assert summary.startswith("⚠️"), f"Warning summary must start with ⚠️: {summary}"
+    # Morning has rain+wind+cold — warning emoji should appear before the arrow
+    before_arrow = summary.split("→")[0]
+    assert "☂️" in before_arrow, f"Morning rain warning missing: {summary}"
+    # No ⚠️ prefix anywhere
+    assert "⚠️" not in summary, f"Summary should not contain ⚠️: {summary}"
 
 
 def test_summary_no_warnings_has_weather_emojis():

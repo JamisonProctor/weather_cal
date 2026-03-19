@@ -74,25 +74,34 @@ def map_morning_afternoon(times, temps, codes, start_hour=6, end_hour=22):
 def format_summary(forecast: Forecast, prefs=None) -> str:
     """
     Returns a concise summary string for the calendar event title.
+    Warning emoji replace the weather emoji for the affected half-day.
     Example outputs:
-      - No hazards: '🌧️15° → ☁️16°'
-      - With hazards: '⚠️☂️🌬️ 6° → 13°'
+      - No warnings:          '🌧️15° → ☁️16°C'
+      - Rain AM, clear PM:    '☂️6° → ☀️13°C'
+      - Rain AM, windy PM:    '☂️6° → 🌬️13°C'
+      - Rain+wind all day:    '☂️🌬️6° → ☂️🌬️13°C'
     """
     morning_emoji, morning_temp, afternoon_emoji, afternoon_temp = map_morning_afternoon(
         forecast.times, forecast.temps, forecast.codes
     )
     data = list(zip(forecast.times, forecast.temps, forecast.codes, forecast.rain,
                     forecast.winds, forecast.precipitation or [0]*len(forecast.times)))
-    warnings = _collect_warnings(data, prefs) if data else ""
+
+    start_hour, mid_hour, end_hour = 6, 12, 22
+    morning_data = [d for d in data if start_hour <= datetime.fromisoformat(d[0]).hour < mid_hour]
+    afternoon_data = [d for d in data if mid_hour <= datetime.fromisoformat(d[0]).hour <= end_hour]
+
+    morning_warnings = _collect_warnings(morning_data, prefs) if morning_data else ""
+    afternoon_warnings = _collect_warnings(afternoon_data, prefs) if afternoon_data else ""
+
+    am_icon = morning_warnings if morning_warnings else morning_emoji
+    pm_icon = afternoon_warnings if afternoon_warnings else afternoon_emoji
 
     unit = prefs.get("temp_unit", "C") if prefs else "C"
     morning_value = _fmt_temp(morning_temp, unit)
     afternoon_value = _fmt_temp(afternoon_temp, unit)
 
-    if warnings:
-        return f"⚠️{warnings} {morning_value}° → {afternoon_value}°{unit}"
-
-    return f"{morning_emoji}{morning_value}° → {afternoon_emoji}{afternoon_value}°{unit}"
+    return f"{am_icon}{morning_value}° → {pm_icon}{afternoon_value}°{unit}"
 
 def _collect_warnings(block: List[Tuple[str, float, int, float, float, float]], prefs=None) -> str:
     """

@@ -242,6 +242,16 @@ def get_warning_windows(forecast: Forecast, prefs=None) -> List[WarningWindow]:
 
 _TYPE_ORDER = {wtype: i for i, (wtype, *_) in enumerate(_WARNING_TYPES)}
 
+_INCOMPATIBLE_PAIRS = [{"cold", "sunny"}, {"cold", "hot"}]
+
+
+def _types_are_compatible(types: set) -> bool:
+    """Return False if the type set contains any mutually exclusive pair."""
+    for pair in _INCOMPATIBLE_PAIRS:
+        if pair <= types:
+            return False
+    return True
+
 
 def merge_overlapping_windows(windows: List[WarningWindow]) -> List[MergedWarningWindow]:
     """Merge overlapping WarningWindows into combined MergedWarningWindows."""
@@ -256,32 +266,35 @@ def merge_overlapping_windows(windows: List[WarningWindow]) -> List[MergedWarnin
 
     intervals.sort(key=lambda x: x[0])
 
+    def _flush(types, start, end):
+        ordered = sorted(types.items(), key=lambda x: _TYPE_ORDER.get(x[0], 99))
+        return MergedWarningWindow(
+            warning_types=[t for t, _ in ordered],
+            emojis=[e for _, e in ordered],
+            start_time=start.strftime("%Y-%m-%dT%H:%M"),
+            end_time=end.strftime("%Y-%m-%dT%H:%M"),
+        )
+
     merged: List[MergedWarningWindow] = []
     cur_start, cur_end = intervals[0][0], intervals[0][1]
     cur_types = {intervals[0][2].warning_type: intervals[0][2].emoji}
 
     for start_dt, end_dt, w in intervals[1:]:
         if start_dt < cur_end:  # strict overlap
-            cur_end = max(cur_end, end_dt)
-            cur_types[w.warning_type] = w.emoji
+            candidate_types = set(cur_types) | {w.warning_type}
+            if _types_are_compatible(candidate_types):
+                cur_end = max(cur_end, end_dt)
+                cur_types[w.warning_type] = w.emoji
+            else:
+                merged.append(_flush(cur_types, cur_start, cur_end))
+                cur_start, cur_end = start_dt, end_dt
+                cur_types = {w.warning_type: w.emoji}
         else:
-            ordered = sorted(cur_types.items(), key=lambda x: _TYPE_ORDER.get(x[0], 99))
-            merged.append(MergedWarningWindow(
-                warning_types=[t for t, _ in ordered],
-                emojis=[e for _, e in ordered],
-                start_time=cur_start.strftime("%Y-%m-%dT%H:%M"),
-                end_time=cur_end.strftime("%Y-%m-%dT%H:%M"),
-            ))
+            merged.append(_flush(cur_types, cur_start, cur_end))
             cur_start, cur_end = start_dt, end_dt
             cur_types = {w.warning_type: w.emoji}
 
-    ordered = sorted(cur_types.items(), key=lambda x: _TYPE_ORDER.get(x[0], 99))
-    merged.append(MergedWarningWindow(
-        warning_types=[t for t, _ in ordered],
-        emojis=[e for _, e in ordered],
-        start_time=cur_start.strftime("%Y-%m-%dT%H:%M"),
-        end_time=cur_end.strftime("%Y-%m-%dT%H:%M"),
-    ))
+    merged.append(_flush(cur_types, cur_start, cur_end))
 
     return merged
 

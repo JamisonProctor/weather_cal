@@ -2,6 +2,7 @@ from src.models.forecast import Forecast
 from src.services.forecast_formatting import (
     MergedWarningWindow,
     WarningWindow,
+    _types_are_compatible,
     c_to_f,
     format_detailed_forecast,
     format_summary,
@@ -570,3 +571,67 @@ def test_summary_no_am_pm():
         summary = format_summary(forecast)
         assert "AM" not in summary, f"Summary should not contain AM: {summary}"
         assert "PM" not in summary, f"Summary should not contain PM: {summary}"
+
+
+# --- Incompatible type guard tests ---
+
+
+def test_types_are_compatible_helper():
+    """Unit test the _types_are_compatible helper."""
+    assert _types_are_compatible({"rain", "wind"}) is True
+    assert _types_are_compatible({"cold", "rain"}) is True
+    assert _types_are_compatible({"cold", "wind", "rain"}) is True
+    assert _types_are_compatible({"cold", "sunny"}) is False
+    assert _types_are_compatible({"cold", "hot"}) is False
+    assert _types_are_compatible({"cold", "wind", "sunny"}) is False
+    assert _types_are_compatible({"sunny"}) is True
+    assert _types_are_compatible({"cold"}) is True
+    assert _types_are_compatible(set()) is True
+
+
+def test_merge_incompatible_cold_sunny_not_merged():
+    """Overlapping cold + sunny windows must stay separate."""
+    windows = [
+        WarningWindow("cold", "🥶", "Cold Warning", "2025-08-01T06:00", "2025-08-01T10:00"),
+        WarningWindow("sunny", "☀️", "Nice weather — enjoy!", "2025-08-01T08:00", "2025-08-01T14:00"),
+    ]
+    merged = merge_overlapping_windows(windows)
+    assert len(merged) == 2
+    assert merged[0].warning_types == ["cold"]
+    assert merged[1].warning_types == ["sunny"]
+
+
+def test_merge_incompatible_cold_hot_not_merged():
+    """Overlapping cold + hot windows must stay separate."""
+    windows = [
+        WarningWindow("cold", "🥶", "Cold Warning", "2025-08-01T06:00", "2025-08-01T10:00"),
+        WarningWindow("hot", "🥵", "Heat Warning", "2025-08-01T08:00", "2025-08-01T14:00"),
+    ]
+    merged = merge_overlapping_windows(windows)
+    assert len(merged) == 2
+    assert merged[0].warning_types == ["cold"]
+    assert merged[1].warning_types == ["hot"]
+
+
+def test_merge_compatible_cold_rain_still_merges():
+    """Cold + rain are compatible and should still merge when overlapping."""
+    windows = [
+        WarningWindow("rain", "☂️", "Rain Warning", "2025-08-01T06:00", "2025-08-01T10:00"),
+        WarningWindow("cold", "🥶", "Cold Warning", "2025-08-01T08:00", "2025-08-01T12:00"),
+    ]
+    merged = merge_overlapping_windows(windows)
+    assert len(merged) == 1
+    assert set(merged[0].warning_types) == {"rain", "cold"}
+
+
+def test_bridging_type_does_not_chain_incompatible():
+    """Wind bridges cold+sunny — cold+wind merge, but sunny stays separate."""
+    windows = [
+        WarningWindow("cold", "🥶", "Cold Warning", "2025-08-01T06:00", "2025-08-01T10:00"),
+        WarningWindow("wind", "🌬️", "Wind Warning", "2025-08-01T08:00", "2025-08-01T14:00"),
+        WarningWindow("sunny", "☀️", "Nice weather — enjoy!", "2025-08-01T12:00", "2025-08-01T16:00"),
+    ]
+    merged = merge_overlapping_windows(windows)
+    assert len(merged) == 2
+    assert set(merged[0].warning_types) == {"cold", "wind"}
+    assert merged[1].warning_types == ["sunny"]

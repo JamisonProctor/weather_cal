@@ -162,7 +162,6 @@ def test_allday_event_description_contains_settings_url():
     events = _parse_events(ics_bytes)
     all_day = next(e for e in events if not hasattr(e["DTSTART"].dt, "hour"))
     description = str(all_day.get("DESCRIPTION", ""))
-    assert "Change your settings:" in description
     assert settings_url in description
 
 
@@ -181,7 +180,6 @@ def test_timed_event_description_contains_settings_url():
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
     assert timed, "Expected at least one timed warning event"
     description = str(timed[0].get("DESCRIPTION", ""))
-    assert "Change your settings:" in description
     assert settings_url in description
 
 

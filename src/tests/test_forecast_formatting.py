@@ -308,7 +308,17 @@ def test_sunny_window_excludes_partly_cloudy_with_wind():
 
 
 def test_map_code_to_emoji_unknown_code():
-    assert map_code_to_emoji(9999) == "❓"
+    assert map_code_to_emoji(9999) == "☁️"
+
+
+def test_map_code_to_emoji_all_wmo_codes_mapped():
+    """Every valid WMO weather code should produce a non-question-mark emoji."""
+    wmo_codes = [0, 1, 2, 3, 45, 48, 51, 53, 55, 56, 57,
+                 61, 63, 65, 66, 67, 71, 73, 75, 77,
+                 80, 81, 82, 85, 86, 95, 96, 99]
+    for code in wmo_codes:
+        result = map_code_to_emoji(code)
+        assert result != "❓", f"WMO code {code} should have an emoji mapping"
 
 
 def test_c_to_f_basic_conversions():
@@ -562,7 +572,7 @@ def test_summary_no_warnings_has_weather_emojis():
     summary = format_summary(_calm_forecast())
     assert "⚠️" not in summary
     # Should contain at least one weather emoji (from map_code_to_emoji)
-    assert any(e in summary for e in ["☀️", "🌤️", "⛅", "☁️", "🌧️", "❄️", "🌦️", "⛈️"])
+    assert any(e in summary for e in ["☀️", "🌤️", "⛅", "☁️", "🌧️", "❄️", "🌦️", "🌨️", "⛈️"])
 
 
 def test_summary_no_am_pm():

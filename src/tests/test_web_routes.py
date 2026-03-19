@@ -722,6 +722,26 @@ def test_connect_page_requires_auth(client):
     assert resp.headers["location"] == "/login"
 
 
+def test_connect_page_from_setup_links_to_welcome(client, db_path, auth_cookies):
+    _, cookies = auth_cookies(email="connect_welcome@example.com")
+    resp = client.get("/connect?from=setup", cookies=cookies)
+    assert resp.status_code == 200
+    assert b"/welcome" in resp.content
+
+
+def test_welcome_page_returns_200(client, db_path, auth_cookies):
+    _, cookies = auth_cookies(email="welcome@example.com")
+    resp = client.get("/welcome", cookies=cookies)
+    assert resp.status_code == 200
+    assert b"all set" in resp.content
+
+
+def test_welcome_page_requires_auth(client):
+    resp = client.get("/welcome")
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/login"
+
+
 def test_feedback_page_renders(client):
     resp = client.get("/feedback")
     assert resp.status_code == 200

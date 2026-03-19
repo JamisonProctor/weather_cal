@@ -24,7 +24,7 @@ DEFAULT_PREFS = {
     "allday_wind": 1,
     "allday_cold": 1,
     "allday_snow": 1,
-    "allday_sunny": 0,
+    "allday_sunny": 1,
     "allday_hot": 1,
     "warm_threshold": 14.0,
     "hot_threshold": 28.0,

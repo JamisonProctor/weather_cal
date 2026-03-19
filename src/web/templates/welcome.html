@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}You're all set — WeatherCal{% endblock %}
+
+{% block body_class %}layout-narrow{% endblock %}
+
+{% block extra_style %}
+<style>
+  h1 { margin-bottom: 0.4rem; }
+  .subtitle { color: var(--text-muted); margin-bottom: 2rem; }
+  .welcome-body { font-size: 0.95rem; line-height: 1.6; color: var(--text); }
+  .welcome-body p { margin-bottom: 1rem; }
+  .media-placeholder { margin: 24px 0; border-radius: 8px; overflow: hidden; }
+  .media-placeholder img,
+  .media-placeholder video { width: 100%; display: block; border-radius: 8px; border: 1px solid var(--border); }
+  .cta-section { margin-top: 28px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+  .nav-done { font-weight: 600; font-size: 1rem; color: var(--accent); text-decoration: none; }
+  .nav-done:hover { text-decoration: underline; }
+</style>
+{% endblock %}
+
+{% block content %}
+  <h1>You're all set!</h1>
+  <p class="subtitle">Your 14-day forecast is now in your calendar. Go check it out.</p>
+
+  <div class="welcome-body">
+    <p>We've turned on all features so you can see everything WeatherCal has to offer — daily summaries, rain and wind warnings, temperature alerts, and more.</p>
+    <p>If you find events you'd prefer not to see, you can change your settings from any WeatherCal event. Just tap the settings link in the event notes.</p>
+  </div>
+
+  <div class="media-placeholder">
+    <!-- Replace with screenshot or video showing the settings link in event notes -->
+    <!-- <img src="/static/img/event-notes-example.png" alt="Settings link in event notes"> -->
+    <!-- <video src="/static/img/event-notes-example.mp4" autoplay muted loop playsinline></video> -->
+  </div>
+
+  <div class="cta-section">
+    <a href="/settings" class="nav-done">Go to settings &rarr;</a>
+  </div>
+{% endblock %}

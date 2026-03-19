@@ -621,7 +621,6 @@
       function getStatusSpan(el) {
         var card = el ? el.closest('.pref-card') : null;
         if (card) return card.querySelector('.save-status');
-        // Fallback: first card
         return form.querySelector('.save-status');
       }
 

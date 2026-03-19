@@ -360,7 +360,14 @@ async def connect(request: Request):
         "google_cal_url": google_cal_url,
         "google_oauth_enabled": google_oauth_enabled(),
         "google_connected": is_google_connected(DB_PATH, user_id),
+        "from_setup": True,
     })
+
+
+@app.get("/welcome", response_class=HTMLResponse)
+async def welcome(request: Request):
+    _require_login(request)
+    return _template("welcome.html", request)
 
 
 @app.get("/settings", response_class=HTMLResponse)

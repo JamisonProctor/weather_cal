@@ -91,7 +91,11 @@
   <p class="help-text">Calendar links refresh every few hours. Apple Calendar users can speed this up: right-click WeatherCal &#8594; Get Info &#8594; set Auto-refresh to Every Hour.</p>
 
   <div class="cta-section">
+    {% if from_setup %}
+    <a href="/welcome" class="nav-done">Next &rarr;</a>
+    {% else %}
     <a href="/settings" class="nav-done">Go to settings &rarr;</a>
+    {% endif %}
     <a href="mailto:hello@weathercal.app" class="trouble-link">Having trouble?</a>
   </div>
 {% endblock %}

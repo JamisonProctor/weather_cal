@@ -80,7 +80,7 @@ def test_default_prefs_values():
     assert DEFAULT_PREFS["allday_wind"] == 1
     assert DEFAULT_PREFS["allday_cold"] == 1
     assert DEFAULT_PREFS["allday_snow"] == 1
-    assert DEFAULT_PREFS["allday_sunny"] == 0
+    assert DEFAULT_PREFS["allday_sunny"] == 1
     assert DEFAULT_PREFS["allday_hot"] == 1
 
 

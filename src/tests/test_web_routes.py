@@ -416,19 +416,6 @@ def test_feed_records_poll(client, db_path, auth_cookies):
     assert len(poll_log_rows) == 2
 
 
-def test_settings_ref_cal_increments_clicks(client, db_path, auth_cookies):
-    user_id, cookies = auth_cookies()
-    token = create_feed_token(db_path, user_id)
-    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
-
-    client.get("/settings?ref=cal", cookies=cookies)
-    client.get("/settings?ref=cal", cookies=cookies)
-
-    conn = sqlite3.connect(db_path)
-    row = conn.execute("SELECT settings_clicks FROM feed_tokens WHERE user_id = ?", (user_id,)).fetchone()
-    conn.close()
-    assert row[0] == 2
-
 
 def test_setup_us_location_sets_fahrenheit(client, db_path, auth_cookies):
     _, cookies = auth_cookies(email="us@example.com")

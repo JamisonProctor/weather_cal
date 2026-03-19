@@ -56,7 +56,6 @@ from src.web.db import (
     get_user_locations,
     get_user_preferences,
     increment_page_view,
-    increment_settings_clicks,
     log_feed_poll,
     log_funnel_event,
     update_feed_poll,
@@ -376,16 +375,12 @@ async def settings(
     request: Request,
     success: str = Query(default=""),
     error: str = Query(default=""),
-    ref: str = Query(default=""),
 ):
     user_id = _require_login(request)
 
     user = get_user_by_id(DB_PATH, user_id)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
-
-    if ref == "cal":
-        increment_settings_clicks(DB_PATH, user_id)
 
     feed_token = get_feed_token_by_user(DB_PATH, user_id)
     locations = get_user_locations(DB_PATH, user_id)
@@ -777,7 +772,7 @@ async def feed(request: Request, token: str):
     update_feed_poll(DB_PATH, token, ua)
     log_feed_poll(DB_PATH, token, ua)
 
-    settings_url = str(request.base_url).rstrip("/") + "/settings?ref=cal"
+    settings_url = str(request.base_url).rstrip("/") + "/settings"
 
     # When Google Calendar is connected, stop serving weather via ICS
     if is_google_connected(DB_PATH, user_id):

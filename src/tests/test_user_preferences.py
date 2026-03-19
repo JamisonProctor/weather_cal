@@ -97,7 +97,10 @@ def test_format_summary_hides_warnings_when_warn_in_allday_false():
     )
     prefs = {**DEFAULT_PREFS, "warn_in_allday": 0}
     summary = format_summary(forecast, prefs=prefs)
-    assert "⚠️" not in summary
+    # With warnings disabled, weather emoji should appear instead of warning icons
+    assert "☂️" not in summary
+    assert "🌬️" not in summary
+    assert "🥶" not in summary
 
 
 def test_format_summary_filters_rain_warning():

@@ -179,15 +179,14 @@ LOCATION:Munich\, Germany
 TRANSP:TRANSPARENT
 END:VEVENT
 BEGIN:VEVENT
-SUMMARY:☀️ 20 ~ 25°C
-DTSTART;TZID=Europe/Berlin:20260322T100000
-DTEND;TZID=Europe/Berlin:20260322T180000
+SUMMARY:☀️ 22 ~ 25°C
+DTSTART;TZID=Europe/Berlin:20260322T110000
+DTEND;TZID=Europe/Berlin:20260322T150000
 DTSTAMP:20260316T130656Z
 UID:091ea5cc3523c89c@weathercal.app
-DESCRIPTION:10:00 ☀️ 20°C\n11:00 ☀️ 22°C\n12:00 ☀️ 23°C\n13
- :00 ☀️ 24°C\n14:00 ☀️ 25°C\n15:00 ☀️ 25°C\n16:00 ☀️ 24
- °C\n17:00 ☀️ 22°C\n\nHigh: 25°C | Low: 20°C\n\n⚙️ Change your 
- settings: https://weathercal.app/settings
+DESCRIPTION:11:00 ☀️ 22°C\n12:00 ☀️ 23°C\n13:00 ☀️ 24°C\n14
+ :00 ☀️ 25°C\n\nHigh: 25°C | Low: 22°C\n\n⚙️ Change your settings
+ : https://weathercal.app/settings
 LOCATION:Munich\, Germany
 TRANSP:TRANSPARENT
 END:VEVENT

@@ -235,6 +235,7 @@ async def setup_post(
     lat: str = Form(default=""),
     lon: str = Form(default=""),
     timezone: str = Form(default=""),
+    admin1: str = Form(default=""),
     country: str = Form(default=""),
 ):
     user_id = _require_login(request)
@@ -254,7 +255,7 @@ async def setup_post(
                 status_code=422,
             )
 
-    set_user_location(DB_PATH, user_id, location, resolved_lat, resolved_lon, resolved_tz)
+    set_user_location(DB_PATH, user_id, location, resolved_lat, resolved_lon, resolved_tz, admin1=admin1, country=country)
     log_funnel_event(DB_PATH, user_id, "location_set")
     existing_prefs = get_user_preferences(DB_PATH, user_id)
     if not existing_prefs and "united states" in country.lower():

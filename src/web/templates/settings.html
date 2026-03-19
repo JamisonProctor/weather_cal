@@ -334,7 +334,8 @@
             </div>
           </div>
 
-          <button type="submit" class="btn-primary" data-loading-text="Saving...">Save preferences</button>
+          <button type="submit" class="btn-primary" id="save-btn" data-loading-text="Saving...">Save preferences</button>
+          <span id="save-status" style="display:none;font-size:0.9rem;margin-left:12px;vertical-align:middle"></span>
         </form>
 
       </div>
@@ -594,6 +595,120 @@
       chk.addEventListener('change', update);
       update();
     });
+
+    // --- Autosave ---
+    (function () {
+      var form = document.querySelector('form[action="/settings"]');
+      if (!form) return;
+
+      var saveBtn = document.getElementById('save-btn');
+      var status = document.getElementById('save-status');
+
+      // Hide submit button, show status area
+      saveBtn.style.display = 'none';
+      status.style.display = 'inline';
+
+      var timer = null;
+      var fadeTimer = null;
+
+      function showStatus(text, color) {
+        if (fadeTimer) clearTimeout(fadeTimer);
+        status.textContent = text;
+        status.style.color = color || 'var(--text-muted)';
+        status.style.opacity = '1';
+      }
+
+      function fadeStatus() {
+        fadeTimer = setTimeout(function () {
+          status.style.transition = 'opacity 0.5s';
+          status.style.opacity = '0';
+          setTimeout(function () {
+            status.style.transition = '';
+            status.textContent = '';
+          }, 500);
+        }, 2000);
+      }
+
+      function collectFormData() {
+        var data = {};
+        // Checkboxes
+        form.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+          if (cb.name) data[cb.name] = cb.checked;
+        });
+        // Radios
+        form.querySelectorAll('input[type="radio"]:checked').forEach(function (r) {
+          if (r.name) data[r.name] = r.value;
+        });
+        // Number inputs
+        form.querySelectorAll('input[type="number"]').forEach(function (n) {
+          if (n.name) data[n.name] = parseFloat(n.value);
+        });
+        // Selects
+        form.querySelectorAll('select').forEach(function (s) {
+          if (s.name) data[s.name] = parseInt(s.value, 10);
+        });
+        // Hidden inputs (for reminder_allday_hour fallback etc.)
+        form.querySelectorAll('input[type="hidden"]').forEach(function (h) {
+          if (h.name && !(h.name in data)) data[h.name] = h.value;
+        });
+        // midnight checkbox → allday_hour conversion
+        if (data.reminder_allday_midnight) {
+          data.reminder_allday_hour = 0;
+        }
+        return data;
+      }
+
+      function doSave() {
+        showStatus('Saving...', 'var(--text-muted)');
+        var payload = collectFormData();
+        fetch('/settings/api', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(payload),
+        })
+        .then(function (resp) { return resp.json(); })
+        .then(function (data) {
+          if (data.ok) {
+            showStatus('Saved \u2713', '#16a34a');
+            fadeStatus();
+          } else {
+            showStatus('Save failed', '#dc2626');
+          }
+        })
+        .catch(function () {
+          showStatus('Save failed', '#dc2626');
+        });
+      }
+
+      function scheduleAutosave(delay) {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(doSave, delay);
+      }
+
+      // Listen to all form input changes
+      form.addEventListener('change', function (e) {
+        var tag = e.target.tagName;
+        var type = e.target.type;
+        // Longer debounce for number inputs
+        var delay = (type === 'number') ? 1000 : 500;
+        scheduleAutosave(delay);
+      });
+
+      // Also listen for direct typing in number inputs
+      form.addEventListener('input', function (e) {
+        if (e.target.type === 'number') {
+          scheduleAutosave(1000);
+        }
+      });
+
+      // Fallback: intercept form submit (e.g. Enter key)
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (timer) clearTimeout(timer);
+        doSave();
+      });
+    })();
 
   })();
 </script>

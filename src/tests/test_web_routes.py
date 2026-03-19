@@ -181,6 +181,121 @@ def test_settings_post_reminder_defaults_to_minus_one(client, db_path, auth_cook
     assert prefs["reminder_timed_minutes"] == -1
 
 
+# --- Settings API (autosave) ---
+
+def test_settings_api_saves_preferences(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies()
+    resp = client.post(
+        "/settings/api",
+        json={
+            "cold_threshold": 5.0,
+            "warm_threshold": 14.0,
+            "hot_threshold": 28.0,
+            "warn_in_allday": True,
+            "warn_rain": True,
+            "warn_wind": False,
+            "warn_cold": True,
+            "warn_snow": False,
+            "warn_sunny": True,
+            "show_allday_events": True,
+            "timed_events_enabled": True,
+            "allday_rain": True,
+            "allday_wind": False,
+            "allday_cold": True,
+            "allday_snow": True,
+            "allday_sunny": False,
+            "temp_unit": "C",
+        },
+        cookies=cookies,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    prefs = get_user_preferences(db_path, user_id)
+    assert prefs["cold_threshold"] == 5.0
+    assert prefs["warn_rain"] == 1
+    assert prefs["warn_wind"] == 0
+    assert prefs["warn_sunny"] == 1
+    assert prefs["show_allday_events"] == 1
+    assert prefs["timed_events_enabled"] == 1
+    assert prefs["allday_rain"] == 1
+    assert prefs["allday_wind"] == 0
+
+
+def test_settings_api_requires_auth(client):
+    resp = client.post(
+        "/settings/api",
+        json={"cold_threshold": 5.0},
+    )
+    assert resp.status_code == 401
+    assert resp.json()["ok"] is False
+
+
+def test_settings_api_converts_fahrenheit_to_celsius(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies()
+    # 37.4°F = 3°C, 57.2°F = 14°C, 82.4°F = 28°C
+    resp = client.post(
+        "/settings/api",
+        json={
+            "cold_threshold": 37.4,
+            "warm_threshold": 57.2,
+            "hot_threshold": 82.4,
+            "temp_unit": "F",
+            "warn_rain": True,
+        },
+        cookies=cookies,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    prefs = get_user_preferences(db_path, user_id)
+    assert prefs["temp_unit"] == "F"
+    assert abs(prefs["cold_threshold"] - 3.0) < 0.01
+    assert abs(prefs["warm_threshold"] - 14.0) < 0.01
+    assert abs(prefs["hot_threshold"] - 28.0) < 0.01
+
+
+def test_settings_api_midnight_checkbox(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies()
+    resp = client.post(
+        "/settings/api",
+        json={
+            "cold_threshold": 3.0,
+            "reminder_allday_hour": -1,
+            "reminder_allday_midnight": True,
+        },
+        cookies=cookies,
+    )
+    assert resp.status_code == 200
+    prefs = get_user_preferences(db_path, user_id)
+    assert prefs["reminder_allday_hour"] == 0
+
+
+def test_settings_api_invalid_json(client, db_path, auth_cookies):
+    _, cookies = auth_cookies()
+    resp = client.post(
+        "/settings/api",
+        content="not json",
+        headers={"Content-Type": "application/json"},
+        cookies=cookies,
+    )
+    assert resp.status_code == 400
+    assert resp.json()["ok"] is False
+
+
+def test_settings_api_reminder_defaults(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies()
+    resp = client.post(
+        "/settings/api",
+        json={"cold_threshold": 3.0},
+        cookies=cookies,
+    )
+    assert resp.status_code == 200
+    prefs = get_user_preferences(db_path, user_id)
+    assert prefs["reminder_allday_hour"] == -1
+    assert prefs["reminder_evening_hour"] == -1
+    assert prefs["reminder_timed_minutes"] == -1
+
+
 # --- Setup ---
 
 def test_setup_post_first_time_redirects_to_connect(client, db_path, auth_cookies):

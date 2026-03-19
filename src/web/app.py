@@ -494,6 +494,72 @@ async def settings_post(
     return RedirectResponse(url="/settings?success=prefs", status_code=303)
 
 
+@app.post("/settings/api")
+async def settings_api(
+    request: Request,
+    background_tasks: BackgroundTasks,
+):
+    user_id = _get_user_id(request)
+    if not user_id:
+        return JSONResponse({"ok": False, "error": "Login required"}, status_code=401)
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "error": "Invalid JSON"}, status_code=400)
+
+    cold_threshold = float(body.get("cold_threshold", 3.0))
+    warm_threshold = float(body.get("warm_threshold", 14.0))
+    hot_threshold = float(body.get("hot_threshold", 28.0))
+    temp_unit = body.get("temp_unit", "C")
+
+    if temp_unit == "F":
+        cold_threshold, warm_threshold, hot_threshold = _convert_thresholds_to_celsius(
+            cold_threshold, warm_threshold, hot_threshold
+        )
+
+    def _flag(key): return 1 if body.get(key) else 0
+
+    reminder_allday_hour = int(body.get("reminder_allday_hour", -1))
+    if body.get("reminder_allday_midnight"):
+        reminder_allday_hour = 0
+
+    try:
+        upsert_user_preferences(
+            DB_PATH, user_id,
+            cold_threshold=cold_threshold,
+            warm_threshold=warm_threshold,
+            hot_threshold=hot_threshold,
+            warn_in_allday=_flag("warn_in_allday"),
+            warn_rain=_flag("warn_rain"),
+            warn_wind=_flag("warn_wind"),
+            warn_cold=_flag("warn_cold"),
+            warn_snow=_flag("warn_snow"),
+            warn_sunny=_flag("warn_sunny"),
+            warn_hot=_flag("warn_hot"),
+            show_allday_events=_flag("show_allday_events"),
+            timed_events_enabled=_flag("timed_events_enabled"),
+            allday_rain=_flag("allday_rain"),
+            allday_wind=_flag("allday_wind"),
+            allday_cold=_flag("allday_cold"),
+            allday_snow=_flag("allday_snow"),
+            allday_sunny=_flag("allday_sunny"),
+            allday_hot=_flag("allday_hot"),
+            temp_unit=temp_unit,
+            reminder_allday_hour=reminder_allday_hour,
+            reminder_evening_hour=int(body.get("reminder_evening_hour", -1)),
+            reminder_timed_minutes=int(body.get("reminder_timed_minutes", -1)),
+        )
+    except Exception:
+        logger.exception("Failed to save preferences via API for user_id=%s", user_id)
+        return JSONResponse({"ok": False, "error": "Save failed"}, status_code=500)
+
+    if is_google_connected(DB_PATH, user_id):
+        background_tasks.add_task(_google_push_initial, DB_PATH, user_id)
+
+    return JSONResponse({"ok": True})
+
+
 @app.post("/settings/email")
 async def settings_email_post(
     request: Request,

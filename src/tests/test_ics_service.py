@@ -836,6 +836,178 @@ def test_timed_description_combined_rain_wind():
     assert "°C" in lines[2]
 
 
+# --- Sunny timed event description enhancements ---
+
+
+def test_timed_description_sunny_has_sunshine_duration():
+    """Sunny-only event includes '☀️ N hours of sunshine ahead' line."""
+    from src.services.calendar_events import _format_window_description
+    from src.services.forecast_formatting import MergedWarningWindow
+    window = MergedWarningWindow(
+        warning_types=["sunny"], emojis=["☀️"],
+        start_time="2026-03-10T10:00", end_time="2026-03-10T16:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00", "2026-03-10T12:00",
+               "2026-03-10T13:00", "2026-03-10T14:00", "2026-03-10T15:00"],
+        temps=[20, 22, 24, 25, 24, 22],
+        codes=[0, 0, 1, 0, 1, 0],
+        rain=[0, 0, 0, 0, 0, 0],
+        precipitation=[0, 0, 0, 0, 0, 0],
+        winds=[5, 8, 10, 8, 5, 5],
+    )
+    desc = _format_window_description(forecast, window)
+    assert "☀️ 6 hours of sunshine ahead" in desc
+
+
+def test_timed_description_sunny_has_light_breeze():
+    """Sunny-only event with gentle wind shows '🍃 Light breeze' line."""
+    from src.services.calendar_events import _format_window_description
+    from src.services.forecast_formatting import MergedWarningWindow
+    window = MergedWarningWindow(
+        warning_types=["sunny"], emojis=["☀️"],
+        start_time="2026-03-10T10:00", end_time="2026-03-10T13:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00", "2026-03-10T12:00"],
+        temps=[20, 22, 21],
+        codes=[0, 0, 1],
+        rain=[0, 0, 0],
+        precipitation=[0, 0, 0],
+        winds=[8, 12, 10],
+    )
+    desc = _format_window_description(forecast, window)
+    assert "🍃 Light breeze at 12 km/h" in desc
+
+
+def test_timed_description_sunny_no_breeze_when_calm():
+    """Sunny-only event with zero wind omits the breeze line."""
+    from src.services.calendar_events import _format_window_description
+    from src.services.forecast_formatting import MergedWarningWindow
+    window = MergedWarningWindow(
+        warning_types=["sunny"], emojis=["☀️"],
+        start_time="2026-03-10T10:00", end_time="2026-03-10T13:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00", "2026-03-10T12:00"],
+        temps=[20, 22, 21],
+        codes=[0, 0, 1],
+        rain=[0, 0, 0],
+        precipitation=[0, 0, 0],
+        winds=[0, 0, 0],
+    )
+    desc = _format_window_description(forecast, window)
+    assert "🍃" not in desc
+
+
+def test_timed_description_sunny_tagline_cool():
+    """Sunny event with cool temps (< 18°C avg) shows 'grab a light layer' tagline."""
+    from src.services.calendar_events import _format_window_description
+    from src.services.forecast_formatting import MergedWarningWindow
+    window = MergedWarningWindow(
+        warning_types=["sunny"], emojis=["☀️"],
+        start_time="2026-03-10T10:00", end_time="2026-03-10T13:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00", "2026-03-10T12:00"],
+        temps=[15, 16, 17],
+        codes=[0, 0, 1],
+        rain=[0, 0, 0],
+        precipitation=[0, 0, 0],
+        winds=[5, 5, 5],
+    )
+    desc = _format_window_description(forecast, window)
+    assert "Fresh & sunny — grab a light layer" in desc
+
+
+def test_timed_description_sunny_tagline_mild():
+    """Sunny event with mild temps (18-24°C avg) shows 'outdoor plans' tagline."""
+    from src.services.calendar_events import _format_window_description
+    from src.services.forecast_formatting import MergedWarningWindow
+    window = MergedWarningWindow(
+        warning_types=["sunny"], emojis=["☀️"],
+        start_time="2026-03-10T10:00", end_time="2026-03-10T13:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00", "2026-03-10T12:00"],
+        temps=[20, 22, 21],
+        codes=[0, 0, 1],
+        rain=[0, 0, 0],
+        precipitation=[0, 0, 0],
+        winds=[5, 5, 5],
+    )
+    desc = _format_window_description(forecast, window)
+    assert "Perfect weather for outdoor plans" in desc
+
+
+def test_timed_description_sunny_tagline_warm():
+    """Sunny event with warm temps (>= 25°C avg) shows 'enjoy it' tagline."""
+    from src.services.calendar_events import _format_window_description
+    from src.services.forecast_formatting import MergedWarningWindow
+    window = MergedWarningWindow(
+        warning_types=["sunny"], emojis=["☀️"],
+        start_time="2026-03-10T10:00", end_time="2026-03-10T13:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00", "2026-03-10T12:00"],
+        temps=[26, 28, 27],
+        codes=[0, 0, 1],
+        rain=[0, 0, 0],
+        precipitation=[0, 0, 0],
+        winds=[5, 5, 5],
+    )
+    desc = _format_window_description(forecast, window)
+    assert "Beautiful warm day — enjoy it!" in desc
+
+
+def test_timed_description_sunny_full_structure():
+    """Sunny-only event has all four lines in order: sunshine, breeze, temp, tagline."""
+    from src.services.calendar_events import _format_window_description
+    from src.services.forecast_formatting import MergedWarningWindow
+    window = MergedWarningWindow(
+        warning_types=["sunny"], emojis=["☀️"],
+        start_time="2026-03-10T10:00", end_time="2026-03-10T16:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00", "2026-03-10T12:00",
+               "2026-03-10T13:00", "2026-03-10T14:00", "2026-03-10T15:00"],
+        temps=[20, 22, 24, 23, 22, 21],
+        codes=[0, 0, 1, 0, 1, 0],
+        rain=[0, 0, 0, 0, 0, 0],
+        precipitation=[0, 0, 0, 0, 0, 0],
+        winds=[5, 10, 12, 8, 6, 5],
+    )
+    desc = _format_window_description(forecast, window)
+    lines = desc.strip().split("\n")
+    assert len(lines) == 4
+    assert lines[0].startswith("☀️")         # sunshine duration
+    assert "🍃" in lines[1]                  # light breeze
+    assert "🌡️" in lines[2]                # temp range
+    assert "outdoor plans" in lines[3]        # tagline
+
+
+def test_timed_description_rain_event_unchanged():
+    """Non-sunny events are not affected by sunny enhancements."""
+    from src.services.calendar_events import _format_window_description
+    from src.services.forecast_formatting import MergedWarningWindow
+    window = MergedWarningWindow(
+        warning_types=["rain"], emojis=["☂️"],
+        start_time="2026-03-10T10:00", end_time="2026-03-10T13:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00", "2026-03-10T12:00"],
+        temps=[15, 16, 17],
+        codes=[61, 61, 63],
+        rain=[50, 60, 70],
+        precipitation=[1.0, 1.5, 2.0],
+        winds=[5, 5, 5],
+    )
+    desc = _format_window_description(forecast, window)
+    assert "☀️" not in desc.split("\n")[0]    # no sunshine line
+    assert "🍃" not in desc                  # no breeze line
+    assert "outdoor plans" not in desc         # no tagline
+
+
 def test_generate_ics_custom_cal_name():
     forecast = _make_forecast(
         times=["2026-03-10T10:00"],

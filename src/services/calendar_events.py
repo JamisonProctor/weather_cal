@@ -150,11 +150,15 @@ def _format_window_description(forecast: Forecast, window, prefs=None) -> str:
             winds.append(wind)
 
     lines = []
+    warning_types = getattr(window, "warning_types", [])
 
-    # Precipitation line — weather emoji from dominant code
+    # Precipitation line — snowflake for snow, weather emoji otherwise
     if precips:
-        dominant_code = Counter(codes).most_common(1)[0][0] if codes else 0
-        emoji = map_code_to_emoji(dominant_code)
+        if "snow" in warning_types:
+            emoji = "\u2744\ufe0f"
+        else:
+            dominant_code = Counter(codes).most_common(1)[0][0] if codes else 0
+            emoji = map_code_to_emoji(dominant_code)
         total = sum(precips)
         if chances:
             lo_ch, hi_ch = min(chances), max(chances)
@@ -169,14 +173,20 @@ def _format_window_description(forecast: Forecast, window, prefs=None) -> str:
         peak = round(max(strong_winds))
         lines.append(f"\U0001f4a8 Gusts to {peak} km/h")
 
-    # Temperature line — always last
+    # Temperature line — 🥶 for cold, 🥵 for hot, 🌡️ otherwise
     if temps:
+        if "cold" in warning_types:
+            temp_emoji = "\U0001f976"
+        elif "hot" in warning_types:
+            temp_emoji = "\U0001f975"
+        else:
+            temp_emoji = "\U0001f321\ufe0f"
         lo = _fmt_temp(min(temps), unit)
         hi = _fmt_temp(max(temps), unit)
         if lo == hi:
-            lines.append(f"\U0001f321\ufe0f {lo}\u00b0{unit}")
+            lines.append(f"{temp_emoji} {lo}\u00b0{unit}")
         else:
-            lines.append(f"\U0001f321\ufe0f {lo} ~ {hi}\u00b0{unit}")
+            lines.append(f"{temp_emoji} {lo} ~ {hi}\u00b0{unit}")
 
     return "\n".join(lines)
 

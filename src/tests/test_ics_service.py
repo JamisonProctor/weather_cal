@@ -386,7 +386,7 @@ def test_timed_event_description_contains_hourly_weather():
     # Should contain precip chance range
     assert "50" in desc
     assert "70" in desc
-    # Should contain temp range at the bottom
+    # Should contain temp range (no cold warning, so 🌡️)
     assert "🌡️" in desc
     assert "°C" in desc
 

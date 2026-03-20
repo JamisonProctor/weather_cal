@@ -230,6 +230,14 @@
       margin: 0;
       line-height: 1.6;
     }
+    .lp-walkthrough-text p + p {
+      margin-top: 12px;
+    }
+    .lp-walkthrough-text .wt-example {
+      font-size: 1.15rem;
+      color: var(--lp-text);
+      letter-spacing: 0.02em;
+    }
     .lp-walkthrough-screenshot { flex: 1; display: flex; justify-content: center; }
     .lp-phone-frame {
       width: 260px;
@@ -477,8 +485,11 @@
     <div class="lp-walkthrough">
       <div class="lp-walkthrough-text">
         <div class="wt-icon">📅</div>
-        <h3>Weather events, not weather apps</h3>
-        <p>WeatherCal adds daily forecasts as calendar events — morning and afternoon, with conditions, temps, and emoji you can read at a glance. It just shows up alongside the rest of your day.</p>
+        <h3>See the whole day at a glance</h3>
+        <p>WeatherCal adds one simple event to each day — a quick morning → afternoon snapshot you can read in seconds.</p>
+        <p class="wt-example"><strong>☀️ 18° → ⛅ 25°C</strong></p>
+        <p>Tap in to see how the day unfolds: morning, midday, afternoon, evening, and night — with conditions and anything that might affect your plans highlighted.</p>
+        <p>No apps to open. No forecasts to scan. It's just there, alongside everything else you've planned.</p>
       </div>
       <div class="lp-walkthrough-screenshot">
         <div class="lp-phone-frame">
@@ -491,9 +502,11 @@
   <div class="wt-bg-default">
     <div class="lp-walkthrough reverse">
       <div class="lp-walkthrough-text">
-        <div class="wt-icon">☀️</div>
-        <h3>Plan with the weather, not around it</h3>
-        <p>See rain on Thursday before you schedule that outdoor lunch. Spot a sunny weekend while you're planning the week ahead. Your forecast is already where your decisions happen.</p>
+        <div class="wt-icon">⚠️</div>
+        <h3>Weather alerts that earn their spot</h3>
+        <p>WeatherCal drops an alert into your calendar when weather might affect your plans — so you know exactly when to pay attention.</p>
+        <p class="wt-example"><strong>☂️ Rain at 8am — you'll want that umbrella</strong><br><strong>☀️ Sunny all Saturday — make the most of it</strong></p>
+        <p>No constant checking, no clutter — just clear signals at the right time.</p>
       </div>
       <div class="lp-walkthrough-screenshot">
         <div class="lp-phone-frame">

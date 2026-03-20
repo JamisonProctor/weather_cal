@@ -697,6 +697,145 @@ def test_merged_summary_single_cold_temp_no_tilde():
     assert "2°C" in result
 
 
+# --- Contextual emoji logic in _format_window_description ---
+
+
+def test_timed_description_snow_event_has_snowflake_and_cold_emoji():
+    """Snow event → ❄️ on precip line, 🥶 on temp line."""
+    from src.services.calendar_events import _format_window_description
+    from src.services.forecast_formatting import MergedWarningWindow
+    window = MergedWarningWindow(
+        warning_types=["snow", "cold"], emojis=["❄️", "🥶"],
+        start_time="2026-03-10T10:00", end_time="2026-03-10T13:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00", "2026-03-10T12:00"],
+        temps=[-2, -1, 0],
+        codes=[71, 73, 71],  # snow codes
+        rain=[60, 70, 50],
+        precipitation=[1.5, 2.0, 1.0],
+        winds=[10, 12, 8],
+    )
+    desc = _format_window_description(forecast, window)
+    assert "❄️" in desc          # snowflake on precip line
+    assert "🥶" in desc          # cold emoji on temp line
+    assert "4.5mm total" in desc  # total precip
+
+
+def test_timed_description_cold_only_no_precip_line():
+    """Cold event with no precipitation → 🥶 temp line, no precip line."""
+    from src.services.calendar_events import _format_window_description
+    from src.services.forecast_formatting import MergedWarningWindow
+    window = MergedWarningWindow(
+        warning_types=["cold"], emojis=["🥶"],
+        start_time="2026-03-10T06:00", end_time="2026-03-10T10:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T06:00", "2026-03-10T07:00", "2026-03-10T08:00", "2026-03-10T09:00"],
+        temps=[-5, -3, -2, 0],
+        codes=[0, 0, 1, 1],
+        rain=[0, 0, 0, 0],
+        precipitation=[0, 0, 0, 0],
+        winds=[5, 5, 5, 5],
+    )
+    desc = _format_window_description(forecast, window)
+    assert "🥶" in desc
+    assert "mm" not in desc  # no precip line
+    assert "°C" in desc
+
+
+def test_timed_description_hot_event_has_hot_emoji():
+    """Hot event → 🥵 on temp line."""
+    from src.services.calendar_events import _format_window_description
+    from src.services.forecast_formatting import MergedWarningWindow
+    window = MergedWarningWindow(
+        warning_types=["hot"], emojis=["🥵"],
+        start_time="2026-03-10T12:00", end_time="2026-03-10T16:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T12:00", "2026-03-10T13:00", "2026-03-10T14:00", "2026-03-10T15:00"],
+        temps=[35, 37, 38, 36],
+        codes=[0, 0, 1, 1],
+        rain=[0, 0, 0, 0],
+        precipitation=[0, 0, 0, 0],
+        winds=[5, 5, 5, 5],
+    )
+    desc = _format_window_description(forecast, window)
+    assert "🥵" in desc
+    assert "°C" in desc
+    assert "mm" not in desc
+
+
+def test_timed_description_rain_not_cold_has_weather_emoji_and_thermometer():
+    """Rain event (not cold) → weather code emoji on precip, 🌡️ on temp line."""
+    from src.services.calendar_events import _format_window_description
+    from src.services.forecast_formatting import MergedWarningWindow
+    window = MergedWarningWindow(
+        warning_types=["rain"], emojis=["☂️"],
+        start_time="2026-03-10T10:00", end_time="2026-03-10T13:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00", "2026-03-10T12:00"],
+        temps=[15, 16, 17],
+        codes=[61, 61, 63],  # 61 = 🌧️
+        rain=[50, 60, 70],
+        precipitation=[1.0, 1.5, 2.0],
+        winds=[5, 5, 5],
+    )
+    desc = _format_window_description(forecast, window)
+    assert "🌧️" in desc    # weather code emoji for rain
+    assert "🌡️" in desc   # thermometer (not cold, not hot)
+    assert "°C" in desc
+    assert "4.5mm total" in desc
+
+
+def test_timed_description_wind_event_no_precip():
+    """Wind-only event → 💨 line, no precip line."""
+    from src.services.calendar_events import _format_window_description
+    from src.services.forecast_formatting import MergedWarningWindow
+    window = MergedWarningWindow(
+        warning_types=["wind"], emojis=["🌬️"],
+        start_time="2026-03-10T14:00", end_time="2026-03-10T17:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T14:00", "2026-03-10T15:00", "2026-03-10T16:00"],
+        temps=[18, 19, 17],
+        codes=[1, 2, 3],
+        rain=[0, 0, 0],
+        precipitation=[0, 0, 0],
+        winds=[40, 55, 45],
+    )
+    desc = _format_window_description(forecast, window)
+    assert "💨" in desc       # wind emoji
+    assert "55 km/h" in desc  # peak gust
+    assert "mm" not in desc   # no precip line
+
+
+def test_timed_description_combined_rain_wind():
+    """Combined rain+wind → precip line, wind line, and temp line."""
+    from src.services.calendar_events import _format_window_description
+    from src.services.forecast_formatting import MergedWarningWindow
+    window = MergedWarningWindow(
+        warning_types=["rain", "wind"], emojis=["☂️", "🌬️"],
+        start_time="2026-03-10T10:00", end_time="2026-03-10T14:00",
+    )
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00", "2026-03-10T11:00", "2026-03-10T12:00", "2026-03-10T13:00"],
+        temps=[12, 13, 14, 13],
+        codes=[61, 63, 65, 61],
+        rain=[50, 60, 70, 55],
+        precipitation=[1.5, 2.0, 3.0, 1.0],
+        winds=[35, 45, 50, 40],
+    )
+    desc = _format_window_description(forecast, window)
+    lines = desc.strip().split("\n")
+    assert len(lines) == 3  # precip, wind, temp
+    assert "mm total" in lines[0]   # precip line
+    assert "💨" in lines[1]         # wind line
+    assert "🌡️" in lines[2]       # temp line
+    assert "°C" in lines[2]
+
+
 def test_generate_ics_custom_cal_name():
     forecast = _make_forecast(
         times=["2026-03-10T10:00"],

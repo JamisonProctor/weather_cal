@@ -9,7 +9,7 @@ Screenshots align with landing page copy:
    Spot a sunny weekend while you're planning the week ahead."
 
   Screenshot 1: Busy Monday day view — packed calendar + weather overlay
-  Screenshot 2: Thursday rain overlapping lunch + Sunday sunny timed event
+  Screenshot 2: Thursday rain overlapping lunch + Saturday sunny timed event
 
 Uses the REAL formatting functions from src/services/ so output
 matches production exactly.
@@ -110,14 +110,14 @@ def build_forecasts() -> list[Forecast]:
         high=14, low=5,
     )
 
-    # THURSDAY: RAIN (the "rained out lunch" day) — rain 09-15, clearing after
+    # THURSDAY: RAIN (the "rained out lunch" day) — rain 08-15, clearing after
     # Hours: 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23
     thu = _make_forecast(
         date(2026, 3, 19),
         temps= [7, 7, 8, 9, 10, 10, 11, 11, 10, 10, 9, 8, 6, 5, 5, 4, 4, 3],
-        codes= [3, 3, 3, 63, 63, 61, 61, 61, 61, 80, 3, 3, 3, 3, 3, 3, 3, 3],
-        rain_pcts=  [0, 0, 10, 85, 82, 78, 75, 70, 65, 40, 0, 0, 0, 0, 0, 0, 0, 0],
-        precip_mms= [0, 0, 0.1, 1.0, 0.9, 0.7, 0.6, 0.5, 0.5, 0.2, 0, 0, 0, 0, 0, 0, 0, 0],
+        codes= [3, 3, 63, 63, 63, 61, 61, 61, 61, 80, 3, 3, 3, 3, 3, 3, 3, 3],
+        rain_pcts=  [0, 0, 85, 85, 82, 78, 75, 70, 65, 40, 0, 0, 0, 0, 0, 0, 0, 0],
+        precip_mms= [0, 0, 0.8, 1.0, 0.9, 0.7, 0.6, 0.5, 0.5, 0.2, 0, 0, 0, 0, 0, 0, 0, 0],
         winds= [10, 12, 14, 22, 20, 18, 16, 14, 12, 10, 8, 6, 5, 5, 4, 4, 3, 3],
         high=11, low=3,
     )
@@ -134,28 +134,28 @@ def build_forecasts() -> list[Forecast]:
         high=16, low=6,
     )
 
-    # Saturday: pleasant, warming up
+    # SATURDAY: BEAUTIFUL SUNNY DAY (the "spot a sunny weekend" day)
     # Hours: 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23
     sat = _make_forecast(
         date(2026, 3, 21),
-        temps= [10, 11, 13, 15, 16, 17, 18, 19, 19, 18, 17, 15, 13, 12, 11, 10, 9, 9],
-        codes= [2, 2, 1, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 3],
-        rain_pcts=  [0]*18,
-        precip_mms= [0]*18,
-        winds= [5, 5, 6, 6, 8, 8, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3, 3],
-        high=19, low=9,
-    )
-
-    # SUNDAY: BEAUTIFUL SUNNY DAY (the "spot a sunny weekend" day)
-    # Hours: 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23
-    sun = _make_forecast(
-        date(2026, 3, 22),
         temps= [13, 14, 16, 18, 19, 22, 23, 24, 25, 25, 19, 18, 16, 15, 14, 13, 12, 11],
         codes= [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2],
         rain_pcts=  [0]*18,
         precip_mms= [0]*18,
         winds= [4, 4, 5, 5, 6, 6, 6, 5, 5, 5, 4, 4, 3, 3, 3, 3, 2, 2],
         high=25, low=11,
+    )
+
+    # Sunday: pleasant, mild (no sunny timed event — peaks at 19°C, below warm_threshold)
+    # Hours: 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23
+    sun = _make_forecast(
+        date(2026, 3, 22),
+        temps= [10, 11, 13, 15, 16, 17, 18, 19, 19, 18, 17, 15, 13, 12, 11, 10, 9, 9],
+        codes= [2, 2, 1, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 3],
+        rain_pcts=  [0]*18,
+        precip_mms= [0]*18,
+        winds= [5, 5, 6, 6, 8, 8, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3, 3],
+        high=19, low=9,
     )
 
     return [mon, tue, wed, thu, fri, sat, sun]
@@ -215,13 +215,12 @@ def generate_life_ics() -> bytes:
 
     life_events = [
         # Monday — PACKED (screenshot 1: busy person's real day)
-        {"summary": "Morning meeting", "start": _dt(mon, 9, 0), "end": _dt(mon, 10, 0)},
-        {"summary": "Call with Anna", "start": _dt(mon, 10, 30), "end": _dt(mon, 11, 0)},
-        {"summary": "Lunch with Emma", "start": _dt(mon, 12, 0), "end": _dt(mon, 13, 0)},
-        {"summary": "Pick up dry cleaning", "start": _dt(mon, 14, 0), "end": _dt(mon, 14, 30)},
+        {"summary": "Standup", "start": _dt(mon, 9, 0), "end": _dt(mon, 9, 30)},
+        {"summary": "Project review", "start": _dt(mon, 10, 0), "end": _dt(mon, 11, 0)},
+        {"summary": "1:1 with Anna", "start": _dt(mon, 11, 30), "end": _dt(mon, 12, 0)},
+        {"summary": "Lunch with Emma", "start": _dt(mon, 12, 30), "end": _dt(mon, 13, 30)},
         {"summary": "Dentist", "start": _dt(mon, 15, 0), "end": _dt(mon, 16, 0)},
         {"summary": "Yoga", "start": _dt(mon, 17, 30), "end": _dt(mon, 18, 30)},
-        {"summary": "Grocery run", "start": _dt(mon, 19, 0), "end": _dt(mon, 19, 45)},
 
         # Tuesday
         {"summary": "Morning meeting", "start": _dt(tue, 9, 0), "end": _dt(tue, 10, 0)},
@@ -246,8 +245,8 @@ def generate_life_ics() -> bytes:
         {"summary": "Dinner with Tom & Lisa", "start": _dt(fri, 19, 0), "end": _dt(fri, 21, 0)},
 
         # Saturday
-        {"summary": "Farmers market", "start": _dt(sat, 9, 30), "end": _dt(sat, 11, 0)},
-        {"summary": "Haircut", "start": _dt(sat, 14, 0), "end": _dt(sat, 14, 45)},
+        {"summary": "Haircut", "start": _dt(sat, 9, 30), "end": _dt(sat, 10, 15)},
+        {"summary": "Farmers market", "start": _dt(sat, 13, 0), "end": _dt(sat, 14, 30)},
 
         # Sunday — empty (nice sunny day, enjoy it)
     ]

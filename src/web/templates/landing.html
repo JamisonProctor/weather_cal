@@ -99,7 +99,7 @@
     }
     @keyframes cloud-drift {
       from { transform: translate3d(0, 0, 0); }
-      to { transform: translate3d(140vw, 0, 0); }
+      to { transform: translate3d(160vw, 0, 0); }
     }
     /* --- Hero --- */
     .lp-hero {
@@ -713,20 +713,21 @@
     // Vertical bands sized to prevent overlap at largest cloud size in each band
     var driftDefs = isMobile ? [
       // top%, size(rem), duration(s), delay(s) — negative = start partway through
-      { top: 5,  size: 11, duration: 50, delay: -5 },   // left side
-      { top: 25, size: 8,  duration: 60, delay: -20 },   // left-center
-      { top: 45, size: 15, duration: 42, delay: 0 },     // entering from left
-      { top: 68, size: 9,  duration: 55, delay: -30 },   // center
-      { top: 85, size: 12, duration: 48, delay: -12 }    // left side
+      // All delays sufficiently negative so clouds are already on-screen when layer fades in
+      { top: 5,  size: 11, duration: 50, delay: -15 },   // left side
+      { top: 25, size: 8,  duration: 60, delay: -25 },   // left-center
+      { top: 45, size: 15, duration: 42, delay: -10 },   // mid-drift
+      { top: 68, size: 9,  duration: 55, delay: -35 },   // center
+      { top: 85, size: 12, duration: 48, delay: -20 }    // left side
     ] : [
-      { top: 3,  size: 14, duration: 55, delay: -3 },    // far left
+      { top: 3,  size: 14, duration: 55, delay: -10 },   // far left
       { top: 16, size: 8,  duration: 70, delay: -22 },   // left-center
       { top: 28, size: 18, duration: 48, delay: -35 },   // center-right
-      { top: 42, size: 10, duration: 65, delay: -8 },    // left
+      { top: 42, size: 10, duration: 65, delay: -15 },   // left
       { top: 55, size: 20, duration: 52, delay: -28 },   // center
       { top: 70, size: 9,  duration: 72, delay: -15 },   // left-center
       { top: 82, size: 16, duration: 46, delay: -40 },   // right
-      { top: 93, size: 7,  duration: 62, delay: -5 }     // far left
+      { top: 93, size: 7,  duration: 62, delay: -12 }    // far left
     ];
     // Randomize durations slightly with seeded PRNG
     for (var si = 0; si < driftDefs.length; si++) {
@@ -738,7 +739,7 @@
       var def = driftDefs[i];
       var dc = document.createElement('span');
       dc.className = 'emoji-particle zone-drift';
-      dc.style.cssText = 'top:' + def.top + '%;left:-20%;font-size:' + def.size + 'rem;'
+      dc.style.cssText = 'top:' + def.top + '%;left:-40%;font-size:' + def.size + 'rem;'
         + 'animation:cloud-drift ' + def.duration + 's linear ' + def.delay + 's infinite;'
         + 'animation-play-state:paused;';
       dc.textContent = '\u2601\uFE0F';

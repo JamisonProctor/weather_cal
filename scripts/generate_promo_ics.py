@@ -39,8 +39,8 @@ OUT_DIR = Path(__file__).resolve().parent.parent / "src" / "web" / "static" / "p
 # 61=Rain, 63=Moderate rain, 80=Rain showers
 
 
-def _make_hours(start_hour: int = 6, end_hour: int = 18):
-    """Generate ISO time strings for a given date's hours."""
+def _make_hours(start_hour: int = 6, end_hour: int = 23):
+    """Generate ISO time strings for a given date's hours (06-23)."""
     def gen(day: date):
         return [f"{day}T{h:02d}:00" for h in range(start_hour, end_hour + 1)]
     return gen
@@ -51,7 +51,7 @@ _hours = _make_hours()
 
 def _make_forecast(day: date, temps, codes, rain_pcts, precip_mms, winds,
                    high, low, tz="Europe/Berlin") -> Forecast:
-    """Build a Forecast object from hourly data arrays (hours 06-18)."""
+    """Build a Forecast object from hourly data arrays (hours 06-23)."""
     times = _hours(day)
     assert len(temps) == len(times), f"Expected {len(times)} temps, got {len(temps)}"
     return Forecast(
@@ -75,80 +75,87 @@ def build_forecasts() -> list[Forecast]:
     """Build fake forecast data for Mon Mar 16 – Sun Mar 22."""
 
     # Monday: partly cloudy, mild (no warnings)
+    # Hours: 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23
     mon = _make_forecast(
         date(2026, 3, 16),
-        temps= [7, 8, 10, 11, 12, 13, 14, 14, 13, 12, 11, 10, 8],
-        codes= [3, 3, 2,  2,  2,  2,  0,  0,  2,  2,  3,  3,  3],
-        rain_pcts=  [0]*13,
-        precip_mms= [0]*13,
-        winds= [8, 10, 12, 12, 14, 14, 12, 10, 10, 8, 8, 6, 5],
-        high=14, low=7,
+        temps= [7, 8, 10, 11, 12, 13, 14, 14, 13, 12, 11, 10, 8, 7, 6, 5, 5, 4],
+        codes= [3, 3, 2,  2,  2,  2,  0,  0,  2,  2,  3,  3,  3, 3, 3, 3, 3, 3],
+        rain_pcts=  [0]*18,
+        precip_mms= [0]*18,
+        winds= [8, 10, 12, 12, 14, 14, 12, 10, 10, 8, 8, 6, 5, 5, 4, 4, 3, 3],
+        high=14, low=4,
     )
 
     # Tuesday: overcast, cool
+    # Hours: 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23
     tue = _make_forecast(
         date(2026, 3, 17),
-        temps= [6, 7, 8, 9, 10, 11, 12, 12, 11, 10, 9, 8, 7],
-        codes= [3, 3, 3, 3, 2,  2,  2,  2,  3,  3,  3, 3, 3],
-        rain_pcts=  [0]*13,
-        precip_mms= [0]*13,
-        winds= [10, 12, 14, 14, 12, 10, 10, 8, 8, 6, 6, 5, 5],
-        high=12, low=6,
+        temps= [6, 7, 8, 9, 10, 11, 12, 12, 11, 10, 9, 8, 7, 6, 6, 5, 5, 4],
+        codes= [3, 3, 3, 3, 2,  2,  2,  2,  3,  3,  3, 3, 3, 3, 3, 3, 3, 3],
+        rain_pcts=  [0]*18,
+        precip_mms= [0]*18,
+        winds= [10, 12, 14, 14, 12, 10, 10, 8, 8, 6, 6, 5, 5, 4, 4, 3, 3, 3],
+        high=12, low=4,
     )
 
     # Wednesday: light rain morning, clearing
+    # Hours: 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23
     wed = _make_forecast(
         date(2026, 3, 18),
-        temps= [8, 8, 9, 10, 12, 13, 14, 14, 13, 12, 11, 9, 8],
-        codes= [80, 80, 2, 2, 2, 0, 0, 0, 2, 2, 2, 3, 3],
-        rain_pcts=  [40, 35, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        precip_mms= [0.2, 0.1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        winds= [12, 10, 10, 8, 8, 6, 6, 5, 5, 6, 8, 8, 6],
-        high=14, low=8,
+        temps= [8, 8, 9, 10, 12, 13, 14, 14, 13, 12, 11, 9, 8, 7, 6, 6, 5, 5],
+        codes= [80, 80, 2, 2, 2, 0, 0, 0, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3],
+        rain_pcts=  [40, 35, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        precip_mms= [0.2, 0.1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        winds= [12, 10, 10, 8, 8, 6, 6, 5, 5, 6, 8, 8, 6, 5, 5, 4, 4, 3],
+        high=14, low=5,
     )
 
     # THURSDAY: RAIN (the "rained out lunch" day) — rain 09-15, clearing after
+    # Hours: 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23
     thu = _make_forecast(
         date(2026, 3, 19),
-        temps= [7, 7, 8, 9, 10, 10, 11, 11, 10, 10, 9, 8, 6],
-        codes= [3, 3, 3, 63, 63, 61, 61, 61, 61, 80, 3, 3, 3],
-        rain_pcts=  [0, 0, 10, 85, 82, 78, 75, 70, 65, 40, 0, 0, 0],
-        precip_mms= [0, 0, 0.1, 1.0, 0.9, 0.7, 0.6, 0.5, 0.5, 0.2, 0, 0, 0],
-        winds= [10, 12, 14, 22, 20, 18, 16, 14, 12, 10, 8, 6, 5],
-        high=11, low=6,
+        temps= [7, 7, 8, 9, 10, 10, 11, 11, 10, 10, 9, 8, 6, 5, 5, 4, 4, 3],
+        codes= [3, 3, 3, 63, 63, 61, 61, 61, 61, 80, 3, 3, 3, 3, 3, 3, 3, 3],
+        rain_pcts=  [0, 0, 10, 85, 82, 78, 75, 70, 65, 40, 0, 0, 0, 0, 0, 0, 0, 0],
+        precip_mms= [0, 0, 0.1, 1.0, 0.9, 0.7, 0.6, 0.5, 0.5, 0.2, 0, 0, 0, 0, 0, 0, 0, 0],
+        winds= [10, 12, 14, 22, 20, 18, 16, 14, 12, 10, 8, 6, 5, 5, 4, 4, 3, 3],
+        high=11, low=3,
     )
 
     # Friday: clearing up, nicer — short wind burst late afternoon
+    # Hours: 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23
     fri = _make_forecast(
         date(2026, 3, 20),
-        temps= [7, 8, 10, 12, 13, 14, 15, 16, 16, 15, 14, 12, 10],
-        codes= [3, 2, 2, 2, 2, 0, 0, 0, 0, 0, 2, 2, 3],
-        rain_pcts=  [0]*13,
-        precip_mms= [0]*13,
-        winds= [8, 8, 10, 10, 8, 6, 6, 5, 5, 32, 35, 12, 6],
-        high=16, low=7,
+        temps= [7, 8, 10, 12, 13, 14, 15, 16, 16, 15, 14, 12, 10, 9, 8, 7, 6, 6],
+        codes= [3, 2, 2, 2, 2, 0, 0, 0, 0, 0, 2, 2, 3, 3, 3, 3, 3, 3],
+        rain_pcts=  [0]*18,
+        precip_mms= [0]*18,
+        winds= [8, 8, 10, 10, 8, 6, 6, 5, 5, 32, 35, 12, 6, 5, 5, 4, 4, 3],
+        high=16, low=6,
     )
 
     # Saturday: pleasant, warming up
+    # Hours: 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23
     sat = _make_forecast(
         date(2026, 3, 21),
-        temps= [10, 11, 13, 15, 16, 17, 18, 19, 19, 18, 17, 15, 13],
-        codes= [2, 2, 1, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2],
-        rain_pcts=  [0]*13,
-        precip_mms= [0]*13,
-        winds= [5, 5, 6, 6, 8, 8, 6, 6, 5, 5, 5, 4, 4],
-        high=19, low=10,
+        temps= [10, 11, 13, 15, 16, 17, 18, 19, 19, 18, 17, 15, 13, 12, 11, 10, 9, 9],
+        codes= [2, 2, 1, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 3],
+        rain_pcts=  [0]*18,
+        precip_mms= [0]*18,
+        winds= [5, 5, 6, 6, 8, 8, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3, 3],
+        high=19, low=9,
     )
 
     # SUNDAY: BEAUTIFUL SUNNY DAY (the "spot a sunny weekend" day)
+    # Hours: 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23
     sun = _make_forecast(
         date(2026, 3, 22),
-        temps= [13, 14, 16, 18, 19, 22, 23, 24, 25, 25, 19, 18, 16],
-        codes= [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        rain_pcts=  [0]*13,
-        precip_mms= [0]*13,
-        winds= [4, 4, 5, 5, 6, 6, 6, 5, 5, 5, 4, 4, 3],
-        high=25, low=13,
+        temps= [13, 14, 16, 18, 19, 22, 23, 24, 25, 25, 19, 18, 16, 15, 14, 13, 12, 11],
+        codes= [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2],
+        rain_pcts=  [0]*18,
+        precip_mms= [0]*18,
+        winds= [4, 4, 5, 5, 6, 6, 6, 5, 5, 5, 4, 4, 3, 3, 3, 3, 2, 2],
+        high=25, low=11,
     )
 
     return [mon, tue, wed, thu, fri, sat, sun]

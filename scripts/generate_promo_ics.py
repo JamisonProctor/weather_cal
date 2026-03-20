@@ -143,7 +143,7 @@ def build_forecasts() -> list[Forecast]:
     # SUNDAY: BEAUTIFUL SUNNY DAY (the "spot a sunny weekend" day)
     sun = _make_forecast(
         date(2026, 3, 22),
-        temps= [13, 14, 16, 18, 20, 22, 23, 24, 25, 25, 24, 22, 19],
+        temps= [13, 14, 16, 18, 19, 22, 23, 24, 25, 25, 19, 18, 16],
         codes= [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         rain_pcts=  [0]*13,
         precip_mms= [0]*13,

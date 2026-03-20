@@ -672,8 +672,9 @@ async def google_auth_start(request: Request):
     redirect_uri = base_url + "/auth/google/callback"
     flow = get_oauth_flow(redirect_uri)
 
+    from_setup = request.query_params.get("from") == "setup"
     state = jwt.encode(
-        {"user_id": user_id, "purpose": "google_oauth"},
+        {"user_id": user_id, "purpose": "google_oauth", "from_setup": from_setup},
         SECRET_KEY,
         algorithm="HS256",
     )
@@ -729,6 +730,8 @@ async def google_auth_callback(
     store_google_tokens(DB_PATH, session_user_id, credentials, calendar_id)
     log_funnel_event(DB_PATH, session_user_id, "google_connected")
     background_tasks.add_task(_google_push_initial, DB_PATH, session_user_id)
+    if payload.get("from_setup"):
+        return RedirectResponse(url="/welcome", status_code=303)
     return RedirectResponse(url="/settings?tab=reconnect&success=google_connected", status_code=303)
 
 

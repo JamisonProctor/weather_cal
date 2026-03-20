@@ -737,11 +737,22 @@ def test_connect_page_requires_auth(client):
     assert resp.headers["location"] == "/login"
 
 
-def test_connect_page_from_setup_links_to_welcome(client, db_path, auth_cookies):
+def test_connect_page_from_setup_auto_redirects(client, db_path, auth_cookies):
+    """During signup flow, buttons auto-redirect to /welcome instead of manual link."""
     _, cookies = auth_cookies(email="connect_welcome@example.com")
     resp = client.get("/connect?from=setup", cookies=cookies)
     assert resp.status_code == 200
+    # Webcal button has JS redirect to /welcome
     assert b"/welcome" in resp.content
+    # No manual "Next →" link
+    assert b"Next" not in resp.content
+
+
+def test_connect_page_from_setup_hides_settings_link(client, db_path, auth_cookies):
+    """During signup flow, no 'Go to settings' link shown."""
+    _, cookies = auth_cookies(email="connect_nosettings@example.com")
+    resp = client.get("/connect?from=setup", cookies=cookies)
+    assert b"Go to settings" not in resp.content
 
 
 def test_welcome_page_returns_200(client, db_path, auth_cookies):

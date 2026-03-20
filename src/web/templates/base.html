@@ -120,7 +120,8 @@
       form.addEventListener('submit', function() {
         var btn = form.querySelector('button[type="submit"]');
         if (!btn || btn.disabled) return;
-        var loadingText = btn.getAttribute('data-loading-text') || 'Saving\u2026';
+        var loadingText = btn.getAttribute('data-loading-text');
+        if (!loadingText) return;
         btn.disabled = true;
         btn.textContent = loadingText;
       });

@@ -380,15 +380,15 @@ def test_timed_event_description_contains_hourly_weather():
     timed = [e for e in events if hasattr(e["DTSTART"].dt, "hour")]
     assert timed, "Expected at least one timed event"
     desc = str(timed[0].get("DESCRIPTION", ""))
-    # Should contain hourly lines
-    assert "10:00" in desc
-    assert "11:00" in desc
-    assert "12:00" in desc
-    assert "13:00" in desc
-    # Should contain temp values
+    # Should contain aggregated precip with weather emoji (code 61 = 🌧️)
+    assert "🌧️" in desc
+    assert "7.7mm total" in desc
+    # Should contain precip chance range
+    assert "50" in desc
+    assert "70" in desc
+    # Should contain temp range at the bottom
+    assert "🌡️" in desc
     assert "°C" in desc
-    # Should contain rain indicator for high rain
-    assert "💧" in desc
 
 
 def test_timed_event_description_fahrenheit():

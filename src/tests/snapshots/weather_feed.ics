@@ -30,9 +30,7 @@ SUMMARY:☂️ 8.5mm
 DTSTART;TZID=Europe/Berlin:20990602T060000
 DTEND;TZID=Europe/Berlin:20990602T160000
 UID:da6134e8c8146080@weathercal.app
-DESCRIPTION:06:00 🌧️ 8°C  💧1.0mm (50%)\n09:00 🌧️ 10°C  💧
- 2.0mm (60%)\n12:00 🌧️ 14°C  💧4.0mm (80%)\n15:00 🌧️ 16°C  
- 💧1.5mm (55%)
+DESCRIPTION:🌧️ 8.5mm total (50–80%)\n🌡️ 8 ~ 16°C
 LOCATION:Munich
 TRANSP:TRANSPARENT
 END:VEVENT

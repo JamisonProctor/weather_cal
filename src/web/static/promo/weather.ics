@@ -69,7 +69,7 @@ BEGIN:VEVENT
 SUMMARY:⛅10° → ☁️10°C
 DTSTART;VALUE=DATE:20260316
 DTEND;VALUE=DATE:20260317
-DTSTAMP:20260320T124317Z
+DTSTAMP:20260320T140350Z
 UID:cadee602f4a7bc77@weathercal.app
 DESCRIPTION:Morning ☁️ 9°C\nMidday ⛅ 13°C\nAfternoon ⛅ 12°C\nEv
  ening ☁️ 7°C\nNight ☁️ 5°C\n\n⚙️ https://weathercal.app/sett
@@ -81,7 +81,7 @@ BEGIN:VEVENT
 SUMMARY:☁️8° → ☁️8°C
 DTSTART;VALUE=DATE:20260317
 DTEND;VALUE=DATE:20260318
-DTSTAMP:20260320T124317Z
+DTSTAMP:20260320T140350Z
 UID:70b4c6b7b9be62eb@weathercal.app
 DESCRIPTION:Morning ☁️ 8°C\nMidday ⛅ 11°C\nAfternoon ☁️ 10°C\
  nEvening ☁️ 6°C\nNight ☁️ 5°C\n\n⚙️ https://weathercal.app/s
@@ -93,7 +93,7 @@ BEGIN:VEVENT
 SUMMARY:⛅10° → ☁️10°C
 DTSTART;VALUE=DATE:20260318
 DTEND;VALUE=DATE:20260319
-DTSTAMP:20260320T124317Z
+DTSTAMP:20260320T140350Z
 UID:517e9bf9d6d30ead@weathercal.app
 DESCRIPTION:Morning 🌦️ 9°C\nMidday ☀️ 13°C\nAfternoon ⛅ 11°C
  \nEvening ☁️ 7°C\nNight ☁️ 5°C\n\n⚙️ https://weathercal.app/
@@ -105,7 +105,7 @@ BEGIN:VEVENT
 SUMMARY:☂️8° → ☂️8°C
 DTSTART;VALUE=DATE:20260319
 DTEND;VALUE=DATE:20260320
-DTSTAMP:20260320T124317Z
+DTSTAMP:20260320T140350Z
 UID:e4b653410e9bda0e@weathercal.app
 DESCRIPTION:Morning ☁️ 8°C ⚠️☂️\nMidday 🌧️ 10°C ⚠️
  ☂️\nAfternoon ☁️ 9°C ⚠️☂️\nEvening ☁️ 5°C\nNight ☁
@@ -115,12 +115,12 @@ LOCATION:Munich
 TRANSP:TRANSPARENT
 END:VEVENT
 BEGIN:VEVENT
-SUMMARY:☂️ 4.2mm
-DTSTART;TZID=Europe/Berlin:20260319T090000
+SUMMARY:☂️ 5.0mm
+DTSTART;TZID=Europe/Berlin:20260319T080000
 DTEND;TZID=Europe/Berlin:20260319T150000
-DTSTAMP:20260320T124317Z
-UID:7907b0c90520fa8c@weathercal.app
-DESCRIPTION:🌧️ 4.2mm total (65–85%)\n🌡️ 9 ~ 11°C\n\n⚙️ ht
+DTSTAMP:20260320T140350Z
+UID:e95ce1157c44075a@weathercal.app
+DESCRIPTION:🌧️ 5.0mm total (65–85%)\n🌡️ 8 ~ 11°C\n\n⚙️ ht
  tps://weathercal.app/settings\n✉️ hello@weathercal.app
 LOCATION:Munich
 TRANSP:TRANSPARENT
@@ -129,7 +129,7 @@ BEGIN:VEVENT
 SUMMARY:⛅11° → 🌬️12°C
 DTSTART;VALUE=DATE:20260320
 DTEND;VALUE=DATE:20260321
-DTSTAMP:20260320T124317Z
+DTSTAMP:20260320T140350Z
 UID:7bb92dcab7d03e04@weathercal.app
 DESCRIPTION:Morning ⛅ 9°C\nMidday ☀️ 14°C\nAfternoon ☀️ 14°C 
  ⚠️🌬️\nEvening ☁️ 9°C\nNight ☁️ 6°C\n\n⚙️ https://we
@@ -141,7 +141,7 @@ BEGIN:VEVENT
 SUMMARY:🌬️ 35 km/h
 DTSTART;TZID=Europe/Berlin:20260320T150000
 DTEND;TZID=Europe/Berlin:20260320T170000
-DTSTAMP:20260320T124317Z
+DTSTAMP:20260320T140350Z
 UID:a830e0cce060e44f@weathercal.app
 DESCRIPTION:💨 Gusts to 35 km/h\n🌡️ 14 ~ 15°C\n\n⚙️ https://we
  athercal.app/settings\n✉️ hello@weathercal.app
@@ -149,23 +149,11 @@ LOCATION:Munich
 TRANSP:TRANSPARENT
 END:VEVENT
 BEGIN:VEVENT
-SUMMARY:☀️14° → ☀️15°C
+SUMMARY:☀️17° → ☀️19°C
 DTSTART;VALUE=DATE:20260321
 DTEND;VALUE=DATE:20260322
-DTSTAMP:20260320T124317Z
+DTSTAMP:20260320T140350Z
 UID:b3b814a9f011ba81@weathercal.app
-DESCRIPTION:Morning ⛅ 12°C\nMidday ☀️ 18°C\nAfternoon 🌤️ 17°
- C\nEvening ⛅ 12°C\nNight ☁️ 9°C\n\n⚙️ https://weathercal.app/s
- ettings\n✉️ hello@weathercal.app
-LOCATION:Munich
-TRANSP:TRANSPARENT
-END:VEVENT
-BEGIN:VEVENT
-SUMMARY:☀️17° → ☀️19°C
-DTSTART;VALUE=DATE:20260322
-DTEND;VALUE=DATE:20260323
-DTSTAMP:20260320T124317Z
-UID:177ddad5f3466041@weathercal.app
 DESCRIPTION:Morning ☀️ 15°C\nMidday ☀️ 22°C\nAfternoon ☀️ 22
  °C\nEvening 🌤️ 15°C\nNight ⛅ 12°C\n\n⚙️ https://weathercal.a
  pp/settings\n✉️ hello@weathercal.app
@@ -174,12 +162,24 @@ TRANSP:TRANSPARENT
 END:VEVENT
 BEGIN:VEVENT
 SUMMARY:☀️ 22 ~ 25°C
-DTSTART;TZID=Europe/Berlin:20260322T110000
-DTEND;TZID=Europe/Berlin:20260322T160000
-DTSTAMP:20260320T124317Z
-UID:8b7bcdd6da0118a9@weathercal.app
+DTSTART;TZID=Europe/Berlin:20260321T110000
+DTEND;TZID=Europe/Berlin:20260321T160000
+DTSTAMP:20260320T140350Z
+UID:a2df0ee08b924d3a@weathercal.app
 DESCRIPTION:🌡️ 22 ~ 25°C\n\n⚙️ https://weathercal.app/settings\n
  ✉️ hello@weathercal.app
+LOCATION:Munich
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:☀️14° → ☀️15°C
+DTSTART;VALUE=DATE:20260322
+DTEND;VALUE=DATE:20260323
+DTSTAMP:20260320T140350Z
+UID:177ddad5f3466041@weathercal.app
+DESCRIPTION:Morning ⛅ 12°C\nMidday ☀️ 18°C\nAfternoon 🌤️ 17°
+ C\nEvening ⛅ 12°C\nNight ☁️ 9°C\n\n⚙️ https://weathercal.app/s
+ ettings\n✉️ hello@weathercal.app
 LOCATION:Munich
 TRANSP:TRANSPARENT
 END:VEVENT

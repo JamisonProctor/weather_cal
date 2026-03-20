@@ -176,7 +176,7 @@ def generate_weather_ics() -> bytes:
         "allday_sunny": 0,
         "warn_in_allday": 1,
     }
-    return generate_ics(forecasts, LOCATION, prefs=prefs, settings_url=SETTINGS_URL)
+    return generate_ics(forecasts, LOCATION, prefs=prefs, settings_url=SETTINGS_URL, cal_name="WeatherCal - Promo")
 
 
 def _life_uid(raw: str) -> str:
@@ -193,7 +193,7 @@ def generate_life_ics() -> bytes:
     cal.add("version", "2.0")
     cal.add("calscale", "GREGORIAN")
     cal.add("method", "PUBLISH")
-    cal.add("X-WR-CALNAME", "Life Promo")
+    cal.add("X-WR-CALNAME", "Life - Promo")
     cal.add("REFRESH-INTERVAL;VALUE=DURATION", "PT12H")
     cal.add("X-PUBLISHED-TTL", "PT12H")
 

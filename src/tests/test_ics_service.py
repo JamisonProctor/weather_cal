@@ -695,3 +695,28 @@ def test_merged_summary_single_cold_temp_no_tilde():
     result = _merged_window_summary(merged, forecast)
     assert "~" not in result
     assert "2°C" in result
+
+
+def test_generate_ics_custom_cal_name():
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00"],
+        temps=[12],
+        codes=[0],
+        rain=[0],
+        winds=[5],
+    )
+    ics_bytes = generate_ics([forecast], "Munich", cal_name="WeatherCal - Promo")
+    assert b"WeatherCal - Promo" in ics_bytes
+
+
+def test_generate_ics_default_cal_name():
+    forecast = _make_forecast(
+        times=["2026-03-10T10:00"],
+        temps=[12],
+        codes=[0],
+        rain=[0],
+        winds=[5],
+    )
+    ics_bytes = generate_ics([forecast], "Munich")
+    cal = Calendar.from_ical(ics_bytes)
+    assert str(cal["X-WR-CALNAME"]) == "WeatherCal"

@@ -13,7 +13,7 @@ from src.services.calendar_events import (
 )
 
 
-def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, settings_url: str = None) -> bytes:
+def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, settings_url: str = None, cal_name: str = "WeatherCal") -> bytes:
     """Generate an ICS calendar bytes from a list of Forecast objects."""
     city = location_name.split(",")[0].strip() if "," in location_name else location_name
 
@@ -22,7 +22,7 @@ def generate_ics(forecasts: List[Forecast], location_name: str, prefs=None, sett
     cal.add("version", "2.0")
     cal.add("calscale", "GREGORIAN")
     cal.add("method", "PUBLISH")
-    cal.add("X-WR-CALNAME", "WeatherCal")
+    cal.add("X-WR-CALNAME", cal_name)
     cal.add("X-WR-CALDESC", f"Weather forecast for {city} from WeatherCal")
     cal.add("REFRESH-INTERVAL;VALUE=DURATION", "PT12H")
     cal.add("X-PUBLISHED-TTL", "PT12H")

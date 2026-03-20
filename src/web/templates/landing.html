@@ -763,10 +763,8 @@
     // Track last cloud opacity to avoid redundant style writes
     var lastCloudOpacity = -1;
 
-    function onScroll() {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(function() {
+    // Scroll state — extracted so it can run both synchronously (page load) and via rAF (scroll events)
+    function applyScrollState() {
         // All reads use cached values — no layout thrashing
         var scrollY = window.scrollY;
         var heroHeight = cachedHeroHeight;
@@ -855,13 +853,21 @@
           sunEl.style.opacity = 0;
           sunEl.style.transform = 'translate3d(0,0,0)';
         }
+    }
 
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function() {
+        applyScrollState();
         ticking = false;
       });
     }
 
+    // Apply synchronously on load to prevent cloud flash when browser restores scroll position
+    applyScrollState();
+
     window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
 
     // Tap/click hero to smooth-scroll past clouds
     function scrollPastHero(e) {

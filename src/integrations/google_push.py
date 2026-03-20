@@ -17,6 +17,7 @@ from src.services.calendar_events import (
     merged_warning_uid,
     stable_uid,
 )
+from src.services.admin_alerts import send_google_alert
 from src.utils.db import get_connection as _conn
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,12 @@ def create_google_tokens_table(db_path: str) -> None:
             )
         """)
         conn.commit()
+        # Migration: add alert_sent_at column if missing
+        try:
+            conn.execute("ALTER TABLE google_tokens ADD COLUMN alert_sent_at TEXT")
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass  # Column already exists
     finally:
         conn.close()
 
@@ -71,11 +78,11 @@ def store_google_tokens(
         conn.execute(
             """INSERT OR REPLACE INTO google_tokens
                (user_id, access_token, refresh_token, token_expiry, google_calendar_id,
-                status, connected_at, updated_at)
+                status, connected_at, updated_at, alert_sent_at)
                VALUES (?, ?, ?, ?, ?,
                        'active',
                        COALESCE((SELECT connected_at FROM google_tokens WHERE user_id = ?), ?),
-                       ?)""",
+                       ?, NULL)""",
             (user_id, credentials.token, credentials.refresh_token, token_expiry,
              calendar_id, user_id, now, now),
         )
@@ -143,6 +150,7 @@ def _mark_revoked(db_path: str, user_id: int) -> None:
         conn.commit()
     finally:
         conn.close()
+    send_google_alert(db_path, user_id, "revoked")
 
 
 def delete_google_calendar(db_path: str, user_id: int) -> None:
@@ -484,3 +492,4 @@ def _clear_calendar_id(db_path: str, user_id: int) -> None:
         conn.commit()
     finally:
         conn.close()
+    send_google_alert(db_path, user_id, "calendar_deleted")

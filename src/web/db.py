@@ -25,6 +25,19 @@ def create_user(
     conn = _conn(db_path)
     try:
         cur = conn.cursor()
+        # Check for a soft-deleted account with the same email and reactivate it
+        row = cur.execute(
+            "SELECT id FROM users WHERE email = ? AND is_active = 0", (email,)
+        ).fetchone()
+        if row:
+            cur.execute(
+                """UPDATE users SET password_hash = ?, is_active = 1, created_at = ?,
+                   utm_source = ?, utm_medium = ?, utm_campaign = ?, referrer = ?
+                   WHERE id = ?""",
+                (password_hash, created_at, utm_source, utm_medium, utm_campaign, referrer, row["id"]),
+            )
+            conn.commit()
+            return row["id"]
         cur.execute(
             """INSERT INTO users (email, password_hash, created_at, utm_source, utm_medium, utm_campaign, referrer)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",

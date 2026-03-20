@@ -1050,6 +1050,43 @@ def test_delete_account_cleans_google_tokens(db_path):
     assert row is None
 
 
+def test_delete_account_revokes_google_oauth(client, db_path, auth_cookies, monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from datetime import datetime, timedelta, timezone
+
+    user_id, cookies = auth_cookies(email="grevoke@example.com")
+    cred = MagicMock()
+    cred.token = "tok"
+    cred.refresh_token = "ref"
+    cred.expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+    store_google_tokens(db_path, user_id, cred, "cal123")
+
+    with patch("src.web.app.is_google_connected", return_value=True), \
+         patch("src.integrations.google_push.delete_google_calendar") as mock_del_cal, \
+         patch("src.integrations.google_push.get_google_credentials") as mock_get_creds, \
+         patch("requests.post") as mock_revoke:
+        mock_get_creds.return_value = cred
+        resp = client.post("/settings/delete", data={"confirm_email": "grevoke@example.com"}, cookies=cookies)
+
+    assert resp.status_code == 303
+    mock_del_cal.assert_called_once_with(db_path, user_id)
+    mock_revoke.assert_called_once()
+
+
+def test_signup_after_delete_reactivates(client, db_path, auth_cookies):
+    user_id, cookies = auth_cookies(email="reactivate@example.com")
+    client.post("/settings/delete", data={"confirm_email": "reactivate@example.com"}, cookies=cookies)
+    assert get_user_by_email(db_path, "reactivate@example.com") is None
+
+    resp = client.post("/signup", data={"email": "reactivate@example.com", "password": "supersecretpass1"})
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/setup"
+
+    user = get_user_by_email(db_path, "reactivate@example.com")
+    assert user is not None
+    assert user["is_active"] == 1
+
+
 # --- resolve_prefs ---
 
 

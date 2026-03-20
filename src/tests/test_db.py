@@ -396,6 +396,27 @@ def test_delete_user_account_removes_feed_token(db_path):
     assert get_feed_token_by_user(db_path, user_id) is None
 
 
+def test_reregister_after_delete_reactivates_account(db_path):
+    from src.web.db import delete_user_account
+    user_id = create_user(db_path, "rereg@example.com", "password123456")
+    delete_user_account(db_path, user_id)
+    assert get_user_by_email(db_path, "rereg@example.com") is None
+    new_id = create_user(db_path, "rereg@example.com", "newpassword12345")
+    assert new_id == user_id  # same row reactivated
+    user = get_user_by_email(db_path, "rereg@example.com")
+    assert user is not None
+    assert user["is_active"] == 1
+
+
+def test_reregister_after_delete_updates_password(db_path):
+    from src.web.db import delete_user_account, check_password
+    user_id = create_user(db_path, "reregpw@example.com", "oldpassword1234")
+    delete_user_account(db_path, user_id)
+    create_user(db_path, "reregpw@example.com", "newpassword1234")
+    user = get_user_by_email(db_path, "reregpw@example.com")
+    assert check_password("newpassword1234", user["password_hash"])
+
+
 def test_get_user_by_id_active(db_path):
     from src.web.db import get_user_by_id
     user_id = create_user(db_path, "byid@example.com", "password123456")

@@ -624,6 +624,22 @@ async def settings_delete_post(
     if not user or confirm_email.strip().lower() != user["email"].lower():
         return RedirectResponse(url="/settings?error=email_mismatch", status_code=303)
 
+    # Revoke Google access before deleting account data
+    if is_google_connected(DB_PATH, user_id):
+        from src.integrations.google_push import get_google_credentials, delete_google_calendar
+        delete_google_calendar(DB_PATH, user_id)
+        credentials = get_google_credentials(DB_PATH, user_id)
+        if credentials and credentials.token:
+            try:
+                import requests as _requests
+                _requests.post(
+                    "https://oauth2.googleapis.com/revoke",
+                    params={"token": credentials.token},
+                    timeout=5,
+                )
+            except Exception:
+                logger.warning("Failed to revoke Google token during account deletion for user_id=%s", user_id)
+
     delete_user_account(DB_PATH, user_id)
     response = RedirectResponse(url="/", status_code=303)
     response.delete_cookie("session")

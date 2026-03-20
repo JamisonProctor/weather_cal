@@ -74,7 +74,7 @@
 
   <ul>
     <li><strong>Active accounts</strong> — all data (locations, preferences, poll logs, feedback, feed tokens) is retained while your account is active.</li>
-    <li><strong>Account deletion</strong> — when you delete your account, all personal data (locations, preferences, poll logs, feedback, feed tokens) is immediately and permanently removed. Only your email address and hashed password are retained in a deactivated account record to preserve the email uniqueness constraint and prevent re-registration conflicts.</li>
+    <li><strong>Account deletion</strong> — when you delete your account, all personal data (locations, preferences, poll logs, feedback, feed tokens, Google OAuth tokens) is immediately and permanently removed. Your email address and a deactivated account record are retained to support re-registration. If you sign up again with the same email, a fresh account is created. If you connected Google Calendar, we revoke our OAuth access and delete the WeatherCal calendar from your Google account during deletion.</li>
   </ul>
 
   <h2>What We Share</h2>
@@ -89,7 +89,7 @@
   <p>You can view and update your email address, password, location, and weather preferences at any time through your account settings.</p>
 
   <h3>Delete Your Account</h3>
-  <p>You can delete your account through the settings page. When you delete your account, all personal data — including your locations, weather preferences, poll logs, feedback, and feed tokens — is <strong>immediately and permanently removed</strong>. Your feed token is revoked, stopping all calendar updates. Only your email address and hashed password are retained in a deactivated account record to preserve the email uniqueness constraint. If you have connected Google Calendar, disconnecting will revoke the OAuth tokens and remove our access to the calendar we created.</p>
+  <p>You can delete your account through the settings page. When you delete your account, all personal data — including your locations, weather preferences, poll logs, feedback, feed tokens, and Google OAuth tokens — is <strong>immediately and permanently removed</strong>. Your feed token is revoked, stopping all calendar updates. If you connected Google Calendar, we revoke our OAuth access and delete the WeatherCal calendar from your Google account. Your email address is retained in a deactivated record so you can sign up again later with the same email.</p>
 
   <h3>Disconnect Google Calendar</h3>
   <p>You can disconnect your Google account at any time through the settings page. This revokes our access tokens and stops event updates to your Google Calendar. The WeatherCal calendar created in your Google account will remain (since you own it), but we will no longer be able to update it.</p>

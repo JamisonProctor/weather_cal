@@ -5,6 +5,7 @@ ensuring identical event logic regardless of output format.
 """
 
 import hashlib
+from collections import Counter
 from dataclasses import dataclass
 from datetime import date as date_type, datetime, timedelta, timezone
 from typing import List
@@ -123,26 +124,69 @@ def _merged_window_summary(merged: MergedWarningWindow, forecast: Forecast, pref
 
 
 def _format_window_description(forecast: Forecast, window, prefs=None) -> str:
-    """Format an hourly weather summary for a timed warning event's time range."""
+    """Format a compact weather summary for a timed warning event."""
     unit = prefs.get("temp_unit", "C") if prefs else "C"
     start = datetime.fromisoformat(window.start_time)
     end = datetime.fromisoformat(window.end_time)
-    lines = []
-    precip_list = forecast.precipitation or [0]*len(forecast.times)
+
+    temps, precips, chances, winds, codes = [], [], [], [], []
+    precip_list = forecast.precipitation or [0] * len(forecast.times)
     for t, temp, code, rain, wind, precip in zip(
-        forecast.times, forecast.temps, forecast.codes, forecast.rain, forecast.winds, precip_list
+        forecast.times, forecast.temps, forecast.codes, forecast.rain,
+        forecast.winds, precip_list
     ):
         dt = datetime.fromisoformat(t)
         if dt < start or dt >= end:
             continue
-        emoji = map_code_to_emoji(code)
-        t_val = _fmt_temp(temp, unit)
-        parts = [f"{dt.hour:02d}:00 {emoji} {t_val}\u00b0{unit}"]
-        if precip and precip > 0:
-            parts.append(f"\U0001f4a7{precip:.1f}mm ({round(rain)}%)")
-        if wind and wind >= 30:
-            parts.append(f"\U0001f4a8{round(wind)}km/h")
-        lines.append("  ".join(parts))
+        if temp is not None:
+            temps.append(temp)
+        if code is not None:
+            codes.append(code)
+        if precip is not None and precip > 0:
+            precips.append(precip)
+        if rain is not None and rain > 0:
+            chances.append(round(rain))
+        if wind is not None:
+            winds.append(wind)
+
+    lines = []
+    warning_types = getattr(window, "warning_types", [])
+
+    # Precipitation line — snowflake for snow, weather emoji otherwise
+    if precips:
+        if "snow" in warning_types:
+            emoji = "\u2744\ufe0f"
+        else:
+            dominant_code = Counter(codes).most_common(1)[0][0] if codes else 0
+            emoji = map_code_to_emoji(dominant_code)
+        total = sum(precips)
+        if chances:
+            lo_ch, hi_ch = min(chances), max(chances)
+            ch_str = f"{lo_ch}%" if lo_ch == hi_ch else f"{lo_ch}\u2013{hi_ch}%"
+            lines.append(f"{emoji} {total:.1f}mm total ({ch_str})")
+        else:
+            lines.append(f"{emoji} {total:.1f}mm total")
+
+    # Wind line — only if notable (>= 30 km/h)
+    strong_winds = [w for w in winds if w >= 30]
+    if strong_winds:
+        peak = round(max(strong_winds))
+        lines.append(f"\U0001f4a8 Gusts to {peak} km/h")
+
+    # Temperature line — 🥶 for cold, 🥵 for hot, 🌡️ otherwise
+    if temps:
+        if "cold" in warning_types:
+            temp_emoji = "\U0001f976"
+        elif "hot" in warning_types:
+            temp_emoji = "\U0001f975"
+        else:
+            temp_emoji = "\U0001f321\ufe0f"
+        lo = _fmt_temp(min(temps), unit)
+        hi = _fmt_temp(max(temps), unit)
+        if lo == hi:
+            lines.append(f"{temp_emoji} {lo}\u00b0{unit}")
+        else:
+            lines.append(f"{temp_emoji} {lo} ~ {hi}\u00b0{unit}")
 
     return "\n".join(lines)
 

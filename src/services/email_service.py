@@ -60,9 +60,9 @@ def send_welcome_email(to_email: str, webcal_url: str, location: str) -> None:
       <div style="margin-top:32px;padding-top:24px;border-top:1px solid #f3f4f6">
         <p style="margin:0 0 8px;font-size:0.9rem;font-weight:600;color:#374151">What to expect:</p>
         <ul style="margin:0;padding-left:20px;color:#374151;font-size:0.9rem;line-height:1.7">
-          <li>All-day events with emoji weather summaries (e.g. &#x26C5; 12&#176;C)</li>
+          <li>Daily summaries with emoji weather forecasts (e.g. &#x26C5; 12&#176;C)</li>
           <li>Warning events for rain &#x2602;&#xFE0F;, wind &#x1F32C;&#xFE0F;, cold &#x1F976;, snow &#x2603;&#xFE0F;, and heat &#x1F975;</li>
-          <li>Timed events showing exactly when bad weather arrives</li>
+          <li>Weather alerts showing exactly when bad weather arrives</li>
         </ul>
       </div>
     </div>
@@ -82,9 +82,9 @@ Add it to your calendar app using this URL:
 {webcal_url}
 
 What to expect:
-- All-day events with emoji weather summaries
+- Daily summaries with emoji weather forecasts
 - Warning events for rain, wind, cold, snow, and heat
-- Timed events showing exactly when bad weather arrives
+- Weather alerts showing exactly when bad weather arrives
 
 Respond to this email or reach out anytime at hello@weathercal.app
 

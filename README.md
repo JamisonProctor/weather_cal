@@ -1,6 +1,6 @@
 # Weather Calendar
 
-Weather Calendar keeps a rolling 14-day weather forecast synced to Google Calendar. Forecasts are fetched from Open-Meteo, stored in SQLite for change tracking, and rendered as all-day calendar events that stay up to date without duplicate clutter.
+Weather Calendar keeps a rolling 14-day weather forecast synced to Google Calendar. Forecasts are fetched from Open-Meteo, stored in SQLite for change tracking, and rendered as daily summary calendar events that stay up to date without duplicate clutter.
 
 ---
 
@@ -96,7 +96,7 @@ python -c "from src.app.main import main; main()"
 Each run will:
 - Fetch forecasts for configured locations.
 - Upsert records in SQLite for change tracking.
-- Push Google Calendar events (one all-day event per location/day) with summaries and descriptions.
+- Push Google Calendar events (one daily summary per location/day) with summaries and descriptions.
 
 Logs are emitted to both stdout and the file pointed to `LOG_FILE`.
 

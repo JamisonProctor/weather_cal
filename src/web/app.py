@@ -152,7 +152,7 @@ def _template(name: str, request: Request, ctx: dict | None = None, **kwargs):
     base = {"request": request, "is_authenticated": bool(_get_user_id(request))}
     if ctx:
         base.update(ctx)
-    return templates.TemplateResponse(name, base, **kwargs)
+    return templates.TemplateResponse(request, name, base, **kwargs)
 
 
 @app.get("/health")

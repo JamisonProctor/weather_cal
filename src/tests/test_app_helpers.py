@@ -6,11 +6,14 @@ import pytest
 from src.web.app import _convert_thresholds_to_celsius, _require_login, _LoginRequired
 
 
-def test_require_login_returns_user_id(auth_cookies):
+def test_require_login_returns_user_id(db_path):
     """_require_login returns user_id when session cookie is valid."""
-    user_id, cookies = auth_cookies()
+    from src.web.auth import create_session_token
+    from src.web.db import create_user
+    user_id = create_user(db_path, "test@example.com", "supersecretpass1")
+    token = create_session_token(user_id)
     request = MagicMock()
-    request.cookies = cookies
+    request.cookies = {"session": token}
     result = _require_login(request)
     assert result == user_id
 

@@ -56,12 +56,13 @@ def client(db_path, monkeypatch):
 
 
 @pytest.fixture
-def auth_cookies(db_path):
-    """Factory fixture: returns callable (email, password) -> (user_id, cookies_dict)."""
+def auth_cookies(client, db_path):
+    """Factory fixture: creates user, sets session cookie on client, returns (user_id, client)."""
     def _make(email="test@example.com", password="supersecretpass1"):
         user_id = create_user(db_path, email, password)
         token = create_session_token(user_id)
-        return user_id, {"session": token}
+        client.cookies.set("session", token)
+        return user_id, client
     return _make
 
 

@@ -33,4 +33,5 @@ DEFAULT_PREFS = {
     "reminder_evening_hour": -1,
     "reminder_timed_minutes": -1,
     "title_format": "simple",
+    "temp_display": "feels_like",
 }

@@ -449,6 +449,7 @@ async def settings_post(
     warn_hot: str = Form(default=""),
     temp_unit: str = Form(default="C"),
     title_format: str = Form(default="simple"),
+    temp_display: str = Form(default="feels_like"),
     reminder_allday_hour: int = Form(default=-1),
     reminder_allday_midnight: str = Form(default=""),
     reminder_evening_hour: int = Form(default=-1),
@@ -489,6 +490,7 @@ async def settings_post(
         allday_hot=_on(allday_hot),
         temp_unit=temp_unit,
         title_format=title_format,
+        temp_display=temp_display,
         reminder_allday_hour=reminder_allday_hour,
         reminder_evening_hour=reminder_evening_hour,
         reminder_timed_minutes=reminder_timed_minutes,
@@ -518,6 +520,7 @@ async def settings_api(
     hot_threshold = float(body.get("hot_threshold", 28.0))
     temp_unit = body.get("temp_unit", "C")
     title_format = body.get("title_format", "simple")
+    temp_display = body.get("temp_display", "feels_like")
 
     if temp_unit == "F":
         cold_threshold, warm_threshold, hot_threshold = _convert_thresholds_to_celsius(
@@ -553,6 +556,7 @@ async def settings_api(
             allday_hot=_flag("allday_hot"),
             temp_unit=temp_unit,
             title_format=title_format,
+            temp_display=temp_display,
             reminder_allday_hour=reminder_allday_hour,
             reminder_evening_hour=int(body.get("reminder_evening_hour", -1)),
             reminder_timed_minutes=int(body.get("reminder_timed_minutes", -1)),

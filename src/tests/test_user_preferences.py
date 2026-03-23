@@ -248,6 +248,27 @@ def test_title_format_round_trip_ampm(db_path):
     assert prefs["title_format"] == "ampm"
 
 
+def test_temp_display_defaults_to_feels_like(db_path):
+    upsert_user_preferences(
+        db_path, 1,
+        cold_threshold=3.0, warn_in_allday=1, warn_rain=1,
+        warn_wind=1, warn_cold=1, warn_snow=1, warn_sunny=0,
+    )
+    prefs = get_user_preferences(db_path, 1)
+    assert prefs["temp_display"] == "feels_like"
+
+
+def test_temp_display_round_trip_actual(db_path):
+    upsert_user_preferences(
+        db_path, 1,
+        cold_threshold=3.0, warn_in_allday=1, warn_rain=1,
+        warn_wind=1, warn_cold=1, warn_snow=1, warn_sunny=0,
+        temp_display="actual",
+    )
+    prefs = get_user_preferences(db_path, 1)
+    assert prefs["temp_display"] == "actual"
+
+
 def test_show_allday_events_false_suppresses_allday_event():
     forecast = _make_rainy_forecast()
     prefs = {**DEFAULT_PREFS, "show_allday_events": 0}

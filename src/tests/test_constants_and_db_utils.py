@@ -61,5 +61,6 @@ def test_default_prefs_has_all_expected_keys():
         "warm_threshold", "hot_threshold", "temp_unit",
         "reminder_allday_hour", "reminder_evening_hour", "reminder_timed_minutes",
         "title_format",
+        "temp_display",
     }
     assert set(DEFAULT_PREFS.keys()) == expected_keys

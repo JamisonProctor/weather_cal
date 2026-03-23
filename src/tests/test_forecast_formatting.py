@@ -615,6 +615,72 @@ def test_summary_ampm_format_with_warnings():
     assert "/ PM" in summary, f"AM/PM format should contain '/ PM': {summary}"
 
 
+# --- Feels-like vs actual temperature tests ---
+
+
+def test_build_events_uses_apparent_temps_when_feels_like():
+    """build_calendar_events swaps temps with apparent_temps when temp_display=feels_like."""
+    from src.services.calendar_events import build_calendar_events
+    from src.constants import DEFAULT_PREFS
+    # Actual temps are 10s, apparent temps are 5s — feels_like should produce lower numbers
+    forecast = _make_forecast(
+        times=["2025-08-01T06:00", "2025-08-01T09:00",
+               "2025-08-01T12:00", "2025-08-01T15:00"],
+        temps=[10, 10, 15, 15],
+        codes=[1, 1, 2, 2],
+        rain=[0, 0, 0, 0],
+        winds=[10, 10, 8, 8],
+    )
+    forecast.apparent_temps = [5, 5, 10, 10]
+    prefs = {**DEFAULT_PREFS, "temp_display": "feels_like"}
+    events = build_calendar_events(forecast, prefs)
+    allday = [e for e in events if e.is_allday]
+    assert len(allday) == 1
+    # Summary should contain "5" (from apparent) not "10" (from actual) for morning
+    assert "5°" in allday[0].summary
+
+
+def test_build_events_uses_actual_temps_when_actual():
+    """build_calendar_events uses original temps when temp_display=actual."""
+    from src.services.calendar_events import build_calendar_events
+    from src.constants import DEFAULT_PREFS
+    forecast = _make_forecast(
+        times=["2025-08-01T06:00", "2025-08-01T09:00",
+               "2025-08-01T12:00", "2025-08-01T15:00"],
+        temps=[10, 10, 15, 15],
+        codes=[1, 1, 2, 2],
+        rain=[0, 0, 0, 0],
+        winds=[10, 10, 8, 8],
+    )
+    forecast.apparent_temps = [5, 5, 10, 10]
+    prefs = {**DEFAULT_PREFS, "temp_display": "actual"}
+    events = build_calendar_events(forecast, prefs)
+    allday = [e for e in events if e.is_allday]
+    assert len(allday) == 1
+    # Summary should contain "10" (actual) not "5" (apparent) for morning
+    assert "10°" in allday[0].summary
+
+
+def test_build_events_falls_back_when_no_apparent_temps():
+    """When apparent_temps is empty, build_calendar_events uses actual temps regardless of pref."""
+    from src.services.calendar_events import build_calendar_events
+    from src.constants import DEFAULT_PREFS
+    forecast = _make_forecast(
+        times=["2025-08-01T06:00", "2025-08-01T09:00",
+               "2025-08-01T12:00", "2025-08-01T15:00"],
+        temps=[10, 10, 15, 15],
+        codes=[1, 1, 2, 2],
+        rain=[0, 0, 0, 0],
+        winds=[10, 10, 8, 8],
+    )
+    # No apparent_temps set — empty list by default
+    prefs = {**DEFAULT_PREFS, "temp_display": "feels_like"}
+    events = build_calendar_events(forecast, prefs)
+    allday = [e for e in events if e.is_allday]
+    assert len(allday) == 1
+    assert "10°" in allday[0].summary
+
+
 # --- Incompatible type guard tests ---
 
 

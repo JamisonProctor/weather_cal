@@ -168,6 +168,16 @@
             <label style="font-size:0.95rem;cursor:pointer">
               <input type="radio" name="temp_unit" value="F" {% if prefs.temp_unit == 'F' %}checked{% endif %}> °F
             </label>
+
+            <p style="margin:14px 0 6px;font-size:0.85rem;font-weight:600;color:#374151">Temperature display</p>
+            <label style="display:block;margin-bottom:6px;font-size:0.95rem;cursor:pointer">
+              <input type="radio" name="temp_display" value="feels_like" {% if prefs.temp_display != 'actual' %}checked{% endif %}>
+              Feels like <span style="font-size:0.85rem;color:#6b7280">— adjusted for wind &amp; humidity</span>
+            </label>
+            <label style="display:block;margin-bottom:4px;font-size:0.95rem;cursor:pointer">
+              <input type="radio" name="temp_display" value="actual" {% if prefs.temp_display == 'actual' %}checked{% endif %}>
+              Actual <span style="font-size:0.85rem;color:#6b7280">— standard measured temperature</span>
+            </label>
           </div>
 
           <div class="pref-card" style="margin-bottom:20px">

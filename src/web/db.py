@@ -263,6 +263,7 @@ def create_user_preferences_table(db_path: str) -> None:
             "reminder_evening_hour  INTEGER DEFAULT -1",
             "reminder_timed_minutes INTEGER DEFAULT -1",
             "title_format          TEXT    DEFAULT 'simple'",
+            "temp_display          TEXT    DEFAULT 'feels_like'",
         ]
         for col_def in new_columns:
             try:
@@ -310,6 +311,7 @@ def upsert_user_preferences(
     reminder_evening_hour: int = -1,
     reminder_timed_minutes: int = -1,
     title_format: str = "simple",
+    temp_display: str = "feels_like",
 ) -> None:
     updated_at = datetime.now().isoformat()
     conn = _conn(db_path)
@@ -321,8 +323,8 @@ def upsert_user_preferences(
                  show_allday_events, timed_events_enabled, allday_rain, allday_wind, allday_cold, allday_snow, allday_sunny,
                  warm_threshold, hot_threshold, allday_hot, warn_hot, temp_unit,
                  reminder_allday_hour, reminder_evening_hour, reminder_timed_minutes,
-                 title_format, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 title_format, temp_display, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(user_id) DO UPDATE SET
                 cold_threshold       = excluded.cold_threshold,
                 warn_in_allday       = excluded.warn_in_allday,
@@ -347,13 +349,14 @@ def upsert_user_preferences(
                 reminder_evening_hour  = excluded.reminder_evening_hour,
                 reminder_timed_minutes = excluded.reminder_timed_minutes,
                 title_format           = excluded.title_format,
+                temp_display           = excluded.temp_display,
                 updated_at           = excluded.updated_at
             """,
             (user_id, cold_threshold, warn_in_allday, warn_rain, warn_wind, warn_cold, warn_snow, warn_sunny,
              show_allday_events, timed_events_enabled, allday_rain, allday_wind, allday_cold, allday_snow, allday_sunny,
              warm_threshold, hot_threshold, allday_hot, warn_hot, temp_unit,
              reminder_allday_hour, reminder_evening_hour, reminder_timed_minutes,
-             title_format, updated_at),
+             title_format, temp_display, updated_at),
         )
         conn.commit()
     finally:
@@ -669,6 +672,7 @@ _CHANGED_PREFS_SQL = """
     OR allday_sunny != 0
     OR allday_hot != 1
     OR title_format != 'simple'
+    OR temp_display != 'feels_like'
 """
 
 

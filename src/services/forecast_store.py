@@ -158,6 +158,7 @@ class ForecastStore:
         hourly_json = json.dumps({
             "times": forecast.times or [],
             "temps": forecast.temps or [],
+            "apparent_temps": forecast.apparent_temps or [],
             "codes": forecast.codes or [],
             "rain": forecast.rain or [],
             "precipitation": forecast.precipitation or [],
@@ -216,6 +217,7 @@ class ForecastStore:
                 rain=hourly.get("rain", []),
                 precipitation=hourly.get("precipitation", []),
                 winds=hourly.get("winds", []),
+                apparent_temps=hourly.get("apparent_temps", hourly.get("temps", [])),
                 timezone=row[8],
             ))
         return forecasts
@@ -254,6 +256,7 @@ class ForecastStore:
                 rain=hourly.get("rain", []),
                 precipitation=hourly.get("precipitation", []),
                 winds=hourly.get("winds", []),
+                apparent_temps=hourly.get("apparent_temps", hourly.get("temps", [])),
                 timezone=row[8],
             ))
         return forecasts

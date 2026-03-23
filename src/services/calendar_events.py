@@ -6,7 +6,7 @@ ensuring identical event logic regardless of output format.
 
 import hashlib
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date as date_type, datetime, timedelta, timezone
 from typing import List
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -206,6 +206,10 @@ def build_calendar_events(forecast: Forecast, prefs=None, settings_url: str = No
         tz = ZoneInfo(forecast.timezone) if forecast.timezone else timezone.utc
     except ZoneInfoNotFoundError:
         tz = timezone.utc
+
+    # Resolve temperature display: feels-like or actual
+    if prefs and prefs.get("temp_display", "feels_like") == "feels_like" and forecast.apparent_temps:
+        forecast = replace(forecast, temps=forecast.apparent_temps)
 
     # Reminder preferences
     allday_reminder_hour = prefs.get("reminder_allday_hour", -1) if prefs else -1

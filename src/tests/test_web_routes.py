@@ -1596,3 +1596,15 @@ def test_settings_shows_subscription_when_google_not_connected(client, db_path, 
     resp = client.get("/settings", cookies=cookies)
     assert resp.status_code == 200
     assert "Add to another calendar" in resp.text
+
+
+# --- UI Copy Regression ---
+
+def test_nav_uses_sign_out_not_logout(client, db_path, auth_cookies):
+    """The nav button must read 'Sign out' (not 'Logout') to match 'Sign in'."""
+    user_id, cookies = auth_cookies()
+    set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
+    resp = client.get("/settings", cookies=cookies)
+    assert resp.status_code == 200
+    assert "Sign out" in resp.text
+    assert "Logout" not in resp.text

@@ -12,7 +12,7 @@ from typing import List
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from src.models.forecast import Forecast
-from src.constants import COLD_TEMP_THRESHOLD, HOT_TEMP_THRESHOLD, WARM_TEMP_THRESHOLD
+from src.constants import COLD_TEMP_THRESHOLD, HOT_TEMP_THRESHOLD
 from src.services.forecast_formatting import (
     MergedWarningWindow,
     _fmt_temp,
@@ -123,16 +123,6 @@ def _merged_window_summary(merged: MergedWarningWindow, forecast: Forecast, pref
     return emoji_str
 
 
-def _sunny_tagline(avg_temp: float, unit: str) -> str:
-    """Return a feel-good tagline for sunny weather based on temperature."""
-    # Compare in Celsius regardless of display unit
-    if avg_temp < 18:
-        return "Fresh & sunny — grab a light layer"
-    if avg_temp < 25:
-        return "Perfect weather for outdoor plans"
-    return "Beautiful warm day — enjoy it!"
-
-
 def _format_window_description(forecast: Forecast, window, prefs=None) -> str:
     """Format a compact weather summary for a timed warning event."""
     unit = prefs.get("temp_unit", "C") if prefs else "C"
@@ -161,12 +151,6 @@ def _format_window_description(forecast: Forecast, window, prefs=None) -> str:
 
     lines = []
     warning_types = getattr(window, "warning_types", [])
-    is_sunny_only = warning_types == ["sunny"]
-
-    # Sunny-only: sunshine duration line
-    if is_sunny_only:
-        hours = int((end - start).total_seconds() // 3600)
-        lines.append(f"☀️ {hours} hours of sunshine ahead")
 
     # Precipitation line — snowflake for snow, weather emoji otherwise
     if precips:
@@ -183,15 +167,11 @@ def _format_window_description(forecast: Forecast, window, prefs=None) -> str:
         else:
             lines.append(f"{emoji} {total:.1f}mm total")
 
-    # Wind line — gusts for warnings, gentle breeze for sunny
+    # Wind line — only if notable (>= 30 km/h)
     strong_winds = [w for w in winds if w >= 30]
     if strong_winds:
         peak = round(max(strong_winds))
         lines.append(f"\U0001f4a8 Gusts to {peak} km/h")
-    elif is_sunny_only and winds:
-        peak = round(max(winds))
-        if peak > 0:
-            lines.append(f"\U0001f343 Light breeze at {peak} km/h")
 
     # Temperature line — 🥶 for cold, 🥵 for hot, 🌡️ otherwise
     if temps:
@@ -207,11 +187,6 @@ def _format_window_description(forecast: Forecast, window, prefs=None) -> str:
             lines.append(f"{temp_emoji} {lo}\u00b0{unit}")
         else:
             lines.append(f"{temp_emoji} {lo} ~ {hi}\u00b0{unit}")
-
-    # Sunny-only: contextual tagline
-    if is_sunny_only and temps:
-        avg_temp = sum(temps) / len(temps)
-        lines.append(_sunny_tagline(avg_temp, unit))
 
     return "\n".join(lines)
 

@@ -189,15 +189,15 @@
             </div>
           </div>
 
-          <!-- All-day events card -->
+          <!-- Daily summaries card -->
           <div class="pref-card">
-            <p class="pref-card-title">All-day events</p>
-            <p class="pref-card-desc">Controls the all-day event that appears at the top of each day in your calendar.</p>
+            <p class="pref-card-title">Daily summaries</p>
+            <p class="pref-card-desc">Controls the daily summary that appears at the top of each day in your calendar.</p>
 
             <label class="check-label">
               <input type="checkbox" name="show_allday_events" {% if prefs.show_allday_events %}checked{% endif %} data-controls="group-allday">
               <span class="checkmark"></span>
-              Show all-day events
+              Show daily summaries
             </label>
 
             <div id="group-allday" class="nested-group">
@@ -291,15 +291,15 @@
             {% endif %}
           </div>
 
-          <!-- Timed events card -->
+          <!-- Weather alerts card -->
           <div class="pref-card">
-            <p class="pref-card-title">Timed events during the day</p>
-            <p class="pref-card-desc">Controls separate timed events that appear on your calendar when conditions like rain or wind are expected.</p>
+            <p class="pref-card-title">Weather alerts</p>
+            <p class="pref-card-desc">Controls separate alerts that appear on your calendar when conditions like rain or wind are expected.</p>
 
             <label class="check-label">
               <input type="checkbox" name="timed_events_enabled" {% if prefs.timed_events_enabled %}checked{% endif %} data-controls="group-timed">
               <span class="checkmark"></span>
-              Show timed events
+              Show weather alerts
             </label>
 
             <div id="group-timed" class="nested-group">

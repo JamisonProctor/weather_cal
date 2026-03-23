@@ -9,7 +9,7 @@ Screenshots align with landing page copy:
    Spot a sunny weekend while you're planning the week ahead."
 
   Screenshot 1: Busy Monday day view — packed calendar + weather overlay
-  Screenshot 2: Thursday rain overlapping lunch + Saturday sunny timed event
+  Screenshot 2: Thursday rain overlapping lunch + Saturday sunny weather alert
 
 Uses the REAL formatting functions from src/services/ so output
 matches production exactly.

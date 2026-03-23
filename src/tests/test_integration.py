@@ -392,7 +392,7 @@ class TestPrefsToCalendar:
 
     def test_settings_post_to_feed_e2e(self, client, db_path, auth_cookies):
         """Full HTTP: POST /settings with show_allday_events unchecked → GET feed → no all-day event."""
-        user_id, cookies = auth_cookies()
+        user_id, auth = auth_cookies()
         set_user_location(db_path, user_id, "Munich", 48.137, 11.576, "Europe/Berlin")
         token = create_feed_token(db_path, user_id)
 
@@ -409,7 +409,7 @@ class TestPrefsToCalendar:
         ))
 
         # POST settings with show_allday_events unchecked (not sent = off)
-        resp = client.post("/settings", data={
+        resp = auth.post("/settings", data={
             "cold_threshold": "3.0",
             "warm_threshold": "14.0",
             "hot_threshold": "28.0",
@@ -423,7 +423,7 @@ class TestPrefsToCalendar:
             "warn_hot": "on",
             "timed_events_enabled": "on",
             # show_allday_events NOT included = unchecked = 0
-        }, cookies=cookies)
+        })
         assert resp.status_code == 303
 
         # GET feed and verify no all-day events

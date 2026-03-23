@@ -194,6 +194,16 @@
             <p class="pref-card-title">Daily summaries</p>
             <p class="pref-card-desc">Controls the daily summary that appears at the top of each day in your calendar.</p>
 
+            <p style="margin:12px 0 6px;font-size:0.85rem;font-weight:600;color:#374151">Title format</p>
+            <label style="display:block;margin-bottom:6px;font-size:0.95rem;cursor:pointer">
+              <input type="radio" name="title_format" value="simple" {% if prefs.title_format != 'ampm' %}checked{% endif %}>
+              Simple — <span style="font-size:0.9rem;color:#6b7280">🥶4° → ☁️10°C</span>
+            </label>
+            <label style="display:block;margin-bottom:14px;font-size:0.95rem;cursor:pointer">
+              <input type="radio" name="title_format" value="ampm" {% if prefs.title_format == 'ampm' %}checked{% endif %}>
+              AM / PM — <span style="font-size:0.9rem;color:#6b7280">AM🥶4° / PM☁️10°C</span>
+            </label>
+
             <label class="check-label">
               <input type="checkbox" name="show_allday_events" {% if prefs.show_allday_events %}checked{% endif %} data-controls="group-allday">
               <span class="checkmark"></span>

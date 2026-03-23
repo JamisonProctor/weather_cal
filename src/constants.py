@@ -32,4 +32,5 @@ DEFAULT_PREFS = {
     "reminder_allday_hour": -1,
     "reminder_evening_hour": -1,
     "reminder_timed_minutes": -1,
+    "title_format": "simple",
 }

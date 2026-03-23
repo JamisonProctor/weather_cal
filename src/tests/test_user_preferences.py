@@ -227,6 +227,27 @@ def test_upsert_includes_new_columns(db_path):
     assert prefs["allday_sunny"] == 1
 
 
+def test_title_format_defaults_to_simple(db_path):
+    upsert_user_preferences(
+        db_path, 1,
+        cold_threshold=3.0, warn_in_allday=1, warn_rain=1,
+        warn_wind=1, warn_cold=1, warn_snow=1, warn_sunny=0,
+    )
+    prefs = get_user_preferences(db_path, 1)
+    assert prefs["title_format"] == "simple"
+
+
+def test_title_format_round_trip_ampm(db_path):
+    upsert_user_preferences(
+        db_path, 1,
+        cold_threshold=3.0, warn_in_allday=1, warn_rain=1,
+        warn_wind=1, warn_cold=1, warn_snow=1, warn_sunny=0,
+        title_format="ampm",
+    )
+    prefs = get_user_preferences(db_path, 1)
+    assert prefs["title_format"] == "ampm"
+
+
 def test_show_allday_events_false_suppresses_allday_event():
     forecast = _make_rainy_forecast()
     prefs = {**DEFAULT_PREFS, "show_allday_events": 0}

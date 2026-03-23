@@ -579,12 +579,40 @@ def test_summary_no_warnings_has_weather_emojis():
     assert any(e in summary for e in ["☀️", "🌤️", "⛅", "☁️", "🌧️", "❄️", "🌦️", "🌨️", "⛈️"])
 
 
-def test_summary_no_am_pm():
-    """Neither code path should contain AM or PM labels."""
+def test_summary_simple_format_no_am_pm():
+    """Simple format (default) should not contain AM or PM labels."""
     for forecast in [_warning_forecast(), _calm_forecast()]:
         summary = format_summary(forecast)
         assert "AM" not in summary, f"Summary should not contain AM: {summary}"
         assert "PM" not in summary, f"Summary should not contain PM: {summary}"
+        assert "→" in summary, f"Simple format should use arrow separator: {summary}"
+
+
+def test_summary_simple_format_explicit():
+    """Explicitly passing title_format='simple' produces arrow-separated format."""
+    prefs = {"title_format": "simple"}
+    summary = format_summary(_calm_forecast(), prefs)
+    assert "→" in summary
+    assert "AM" not in summary
+    assert "PM" not in summary
+
+
+def test_summary_ampm_format():
+    """AM/PM format uses AM and PM labels with / separator."""
+    prefs = {"title_format": "ampm"}
+    for forecast in [_warning_forecast(), _calm_forecast()]:
+        summary = format_summary(forecast, prefs)
+        assert summary.startswith("AM"), f"AM/PM format should start with AM: {summary}"
+        assert "/ PM" in summary, f"AM/PM format should contain '/ PM': {summary}"
+        assert "→" not in summary, f"AM/PM format should not use arrow: {summary}"
+
+
+def test_summary_ampm_format_with_warnings():
+    """Warning icons work correctly in AM/PM format."""
+    prefs = {"title_format": "ampm", "warn_in_allday": 1, "allday_rain": 1}
+    summary = format_summary(_warning_forecast(), prefs)
+    assert summary.startswith("AM"), f"AM/PM format should start with AM: {summary}"
+    assert "/ PM" in summary, f"AM/PM format should contain '/ PM': {summary}"
 
 
 # --- Incompatible type guard tests ---

@@ -188,7 +188,7 @@
               <span id="label-cold">{% if prefs.temp_unit == 'F' %}°F{% else %}°C{% endif %}</span>
             </div>
             <div class="threshold-row" style="margin-top:10px">
-              <span>😎 I feel warm at</span>
+              <span>☀️ Nice weather above</span>
               <input type="number" name="warm_threshold" value="{{ prefs.warm_threshold | default(14.0) }}" step="0.5" min="-100" max="150">
               <span id="label-warm">{% if prefs.temp_unit == 'F' %}°F{% else %}°C{% endif %}</span>
             </div>
@@ -351,7 +351,7 @@
               <label class="check-label">
                 <input type="checkbox" name="warn_sunny" {% if prefs.warn_sunny %}checked{% endif %}>
                 <span class="checkmark"></span>
-                ☀️ Nice & warm
+                ☀️ Nice weather
               </label>
             </div>
 

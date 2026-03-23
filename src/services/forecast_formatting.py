@@ -101,6 +101,9 @@ def format_summary(forecast: Forecast, prefs=None) -> str:
     morning_value = _fmt_temp(morning_temp, unit)
     afternoon_value = _fmt_temp(afternoon_temp, unit)
 
+    title_format = prefs.get("title_format", "simple") if prefs else "simple"
+    if title_format == "ampm":
+        return f"AM{am_icon}{morning_value}° / PM{pm_icon}{afternoon_value}°{unit}"
     return f"{am_icon}{morning_value}° → {pm_icon}{afternoon_value}°{unit}"
 
 def _collect_warnings(block: List[Tuple[str, float, int, float, float, float]], prefs=None) -> str:

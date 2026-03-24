@@ -19,6 +19,11 @@
       --card-bg: rgba(255,245,214,0.7);
     }
 
+    html {
+      scroll-snap-type: y mandatory;
+      scroll-behavior: smooth;
+    }
+
     body {
       font-family: system-ui, -apple-system, sans-serif;
       color: var(--text);
@@ -29,13 +34,28 @@
       line-height: 1.6;
     }
 
-    /* --- Fixed background --- */
+    /* --- Fixed background with emoji layer --- */
     .guide-bg {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
+      top: -10%; left: 0;
+      width: 100%; height: 120%;
       z-index: 0;
-      background: var(--bg);
+      pointer-events: none;
+      overflow: hidden;
+      background: linear-gradient(135deg, #FFF8E1, #FFF3E0);
+      contain: layout style paint;
       transition: background 0.8s ease;
+    }
+    .cloud-particle {
+      position: absolute;
+      user-select: none;
+      pointer-events: none;
+      line-height: 1;
+      opacity: 0.25;
+    }
+    @keyframes cloud-drift {
+      from { transform: translate3d(0, 0, 0); }
+      to { transform: translate3d(160vw, 0, 0); }
     }
 
     /* --- Sun --- */
@@ -60,30 +80,28 @@
 
     /* --- Sections --- */
     .guide-section {
-      min-height: 80vh;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
       justify-content: center;
-      padding: 80px 24px;
+      padding: 60px 24px;
       opacity: 0;
       transform: translateY(30px);
       transition: opacity 0.6s ease, transform 0.6s ease;
+      scroll-snap-align: center;
     }
     .guide-section.visible {
       opacity: 1;
       transform: translateY(0);
     }
     .guide-section .section-inner {
-      max-width: 560px;
+      max-width: 520px;
       margin: 0 auto;
       width: 100%;
     }
 
-    /* Welcome section is taller */
-    #welcome {
-      min-height: 100vh;
-      text-align: center;
-    }
+    /* Welcome section */
+    #welcome { text-align: center; }
     #welcome h1 {
       font-size: 2.2rem;
       font-weight: 700;
@@ -115,10 +133,10 @@
 
     /* --- Typography --- */
     .guide-section h2 {
-      font-size: 1.6rem;
+      font-size: 1.5rem;
       font-weight: 700;
       margin: 0 0 12px;
-      line-height: 1.25;
+      line-height: 1.3;
     }
     .guide-section p {
       margin: 0 0 16px;
@@ -134,6 +152,14 @@
       font-style: italic;
       margin-top: 8px;
     }
+    .guide-section .label-sm {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 20px 0 8px;
+    }
 
     /* --- Cards --- */
     .guide-card {
@@ -144,82 +170,109 @@
       margin: 16px 0;
     }
 
-    /* --- Preview box (daily summary mock) --- */
+    /* --- Preview (daily summary mock) --- */
     .preview-box {
-      background: #fff;
+      background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px 20px;
+      border-radius: 12px;
+      padding: 20px 24px;
       margin: 16px 0;
-      font-size: 1.3rem;
+      font-size: 1.4rem;
       text-align: center;
       letter-spacing: 0.5px;
       font-weight: 500;
-      min-height: 56px;
+      min-height: 60px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    /* --- Detail preview (expanded event mock) --- */
-    .detail-preview {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px 20px;
-      margin: 16px 0;
-      font-size: 0.95rem;
-      font-family: system-ui, -apple-system, sans-serif;
-      line-height: 1.8;
-    }
-    .detail-preview .line {
-      display: flex;
-      gap: 8px;
-    }
-    .detail-preview .label {
-      color: var(--text-muted);
-      min-width: 80px;
-      font-size: 0.85rem;
-    }
-
     /* --- Annotated visual --- */
     .annotation {
-      background: #fff;
+      background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 24px;
+      border-radius: 12px;
+      padding: 28px 24px 20px;
       margin: 16px 0;
       text-align: center;
     }
     .annotation .example {
       font-size: 1.5rem;
       font-weight: 500;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
       letter-spacing: 1px;
     }
     .annotation .labels {
       display: flex;
-      justify-content: center;
-      gap: 24px;
-      font-size: 0.8rem;
+      justify-content: space-around;
+      font-size: 0.78rem;
       color: var(--text-muted);
+      padding: 0 16px;
     }
     .annotation .labels span {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 2px;
+      line-height: 1.3;
     }
-    .annotation .labels span::before {
-      content: '↑';
-      font-size: 0.7rem;
+
+    /* --- Mock calendar event --- */
+    .mock-event {
+      background: var(--card-bg);
+      border-left: 4px solid #4285f4;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin: 8px 0;
+      font-size: 0.9rem;
+    }
+    .mock-event .event-title {
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .mock-event .event-time {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+    .mock-event-expanded {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 16px 0;
+    }
+    .mock-event-expanded .event-header {
+      padding: 14px 20px;
+      font-weight: 600;
+      font-size: 1.1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .mock-event-expanded .event-body {
+      padding: 16px 20px;
+      font-size: 0.92rem;
+      line-height: 2;
+    }
+    .mock-event-expanded .event-body .line {
+      display: flex;
+      gap: 8px;
+    }
+    .mock-event-expanded .event-body .time-label {
+      color: var(--text-muted);
+      min-width: 80px;
+      font-size: 0.85rem;
+    }
+    .mock-event-expanded .event-footer {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      font-size: 0.82rem;
+      color: var(--text-muted);
     }
 
     /* --- Form elements --- */
     .radio-group {
       display: flex;
       gap: 12px;
-      margin: 12px 0 16px;
+      margin: 8px 0 16px;
     }
     .radio-option {
       flex: 1;
@@ -227,7 +280,6 @@
       border: 2px solid var(--border);
       border-radius: 10px;
       cursor: pointer;
-      text-align: center;
       transition: border-color 0.2s, background 0.2s;
       font-size: 0.95rem;
     }
@@ -244,6 +296,16 @@
       color: var(--text-muted);
       margin-top: 4px;
       display: block;
+      line-height: 1.4;
+    }
+    .badge-rec {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
     }
 
     .text-input {
@@ -253,7 +315,7 @@
       border-radius: 8px;
       font-size: 1rem;
       margin: 8px 0 16px;
-      background: #fff;
+      background: rgba(255,255,255,0.7);
     }
     .text-input:focus {
       outline: 2px solid var(--accent);
@@ -274,7 +336,7 @@
       text-align: center;
       font-size: 1.1rem;
       font-weight: 600;
-      background: #fff;
+      background: rgba(255,255,255,0.7);
     }
     .threshold-input input[type="number"]:focus {
       outline: 2px solid var(--accent);
@@ -337,7 +399,7 @@
       background: rgba(230,81,0,0.08);
     }
 
-    /* --- Emoji reference table --- */
+    /* --- Emoji reference --- */
     .emoji-ref {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -397,29 +459,13 @@
       transition: border-color 0.2s;
       text-align: left;
     }
-    .btn-group .btn-option:hover {
-      border-color: var(--accent);
-    }
-    .btn-group .btn-option .opt-title {
-      font-weight: 600;
-      font-size: 1rem;
-      margin-bottom: 4px;
-    }
-    .btn-group .btn-option .opt-desc {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-    }
-    .btn-group .btn-option .opt-badge {
-      font-size: 0.75rem;
-      color: var(--accent);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
+    .btn-group .btn-option:hover { border-color: var(--accent); }
+    .btn-group .btn-option .opt-title { font-weight: 600; font-size: 1rem; margin-bottom: 4px; }
+    .btn-group .btn-option .opt-desc { font-size: 0.85rem; color: var(--text-muted); }
 
-    /* --- Summary card (done section) --- */
+    /* --- Summary card (done) --- */
     .summary-card {
-      background: #fff;
+      background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 20px 24px;
@@ -428,25 +474,6 @@
       text-align: left;
       font-size: 0.95rem;
       line-height: 2;
-    }
-
-    /* --- Mock calendar event --- */
-    .mock-event {
-      background: #fff;
-      border-left: 4px solid #4285f4;
-      border-radius: 8px;
-      padding: 12px 16px;
-      margin: 16px 0;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-      font-size: 0.9rem;
-    }
-    .mock-event .event-title {
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-    .mock-event .event-time {
-      color: var(--text-muted);
-      font-size: 0.82rem;
     }
 
     /* --- Settings link highlight --- */
@@ -474,7 +501,7 @@
 
     /* --- Responsive --- */
     @media (max-width: 640px) {
-      .guide-section { padding: 60px 20px; min-height: 70vh; }
+      .guide-section { padding: 40px 20px; }
       #welcome h1 { font-size: 1.7rem; }
       .guide-section h2 { font-size: 1.3rem; }
       .radio-group { flex-direction: column; }
@@ -485,11 +512,8 @@
 
     /* --- Reduced motion --- */
     @media (prefers-reduced-motion: reduce) {
-      .guide-section {
-        opacity: 1;
-        transform: none;
-        transition: none;
-      }
+      html { scroll-snap-type: none; scroll-behavior: auto; }
+      .guide-section { opacity: 1; transform: none; transition: none; }
       .guide-sun { display: none; }
       @keyframes bounce { from, to { transform: none; } }
     }
@@ -502,74 +526,75 @@
 
 <div class="guide-content">
 
-  <!-- Section 1: Welcome -->
+  <!-- 1: Welcome -->
   <section id="welcome" class="guide-section">
     <div class="section-inner">
       <h1>Your weather, in your calendar.</h1>
-      <p>WeatherCal adds a daily forecast to your calendar — so you always know what's coming without checking an app.</p>
-      <p class="muted">Scroll down to set up your forecast. Takes about 2 minutes.</p>
+      <p>WeatherCal puts a daily forecast right in your calendar — so you always know what's coming without opening another app.</p>
+      <p class="muted">Let's get yours set up. This takes about 2 minutes.</p>
       <div class="scroll-hint"><span>↓</span></div>
     </div>
   </section>
 
-  <!-- Section 2: Location -->
+  <!-- 2: Location -->
   <section id="location" class="guide-section">
     <div class="section-inner">
       <div class="section-divider"></div>
-      <h2>Where are you?</h2>
-      <input type="text" class="text-input" placeholder="e.g. Melbourne, Australia" value="Munich, Germany">
+      <h2>First things first — where are you?</h2>
+      <p class="muted">We'll use this to pull your local forecast.</p>
+      <input type="text" class="text-input" id="locationInput" placeholder="e.g. Melbourne, Australia" value="Munich, Germany" oninput="checkLocationForUnit()">
     </div>
   </section>
 
-  <!-- Section 3: Temperature -->
+  <!-- 3: Temperature -->
   <section id="temperature" class="guide-section">
     <div class="section-inner">
       <div class="section-divider"></div>
-      <h2>How do you like your temperatures?</h2>
+      <h2>A couple of quick preferences.</h2>
 
-      <p class="muted" style="margin-bottom:6px">Unit</p>
+      <p class="label-sm">Temperature unit</p>
       <div class="radio-group" id="unitGroup">
         <div class="radio-option selected" data-value="C" onclick="selectRadio('unitGroup', this)">
           <span class="radio-label">°C</span>
-          <span class="radio-desc">Celsius</span>
         </div>
         <div class="radio-option" data-value="F" onclick="selectRadio('unitGroup', this)">
           <span class="radio-label">°F</span>
-          <span class="radio-desc">Fahrenheit</span>
         </div>
       </div>
 
-      <p class="muted" style="margin-bottom:6px">Display</p>
-      <div class="radio-group" id="displayGroup">
+      <p class="label-sm">Which temperature do you want to see?</p>
+      <div class="radio-group" id="displayGroup" style="flex-direction:column">
         <div class="radio-option selected" data-value="feels_like" onclick="selectRadio('displayGroup', this)">
+          <span class="badge-rec">Recommended</span>
           <span class="radio-label">Feels like</span>
-          <span class="radio-desc">Adjusted for wind &amp; humidity. A windy 8° day might feel like 4°.</span>
+          <span class="radio-desc">This is what it actually feels like when you step outside. On a windy winter morning, 8° can feel more like 4°. Most people find this more useful for deciding what to wear.</span>
         </div>
         <div class="radio-option" data-value="actual" onclick="selectRadio('displayGroup', this)">
           <span class="radio-label">Actual</span>
-          <span class="radio-desc">Standard measured temperature.</span>
+          <span class="radio-desc">The raw temperature from the weather station, without wind or humidity adjustments.</span>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Section 4: Daily summary -->
+  <!-- 4: Daily summary -->
   <section id="daily-summary" class="guide-section">
     <div class="section-inner">
       <div class="section-divider"></div>
-      <h2>Every morning, you'll see this at the top of your day.</h2>
+      <h2>Here's what your forecast looks like.</h2>
+      <p>Each day, a forecast event appears at the top of your calendar. It looks like this:</p>
 
       <div class="annotation">
         <div class="example" id="formatPreview">☁️8° → ☀️14°C</div>
         <div class="labels">
-          <span>weather<br>+ morning temp</span>
-          <span>weather<br>+ afternoon temp</span>
+          <span>morning<br>weather + temp</span>
+          <span>afternoon<br>weather + temp</span>
         </div>
       </div>
 
-      <p>The two temperatures are <strong>morning</strong> and <strong>afternoon</strong> — not high and low. The emoji shows the expected weather for each half of the day.</p>
+      <p>It's a quick snapshot of your day — the weather emoji and temperature for <strong>morning</strong> and <strong>afternoon</strong>. (These are not high and low.)</p>
 
-      <p class="muted" style="margin-bottom:6px">Pick your format</p>
+      <p>You can choose how this is displayed:</p>
       <div class="radio-group" id="formatGroup">
         <div class="radio-option selected" data-value="simple" onclick="selectRadio('formatGroup', this); updateFormatPreview()">
           <span class="radio-label">Simple</span>
@@ -583,31 +608,37 @@
     </div>
   </section>
 
-  <!-- Section 5: Inside the summary -->
+  <!-- 5: Inside the summary -->
   <section id="summary-detail" class="guide-section">
     <div class="section-inner">
       <div class="section-divider"></div>
-      <h2>Tap a summary to see the full breakdown.</h2>
+      <h2>There's more detail inside.</h2>
+      <p>When you open the forecast event in your calendar, you'll see a breakdown of the full day — morning through night, with the weather and temperature for each part:</p>
 
-      <div class="detail-preview">
-        <div class="line"><span class="label">Morning</span> ☁️ 6°C</div>
-        <div class="line"><span class="label">Midday</span> ⛅ 10°C</div>
-        <div class="line"><span class="label">Afternoon</span> ☀️ 14°C</div>
-        <div class="line"><span class="label">Evening</span> ☁️ 11°C</div>
-        <div class="line"><span class="label">Night</span> ☁️ 7°C</div>
+      <div class="mock-event-expanded">
+        <div class="event-header">☁️8° → ☀️14°C</div>
+        <div class="event-body">
+          <div class="line"><span class="time-label">Morning</span> ☁️ 6°C</div>
+          <div class="line"><span class="time-label">Midday</span> ⛅ 10°C</div>
+          <div class="line"><span class="time-label">Afternoon</span> ☀️ 14°C</div>
+          <div class="line"><span class="time-label">Evening</span> ☁️ 11°C</div>
+          <div class="line"><span class="time-label">Night</span> ☁️ 7°C</div>
+        </div>
+        <div class="event-footer">
+          ⚙️ weathercal.app/settings
+        </div>
       </div>
 
-      <p>Five time blocks, each with the expected weather and temperature. This is your full picture for the day.</p>
+      <p class="muted">Think of the title as the quick glance and this as the full picture — everything you need to plan your day.</p>
     </div>
   </section>
 
-  <!-- Section 6: Warnings -->
+  <!-- 6: Warnings -->
   <section id="warnings" class="guide-section">
     <div class="section-inner">
       <div class="section-divider"></div>
-      <h2>When bad weather is coming, your summary tells you.</h2>
-
-      <p>Warning emoji replace the weather emoji when conditions are expected. Try it:</p>
+      <h2>We'll also let you know when the weather gets rough.</h2>
+      <p>When rain, wind, snow, or extreme temperatures are in the forecast, the emoji in your daily summary changes to give you a heads-up. Try toggling these to see how it works:</p>
 
       <div class="warning-toggles" id="warningToggles">
         <span class="warning-pill" data-type="rain" onclick="toggleWarning(this)">☂️ Rain</span>
@@ -619,15 +650,9 @@
 
       <div class="preview-box" id="warningPreview">☀️12° → ☀️18°C</div>
 
-      <div class="emoji-ref">
-        <div class="emoji-ref-item">☂️ Rain expected</div>
-        <div class="emoji-ref-item">❄️ Snow expected</div>
-        <div class="emoji-ref-item">🌬️ Strong wind</div>
-        <div class="emoji-ref-item">🥶 Below your cold threshold</div>
-        <div class="emoji-ref-item">🥵 Above your hot threshold</div>
-      </div>
+      <p>The warning emoji replaces the normal weather emoji for that half of the day. So if it's going to rain in the morning, you'll see ☂️ instead of ☀️ — at a glance, before you even open the event.</p>
 
-      <p style="margin-top:24px"><strong>Set your thresholds</strong></p>
+      <p>For cold and heat warnings, you decide what counts as "cold" or "hot":</p>
 
       <div class="guide-card">
         <p style="margin:0 0 8px">🥶 <strong>Cold</strong> — warn me below</p>
@@ -635,7 +660,7 @@
           <input type="number" id="coldThreshold" value="3" min="-30" max="40" step="1" oninput="updateWarningPreview()">
           <span class="unit">°C</span>
         </div>
-        <p class="tip">If cold warnings are too frequent in winter, raise this.</p>
+        <p class="tip">Seeing 🥶 too often? Raise this number.</p>
       </div>
 
       <div class="guide-card">
@@ -646,7 +671,7 @@
         </div>
       </div>
 
-      <p style="margin-top:20px"><strong>Show in my daily summary</strong></p>
+      <p class="label-sm">Show these warnings in my daily summary</p>
       <div>
         <div class="toggle-row checked" onclick="toggleCheck(this)"><span class="toggle-box"></span> ☂️ Rain</div>
         <div class="toggle-row checked" onclick="toggleCheck(this)"><span class="toggle-box"></span> ❄️ Snow</div>
@@ -657,11 +682,12 @@
     </div>
   </section>
 
-  <!-- Section 7: Weather alerts -->
+  <!-- 7: Weather alerts -->
   <section id="weather-alerts" class="guide-section">
     <div class="section-inner">
       <div class="section-divider"></div>
-      <h2>Get alerts for the exact hours when bad weather hits.</h2>
+      <h2>Want to know exactly when the bad weather hits?</h2>
+      <p>Weather alerts are separate events that show you the specific hours — so you can plan around them.</p>
 
       <div style="margin:16px 0">
         <div class="mock-event" style="border-left-color:#9e9e9e">
@@ -678,9 +704,9 @@
         </div>
       </div>
 
-      <p>Your daily summary gives you the overview. Weather alerts tell you <strong>exactly when</strong> — so you know to grab an umbrella before your 3pm pickup.</p>
+      <p>The daily summary tells you <em>what</em> to expect. Alerts tell you <em>when</em> — so you know to grab an umbrella before that 3pm pickup.</p>
 
-      <p style="margin-top:20px"><strong>Which alerts do you want?</strong></p>
+      <p class="label-sm">Which alerts do you want?</p>
       <div>
         <div class="toggle-row checked" onclick="toggleCheck(this)"><span class="toggle-box"></span> ☂️ Rain</div>
         <div class="toggle-row checked" onclick="toggleCheck(this)"><span class="toggle-box"></span> ❄️ Snow</div>
@@ -688,22 +714,22 @@
         <div class="toggle-row checked" onclick="toggleCheck(this)"><span class="toggle-box"></span> 🥶 Cold</div>
         <div class="toggle-row checked" onclick="toggleCheck(this)"><span class="toggle-box"></span> 🥵 Heat</div>
       </div>
-      <p class="tip">Cold alerts can fill your calendar in winter. Turn it off if it gets noisy.</p>
+      <p class="tip">Cold alerts can fill your calendar in winter if your threshold is set high. Turn them off if it gets noisy.</p>
     </div>
   </section>
 
-  <!-- Section 8: Nice weather -->
+  <!-- 8: Nice weather -->
   <section id="nice-weather" class="guide-section">
     <div class="section-inner">
       <div class="section-divider"></div>
-      <h2>Know when the weather is great.</h2>
+      <h2>We don't just warn you about bad weather.</h2>
 
       <div class="mock-event" style="border-left-color:#f9a825; margin:16px 0">
         <div class="event-time">11:00 AM – 6:00 PM</div>
         <div class="event-title">☀️ Nice weather — enjoy!</div>
       </div>
 
-      <p>When it's sunny and above your threshold, you'll get an alert. Think of it as your "go outside" signal.</p>
+      <p>When the forecast is sunny and above your threshold, you'll get a nice weather alert. Think of it as your "go outside" signal.</p>
 
       <div class="guide-card" style="margin-top:16px">
         <p style="margin:0 0 8px">☀️ <strong>Nice weather</strong> above</p>
@@ -718,52 +744,51 @@
     </div>
   </section>
 
-  <!-- Section 9: Finding settings -->
+  <!-- 9: Finding settings -->
   <section id="find-settings" class="guide-section">
     <div class="section-inner">
       <div class="section-divider"></div>
-      <h2>You can change all of this anytime.</h2>
+      <h2>You can change any of this later.</h2>
+      <p>Every forecast event in your calendar has a settings link at the bottom. Here's what it looks like:</p>
 
-      <div class="detail-preview" style="padding-bottom:20px">
-        <div class="line"><span class="label">Morning</span> ☁️ 6°C</div>
-        <div class="line"><span class="label">Midday</span> ⛅ 10°C</div>
-        <div class="line"><span class="label">Afternoon</span> ☀️ 14°C</div>
-        <div class="line"><span class="label">Evening</span> ☁️ 11°C</div>
-        <div class="line"><span class="label">Night</span> ☁️ 7°C</div>
-        <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border); font-size:0.85rem">
-          <span class="settings-link-highlight">⚙️ weathercal.app/settings</span>
+      <div class="mock-event-expanded">
+        <div class="event-header">☁️8° → ☀️14°C</div>
+        <div class="event-body">
+          <div class="line"><span class="time-label">Morning</span> ☁️ 6°C</div>
+          <div class="line"><span class="time-label">Afternoon</span> ☀️ 14°C</div>
+          <div class="line"><span class="time-label">Evening</span> ☁️ 11°C</div>
         </div>
-        <div style="font-size:0.82rem; color:var(--text-muted); margin-top:4px">
-          ✉️ hello@weathercal.app
+        <div class="event-footer">
+          <span class="settings-link-highlight">⚙️ weathercal.app/settings</span><br>
+          <span style="margin-top:4px; display:inline-block">✉️ hello@weathercal.app</span>
         </div>
       </div>
 
-      <p>Every forecast event has a settings link at the bottom. Tap it to adjust anything.</p>
-      <p class="muted">You can also redo this guide anytime from your settings page.</p>
+      <p class="muted">Just open any forecast event and look for the ⚙️ link. You can also redo this guide anytime from your settings page.</p>
     </div>
   </section>
 
-  <!-- Section 10: Connect -->
+  <!-- 10: Connect -->
   <section id="connect" class="guide-section">
     <div class="section-inner">
       <div class="section-divider"></div>
-      <h2>Last step — add WeatherCal to your calendar.</h2>
+      <h2>Last step — connect your calendar.</h2>
 
       <div class="btn-group">
         <div class="btn-option" onclick="this.style.borderColor='var(--accent)'">
-          <div class="opt-badge">Recommended</div>
+          <span class="badge-rec">Recommended</span>
           <div class="opt-title">Google Calendar</div>
           <div class="opt-desc">Automatic updates — your forecast stays current without you doing anything.</div>
         </div>
         <div class="btn-option" onclick="this.style.borderColor='var(--accent)'">
           <div class="opt-title">Calendar subscription (ICS)</div>
-          <div class="opt-desc">Works with Apple Calendar, Outlook, or any app. Refreshes periodically.</div>
+          <div class="opt-desc">Works with Apple Calendar, Outlook, or any app that supports subscriptions.</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Section 11: Done -->
+  <!-- 11: Done -->
   <section id="done" class="guide-section">
     <div class="section-inner">
       <div class="section-divider" style="margin:0 auto 20px"></div>
@@ -791,9 +816,20 @@
 <script>
 // --- Radio selection ---
 function selectRadio(groupId, el) {
-  var group = document.getElementById(groupId);
-  group.querySelectorAll('.radio-option').forEach(function(o) { o.classList.remove('selected'); });
+  document.getElementById(groupId).querySelectorAll('.radio-option').forEach(function(o) { o.classList.remove('selected'); });
   el.classList.add('selected');
+}
+
+// --- Location → auto-select °F for US ---
+var US_PATTERNS = /\b(USA|United States|US$|, [A-Z]{2}$|New York|Los Angeles|Chicago|Houston|Phoenix|Philadelphia|San Antonio|San Diego|Dallas|Austin|Seattle|Denver|Boston|Miami|Atlanta|Portland|Nashville|Charlotte|San Francisco|Las Vegas|Washington DC)\b/i;
+function checkLocationForUnit() {
+  var val = document.getElementById('locationInput').value;
+  var group = document.getElementById('unitGroup');
+  var opts = group.querySelectorAll('.radio-option');
+  if (US_PATTERNS.test(val)) {
+    opts[0].classList.remove('selected');
+    opts[1].classList.add('selected');
+  }
 }
 
 // --- Format preview ---
@@ -811,66 +847,77 @@ function updateFormatPreview() {
 }
 
 // --- Checkbox toggle ---
-function toggleCheck(el) {
-  el.classList.toggle('checked');
-}
+function toggleCheck(el) { el.classList.toggle('checked'); }
 
 // --- Warning preview ---
 var activeWarnings = {};
-
 function toggleWarning(el) {
   var type = el.getAttribute('data-type');
   el.classList.toggle('active');
   activeWarnings[type] = el.classList.contains('active');
   updateWarningPreview();
 }
-
 function getWarningEmoji(half) {
-  // For the preview, warnings apply to AM half
   if (half === 'am') {
-    var emojis = '';
-    if (activeWarnings.rain) emojis += '☂️';
-    if (activeWarnings.snow) emojis += '❄️';
-    if (activeWarnings.wind) emojis += '🌬️';
-    if (activeWarnings.cold) emojis += '🥶';
-    if (activeWarnings.hot) emojis += '🥵';
-    return emojis || null;
+    var e = '';
+    if (activeWarnings.rain) e += '☂️';
+    if (activeWarnings.snow) e += '❄️';
+    if (activeWarnings.wind) e += '🌬️';
+    if (activeWarnings.cold) e += '🥶';
+    if (activeWarnings.hot) e += '🥵';
+    return e || null;
   }
   return null;
 }
-
 function updateWarningPreview() {
-  var amEmoji = getWarningEmoji('am') || '☀️';
-  var pmEmoji = '☀️';
-  var el = document.getElementById('warningPreview');
-  el.textContent = amEmoji + '12° → ' + pmEmoji + '18°C';
+  var am = getWarningEmoji('am') || '☀️';
+  document.getElementById('warningPreview').textContent = am + '12° → ☀️18°C';
 }
 
-// --- Sun animation (scroll-linked parabolic arc) ---
+// --- Generate drifting background clouds ---
+(function() {
+  var bg = document.getElementById('guideBg');
+  var isMobile = window.innerWidth < 640;
+  var defs = isMobile ? [
+    { top: 8, size: 10, dur: 50, delay: -15 },
+    { top: 30, size: 7, dur: 62, delay: -28 },
+    { top: 55, size: 13, dur: 45, delay: -10 },
+    { top: 78, size: 8, dur: 58, delay: -35 },
+  ] : [
+    { top: 5, size: 14, dur: 55, delay: -12 },
+    { top: 18, size: 8, dur: 68, delay: -25 },
+    { top: 32, size: 18, dur: 46, delay: -38 },
+    { top: 48, size: 10, dur: 62, delay: -18 },
+    { top: 62, size: 16, dur: 50, delay: -30 },
+    { top: 78, size: 9, dur: 72, delay: -8 },
+    { top: 90, size: 12, dur: 44, delay: -42 },
+  ];
+  var frag = document.createDocumentFragment();
+  for (var i = 0; i < defs.length; i++) {
+    var d = defs[i];
+    var el = document.createElement('span');
+    el.className = 'cloud-particle';
+    el.textContent = '\u2601\uFE0F';
+    el.style.cssText = 'top:' + d.top + '%;left:-40%;font-size:' + d.size + 'rem;'
+      + 'animation:cloud-drift ' + d.dur + 's linear ' + d.delay + 's infinite;';
+    frag.appendChild(el);
+  }
+  bg.appendChild(frag);
+})();
+
+// --- Sun animation + background gradient ---
 (function() {
   var sun = document.getElementById('guideSun');
   var bg = document.getElementById('guideBg');
   var ticking = false;
-
-  // Background colors for each phase
-  var bgColors = [
-    '#FFF8E1',  // sunrise warm
-    '#FFF8E1',  // morning
-    '#FFFDE7',  // late morning
-    '#FFF9C4',  // noon (brightest)
-    '#FFF8E1',  // afternoon
-    '#FFE0B2',  // golden hour
-    '#FFCCBC',  // sunset
-    '#E8EAF6',  // twilight
-  ];
+  var bgColors = ['#FFF8E1','#FFF8E1','#FFFDE7','#FFF9C4','#FFF8E1','#FFE0B2','#FFCCBC','#E8EAF6'];
 
   function lerp(a, b, t) { return a + (b - a) * t; }
-
   function lerpColor(c1, c2, t) {
-    var r1 = parseInt(c1.slice(1,3),16), g1 = parseInt(c1.slice(3,5),16), b1 = parseInt(c1.slice(5,7),16);
-    var r2 = parseInt(c2.slice(1,3),16), g2 = parseInt(c2.slice(3,5),16), b2 = parseInt(c2.slice(5,7),16);
-    var r = Math.round(lerp(r1,r2,t)), g = Math.round(lerp(g1,g2,t)), b = Math.round(lerp(b1,b2,t));
-    return '#' + ((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+    var r1=parseInt(c1.slice(1,3),16), g1=parseInt(c1.slice(3,5),16), b1=parseInt(c1.slice(5,7),16);
+    var r2=parseInt(c2.slice(1,3),16), g2=parseInt(c2.slice(3,5),16), b2=parseInt(c2.slice(5,7),16);
+    var r=Math.round(lerp(r1,r2,t)), g=Math.round(lerp(g1,g2,t)), b=Math.round(lerp(b1,b2,t));
+    return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
   }
 
   function update() {
@@ -878,53 +925,34 @@ function updateWarningPreview() {
     var scrollY = window.scrollY || window.pageYOffset;
     var maxScroll = document.documentElement.scrollHeight - window.innerHeight;
     if (maxScroll <= 0) return;
-
     var progress = Math.min(1, Math.max(0, scrollY / maxScroll));
 
-    // Sun arc
-    var vw = window.innerWidth;
-    var vh = window.innerHeight;
+    var vw = window.innerWidth, vh = window.innerHeight;
     var sunX = -vw * 0.05 + progress * vw * 1.1;
     var peakHeight = vh * 0.65;
     var sunY = vh * 0.8 - 4 * peakHeight * progress * (1 - progress);
-    var sunOpacity = progress < 0.05 ? (progress / 0.05)
-      : progress > 0.9 ? ((1 - progress) / 0.1)
-      : 1;
-
+    var sunOpacity = progress < 0.05 ? (progress / 0.05) : progress > 0.9 ? ((1 - progress) / 0.1) : 1;
     sun.style.opacity = sunOpacity;
     sun.style.transform = 'translate3d(' + sunX.toFixed(1) + 'px,' + sunY.toFixed(1) + 'px,0)';
 
-    // Background color
     var segment = progress * (bgColors.length - 1);
     var idx = Math.min(Math.floor(segment), bgColors.length - 2);
-    var t = segment - idx;
-    bg.style.background = lerpColor(bgColors[idx], bgColors[idx + 1], t);
+    bg.style.background = lerpColor(bgColors[idx], bgColors[idx + 1], segment - idx);
   }
 
-  function requestUpdate() {
-    if (!ticking) {
-      ticking = true;
-      requestAnimationFrame(update);
-    }
-  }
-
-  window.addEventListener('scroll', requestUpdate, { passive: true });
-  window.addEventListener('resize', requestUpdate);
+  function req() { if (!ticking) { ticking = true; requestAnimationFrame(update); } }
+  window.addEventListener('scroll', req, { passive: true });
+  window.addEventListener('resize', req);
   update();
 
-  // --- Section fade-in via IntersectionObserver ---
+  // Section fade-in
   var sections = document.querySelectorAll('.guide-section');
   if ('IntersectionObserver' in window) {
-    var observer = new IntersectionObserver(function(entries) {
-      entries.forEach(function(entry) {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-        }
-      });
+    var obs = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('visible'); });
     }, { threshold: 0.15 });
-    sections.forEach(function(s) { observer.observe(s); });
+    sections.forEach(function(s) { obs.observe(s); });
   } else {
-    // Fallback: show everything
     sections.forEach(function(s) { s.classList.add('visible'); });
   }
 })();

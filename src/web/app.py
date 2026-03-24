@@ -166,6 +166,11 @@ async def landing(request: Request):
     return _template("landing.html", request)
 
 
+@app.get("/guide", response_class=HTMLResponse)
+async def guide(request: Request):
+    return _template("guide.html", request)
+
+
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_get(request: Request):
     increment_page_view(DB_PATH, "/signup")

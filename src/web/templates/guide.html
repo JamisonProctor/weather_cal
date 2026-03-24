@@ -319,8 +319,7 @@
   <!-- 4: Daily summary -->
   <section id="daily-summary" class="guide-section">
     <div class="inner">
-      <h2>Your daily forecast</h2>
-      <p>Each day, a forecast event appears at the top of your calendar. Here's what it looks like:</p>
+      <h2>Your daily summary</h2>
 
       <div class="cal-mock">
         <div class="cal-mock-header">Tuesday, March 24</div>
@@ -337,9 +336,9 @@
         </div>
       </div>
 
-      <p>The two temperatures are <strong>morning</strong> and <strong>afternoon</strong>, not high and low. The emoji shows the weather for each half of the day.</p>
+      <p>Each day, an all-day event appears at the top of your calendar with a summary of the day's weather. The two temperatures are <strong>morning</strong> and <strong>afternoon</strong> — not high and low. The emoji shows the expected weather for each half of the day.</p>
 
-      <p class="label-sm">Format</p>
+      <p class="label-sm">Choose your format</p>
       <div class="radio-group" id="formatGroup">
         <div class="radio-option selected" data-value="simple" onclick="selectRadio('formatGroup',this);updateFormat()"><span class="rl">Simple</span><span class="rd">☁️8° → ☀️14°C</span></div>
         <div class="radio-option" data-value="ampm" onclick="selectRadio('formatGroup',this);updateFormat()"><span class="rl">AM / PM</span><span class="rd">AM☁️8° / PM☀️14°C</span></div>
@@ -350,8 +349,8 @@
   <!-- 5: Inside the event -->
   <section id="summary-detail" class="guide-section">
     <div class="inner">
-      <h2>Open it for the full picture</h2>
-      <p>When you click on the forecast event in your calendar, you'll see the weather broken down across five parts of the day:</p>
+      <h2>The full breakdown</h2>
+      <p>When you click on the daily summary in your calendar, you'll see the weather broken down across your day:</p>
 
       <div class="cal-expanded">
         <div class="cal-expanded-title">☁️8° → ☀️14°C</div>
@@ -365,7 +364,7 @@
         <div class="cal-expanded-footer">⚙️ weathercal.app/settings</div>
       </div>
 
-      <p class="muted">The title is your quick glance. This is the full detail — everything you need to plan your day.</p>
+      <p class="muted">The title gives you the quick glance. Open it when you want the full picture.</p>
     </div>
   </section>
 
@@ -373,7 +372,7 @@
   <section id="warnings" class="guide-section">
     <div class="inner">
       <h2>Weather warnings</h2>
-      <p>When rain, snow, wind, or extreme temperatures are expected, the emoji in your forecast changes to warn you. Toggle these to see:</p>
+      <p>When bad weather is in the forecast, the emoji in your daily summary changes to warn you at a glance. Try it — toggle a condition and watch the summary update:</p>
 
       <div class="warning-toggles" id="warningToggles">
         <span class="warning-pill" data-type="rain" onclick="toggleWarning(this)">☂️ Rain</span>
@@ -385,25 +384,26 @@
 
       <div class="preview-inline" id="warningPreview">☀️12° → ☀️18°C</div>
 
-      <p>You control when cold and heat warnings trigger:</p>
+      <p>Cold and heat warnings depend on your thresholds. Change these to see how they affect the summary above:</p>
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin:6px 0">
         <div>
           <span style="font-size:0.88rem">🥶 Cold below</span>
-          <div class="threshold-input"><input type="number" id="coldThreshold" value="3" min="-30" max="40" oninput="updateWarningPreview()"><span class="u">°C</span></div>
+          <div class="threshold-input"><input type="number" id="coldThreshold" value="3" min="-30" max="40" oninput="updateThresholdWarnings()"><span class="u">°C</span></div>
         </div>
         <div>
           <span style="font-size:0.88rem">🥵 Hot above</span>
-          <div class="threshold-input"><input type="number" id="hotThreshold" value="28" min="0" max="60" oninput="updateWarningPreview()"><span class="u">°C</span></div>
+          <div class="threshold-input"><input type="number" id="hotThreshold" value="28" min="0" max="60" oninput="updateThresholdWarnings()"><span class="u">°C</span></div>
         </div>
       </div>
+      <p class="tip" id="thresholdHint"></p>
     </div>
   </section>
 
   <!-- 7: Weather alerts -->
   <section id="weather-alerts" class="guide-section">
     <div class="inner">
-      <h2>Timed weather alerts</h2>
-      <p>Separate events that show exactly when bad weather is expected — so you can plan around it.</p>
+      <h2>Weather alerts</h2>
+      <p>In addition to your daily summary, you can get separate calendar events that show exactly when bad weather is expected — so you can plan around it.</p>
 
       <div class="cal-mock">
         <div class="cal-mock-header">Wednesday, March 25</div>
@@ -552,6 +552,8 @@ function updateFormat() {
 function toggleCheck(el) { el.classList.toggle('checked'); }
 
 // --- Warning preview ---
+// Example day: morning 12°, afternoon 18°
+var EXAMPLE_AM = 12, EXAMPLE_PM = 18;
 var aw = {};
 function toggleWarning(el) {
   var t = el.getAttribute('data-type');
@@ -559,14 +561,33 @@ function toggleWarning(el) {
   aw[t] = el.classList.contains('active');
   updateWarningPreview();
 }
+function updateThresholdWarnings() {
+  var cold = parseInt(document.getElementById('coldThreshold').value) || 3;
+  var hot = parseInt(document.getElementById('hotThreshold').value) || 28;
+  var hint = document.getElementById('thresholdHint');
+  // Auto-toggle cold/hot pills based on whether thresholds trigger on example day
+  var coldPill = document.querySelector('[data-type="cold"]');
+  var hotPill = document.querySelector('[data-type="hot"]');
+  if (EXAMPLE_AM < cold) { coldPill.classList.add('active'); aw.cold = true; }
+  else { coldPill.classList.remove('active'); aw.cold = false; }
+  if (EXAMPLE_PM > hot) { hotPill.classList.add('active'); aw.hot = true; }
+  else { hotPill.classList.remove('active'); aw.hot = false; }
+  // Hint text
+  var hints = [];
+  if (EXAMPLE_AM < cold) hints.push('Morning is ' + EXAMPLE_AM + '° — below ' + cold + '°, so 🥶 appears.');
+  if (EXAMPLE_PM > hot) hints.push('Afternoon is ' + EXAMPLE_PM + '° — above ' + hot + '°, so 🥵 appears.');
+  if (hints.length === 0 && (cold > 0 || hot < 40)) hints.push('On this example day, neither threshold is triggered.');
+  hint.textContent = hints.join(' ');
+  updateWarningPreview();
+}
 function updateWarningPreview() {
-  var e = '';
-  if (aw.rain) e += '☂️';
-  if (aw.snow) e += '❄️';
-  if (aw.wind) e += '🌬️';
-  if (aw.cold) e += '🥶';
-  if (aw.hot) e += '🥵';
-  document.getElementById('warningPreview').textContent = (e || '☀️') + '12° → ☀️18°C';
+  var amE = '', pmE = '';
+  if (aw.rain) { amE += '☂️'; }
+  if (aw.snow) { amE += '❄️'; }
+  if (aw.wind) { amE += '🌬️'; }
+  if (aw.cold) { amE += '🥶'; }
+  if (aw.hot) { pmE += '🥵'; }
+  document.getElementById('warningPreview').textContent = (amE || '☀️') + EXAMPLE_AM + '° → ' + (pmE || '☀️') + EXAMPLE_PM + '°C';
 }
 
 // --- Background: landing page clouds + sun (exact match) ---

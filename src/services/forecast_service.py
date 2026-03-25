@@ -135,7 +135,7 @@ class ForecastService:
         params = {
             "latitude": lat,
             "longitude": lon,
-            "hourly": "temperature_2m,apparent_temperature_2m,weathercode,precipitation_probability,precipitation,windspeed_10m,wind_gusts_10m",
+            "hourly": "temperature_2m,apparent_temperature,weather_code,precipitation_probability,precipitation,wind_speed_10m,wind_gusts_10m",
             "timezone": tz,
             "forecast_days": forecast_days,
         }
@@ -152,11 +152,11 @@ class ForecastService:
 
         times = data["hourly"]["time"]
         temps = data["hourly"]["temperature_2m"]
-        apparent_temps = data["hourly"].get("apparent_temperature_2m", temps)
-        codes = data["hourly"]["weathercode"]
+        apparent_temps = data["hourly"].get("apparent_temperature", data["hourly"].get("apparent_temperature_2m", temps))
+        codes = data["hourly"].get("weather_code", data["hourly"].get("weathercode", [0]*len(times)))
         rain_probs = data["hourly"].get("precipitation_probability", [0]*len(times))
         precip = data["hourly"].get("precipitation", [0]*len(times))
-        winds = data["hourly"].get("windspeed_10m", [0]*len(times))
+        winds = data["hourly"].get("wind_speed_10m", data["hourly"].get("windspeed_10m", [0]*len(times)))
         gusts = data["hourly"].get("wind_gusts_10m", [0]*len(times))
 
         daily_data = {}
@@ -206,11 +206,11 @@ class ForecastService:
         """Parse an hourly data block into a list of Forecast objects."""
         times = hourly["time"]
         temps = hourly["temperature_2m"]
-        apparent_temps = hourly.get("apparent_temperature_2m", temps)
-        codes = hourly["weathercode"]
+        apparent_temps = hourly.get("apparent_temperature", hourly.get("apparent_temperature_2m", temps))
+        codes = hourly.get("weather_code", hourly.get("weathercode", [0] * len(times)))
         rain_probs = hourly.get("precipitation_probability", [0] * len(times))
         precip = hourly.get("precipitation", [0] * len(times))
-        winds = hourly.get("windspeed_10m", [0] * len(times))
+        winds = hourly.get("wind_speed_10m", hourly.get("windspeed_10m", [0] * len(times)))
         gusts = hourly.get("wind_gusts_10m", [0] * len(times))
 
         daily_data = {}
@@ -277,7 +277,7 @@ class ForecastService:
         params = {
             "latitude": lats,
             "longitude": lons,
-            "hourly": "temperature_2m,apparent_temperature_2m,weathercode,precipitation_probability,precipitation,windspeed_10m,wind_gusts_10m",
+            "hourly": "temperature_2m,apparent_temperature,weather_code,precipitation_probability,precipitation,wind_speed_10m,wind_gusts_10m",
         }
 
         if start_date and end_date:

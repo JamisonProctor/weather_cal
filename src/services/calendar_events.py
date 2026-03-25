@@ -129,11 +129,12 @@ def _format_window_description(forecast: Forecast, window, prefs=None) -> str:
     start = datetime.fromisoformat(window.start_time)
     end = datetime.fromisoformat(window.end_time)
 
-    temps, precips, chances, winds, codes = [], [], [], [], []
+    temps, precips, chances, winds, gusts, codes = [], [], [], [], [], []
     precip_list = forecast.precipitation or [0] * len(forecast.times)
-    for t, temp, code, rain, wind, precip in zip(
+    gust_list = forecast.gusts or [0] * len(forecast.times)
+    for t, temp, code, rain, wind, precip, gust in zip(
         forecast.times, forecast.temps, forecast.codes, forecast.rain,
-        forecast.winds, precip_list
+        forecast.winds, precip_list, gust_list
     ):
         dt = datetime.fromisoformat(t)
         if dt < start or dt >= end:
@@ -148,6 +149,8 @@ def _format_window_description(forecast: Forecast, window, prefs=None) -> str:
             chances.append(round(rain))
         if wind is not None:
             winds.append(wind)
+        if gust is not None:
+            gusts.append(gust)
 
     lines = []
     warning_types = getattr(window, "warning_types", [])
@@ -167,11 +170,15 @@ def _format_window_description(forecast: Forecast, window, prefs=None) -> str:
         else:
             lines.append(f"{emoji} {total:.1f}mm total")
 
-    # Wind line — only if notable (>= 30 km/h)
+    # Wind line — show peak gust if available, else peak sustained wind
+    strong_gusts = [g for g in gusts if g >= 30]
     strong_winds = [w for w in winds if w >= 30]
-    if strong_winds:
-        peak = round(max(strong_winds))
+    if strong_gusts:
+        peak = round(max(strong_gusts))
         lines.append(f"\U0001f4a8 Gusts to {peak} km/h")
+    elif strong_winds:
+        peak = round(max(strong_winds))
+        lines.append(f"\U0001f4a8 Wind to {peak} km/h")
 
     # Temperature line — 🥶 for cold, 🥵 for hot, 🌡️ otherwise
     if temps:

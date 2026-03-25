@@ -117,7 +117,7 @@ def test_format_detailed_forecast_no_warnings():
     assert "⚠️" not in description
 
 
-def _make_forecast(times, temps, codes, rain, winds, precipitation=None):
+def _make_forecast(times, temps, codes, rain, winds, precipitation=None, gusts=None):
     return Forecast(
         date="2025-08-01",
         location="Munich",
@@ -129,6 +129,7 @@ def _make_forecast(times, temps, codes, rain, winds, precipitation=None):
         rain=rain,
         precipitation=precipitation or [0]*len(times),
         winds=winds,
+        gusts=gusts or [0]*len(times),
     )
 
 
@@ -743,3 +744,85 @@ def test_bridging_type_does_not_chain_incompatible():
     assert len(merged) == 2
     assert set(merged[0].warning_types) == {"cold", "wind"}
     assert merged[1].warning_types == ["sunny"]
+
+
+# --- Wind gust tests ---
+
+
+def test_get_warning_windows_wind_triggered_by_gusts():
+    """Sustained wind below threshold but gusts above → wind warning fires."""
+    forecast = _make_forecast(
+        times=["2025-08-01T10:00", "2025-08-01T11:00", "2025-08-01T12:00"],
+        temps=[15, 15, 15],
+        codes=[1, 1, 1],
+        rain=[0, 0, 0],
+        winds=[20, 25, 20],
+        gusts=[55, 60, 55],
+    )
+    windows = get_warning_windows(forecast)
+    wind = [w for w in windows if w.warning_type == "wind"]
+    assert len(wind) == 1
+    assert wind[0].start_time == "2025-08-01T10:00"
+    assert wind[0].end_time == "2025-08-01T13:00"
+
+
+def test_get_warning_windows_gusts_below_threshold_no_wind_warning():
+    """Both sustained and gusts below thresholds → no wind warning."""
+    forecast = _make_forecast(
+        times=["2025-08-01T10:00", "2025-08-01T11:00"],
+        temps=[15, 15],
+        codes=[1, 1],
+        rain=[0, 0],
+        winds=[25, 28],
+        gusts=[40, 45],
+    )
+    windows = get_warning_windows(forecast)
+    wind = [w for w in windows if w.warning_type == "wind"]
+    assert len(wind) == 0
+
+
+def test_sunny_window_blocked_by_gusts():
+    """Nice weather conditions but gusts >= threshold → no sunny window."""
+    forecast = _make_forecast(
+        times=["2025-08-01T10:00", "2025-08-01T11:00", "2025-08-01T12:00"],
+        temps=[20, 22, 21],
+        codes=[0, 1, 0],
+        rain=[0, 0, 0],
+        winds=[5, 5, 5],
+        gusts=[55, 60, 55],
+    )
+    windows = get_warning_windows(forecast, prefs=_SUNNY_PREFS)
+    sunny = [w for w in windows if w.warning_type == "sunny"]
+    assert len(sunny) == 0
+
+
+def test_sunny_window_passes_with_low_gusts():
+    """Nice weather conditions with gusts below threshold → sunny window fires."""
+    forecast = _make_forecast(
+        times=["2025-08-01T10:00", "2025-08-01T11:00", "2025-08-01T12:00"],
+        temps=[20, 22, 21],
+        codes=[0, 1, 0],
+        rain=[0, 0, 0],
+        winds=[5, 5, 5],
+        gusts=[30, 35, 30],
+    )
+    windows = get_warning_windows(forecast, prefs=_SUNNY_PREFS)
+    sunny = [w for w in windows if w.warning_type == "sunny"]
+    assert len(sunny) == 1
+
+
+def test_collect_warnings_wind_from_gusts():
+    """All-day summary shows wind emoji when only gusts exceed threshold."""
+    forecast = _make_forecast(
+        times=["2025-08-01T12:00", "2025-08-01T13:00"],
+        temps=[15, 15],
+        codes=[1, 1],
+        rain=[0, 0],
+        winds=[20, 25],
+        gusts=[55, 60],
+    )
+    prefs = {"allday_wind": 1, "allday_rain": 1, "allday_cold": 1,
+             "allday_snow": 1, "allday_sunny": 0, "allday_hot": 0,
+             "warn_in_allday": 1}
+    summary = format_summary(forecast, prefs)
+    assert "🌬️" in summary

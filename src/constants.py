@@ -10,6 +10,11 @@ HOT_TEMP_THRESHOLD = 28
 WARM_TEMP_THRESHOLD = 14
 MIN_SUNNY_HOURS = 2
 
+# Forecast alerting thresholds
+STALENESS_THRESHOLD_HOURS = 4
+CONSECUTIVE_FAILURE_THRESHOLD = 3
+ALERT_COOLDOWN_HOURS = 6
+
 DEFAULT_PREFS = {
     "cold_threshold": 3.0,
     "warn_in_allday": 1,

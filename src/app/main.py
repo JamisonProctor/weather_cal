@@ -16,6 +16,7 @@ from src.integrations.google_push import (
     push_events_for_user,
 )
 from src.constants import DEFAULT_PREFS
+from src.services.forecast_alerts import check_and_alert, log_refresh_result
 from src.web.db import get_user_preferences, get_user_locations, resolve_prefs
 
 setup_logging()
@@ -76,6 +77,7 @@ def refresh_tier1(locations: list[dict]):
     if not locations:
         return
     store = ForecastStore()
+    db_path = os.getenv("DB_PATH", "data/forecast.db")
     try:
         batch_result = ForecastService.fetch_forecasts_batch(
             locations, forecast_days=2,
@@ -83,8 +85,11 @@ def refresh_tier1(locations: list[dict]):
         for loc_name, forecasts in batch_result.items():
             _process_and_store(forecasts, store)
         logger.info("Tier 1 refresh complete for %d locations", len(locations))
-    except Exception:
+        log_refresh_result(db_path, "tier1", success=True)
+    except Exception as exc:
         logger.exception("Tier 1 refresh failed")
+        log_refresh_result(db_path, "tier1", success=False, error=str(exc))
+    check_and_alert(db_path)
     _push_google_calendars()
 
 
@@ -93,6 +98,7 @@ def refresh_tier2(locations: list[dict]):
     if not locations:
         return
     store = ForecastStore()
+    db_path = os.getenv("DB_PATH", "data/forecast.db")
     today = date.today()
     start = (today + timedelta(days=2)).isoformat()
     end = (today + timedelta(days=4)).isoformat()
@@ -103,8 +109,11 @@ def refresh_tier2(locations: list[dict]):
         for loc_name, forecasts in batch_result.items():
             _process_and_store(forecasts, store)
         logger.info("Tier 2 refresh complete for %d locations", len(locations))
-    except Exception:
+        log_refresh_result(db_path, "tier2", success=True)
+    except Exception as exc:
         logger.exception("Tier 2 refresh failed")
+        log_refresh_result(db_path, "tier2", success=False, error=str(exc))
+    check_and_alert(db_path)
     _push_google_calendars()
 
 
@@ -113,6 +122,7 @@ def refresh_tier3(locations: list[dict]):
     if not locations:
         return
     store = ForecastStore()
+    db_path = os.getenv("DB_PATH", "data/forecast.db")
     today = date.today()
     start = (today + timedelta(days=5)).isoformat()
     end = (today + timedelta(days=14)).isoformat()
@@ -123,8 +133,11 @@ def refresh_tier3(locations: list[dict]):
         for loc_name, forecasts in batch_result.items():
             _process_and_store(forecasts, store)
         logger.info("Tier 3 refresh complete for %d locations", len(locations))
-    except Exception:
+        log_refresh_result(db_path, "tier3", success=True)
+    except Exception as exc:
         logger.exception("Tier 3 refresh failed")
+        log_refresh_result(db_path, "tier3", success=False, error=str(exc))
+    check_and_alert(db_path)
     _push_google_calendars()
 
 
@@ -232,6 +245,11 @@ def schedule_jobs():
     # Daily reschedule at 00:00 UTC to handle DST transitions and new users
     reschedule_job = schedule.every().day.at("00:00").do(reschedule)
     reschedule_job.tag("reschedule")
+
+    # Hourly staleness check as safety net
+    db_path = os.getenv("DB_PATH", "data/forecast.db")
+    staleness_job = schedule.every(1).hours.do(check_and_alert, db_path=db_path)
+    staleness_job.tag("staleness_check")
 
     # Run tier 1 immediately on startup for all groups
     for offset, locations in tz_groups.items():

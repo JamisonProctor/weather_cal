@@ -72,10 +72,21 @@ def test_events_ics_excludes_past_events(client, insert_event):
 
 # --- /health ---
 
-def test_health_returns_ok(client):
+def test_health_returns_ok(client, db_path):
+    import sqlite3
+    from datetime import datetime, timezone
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "INSERT OR REPLACE INTO forecast (date, location, high, low, last_updated) "
+        "VALUES (?, ?, ?, ?, ?)",
+        ("2026-03-25", "Test", 15, 5, datetime.now(timezone.utc).isoformat()),
+    )
+    conn.commit()
+    conn.close()
     resp = client.get("/health")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ok"}
+    data = resp.json()
+    assert data["status"] == "ok"
 
 
 # --- Content-Disposition headers ---

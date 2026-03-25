@@ -157,7 +157,29 @@ def _template(name: str, request: Request, ctx: dict | None = None, **kwargs):
 
 @app.get("/health")
 async def health():
-    return JSONResponse({"status": "ok"})
+    from src.services.forecast_alerts import check_staleness
+    is_stale, last_updated, hours_since = check_staleness(DB_PATH)
+    recent_failures = -1
+    try:
+        from src.utils.db import get_connection
+        conn = get_connection(DB_PATH)
+        try:
+            row = conn.execute(
+                "SELECT COUNT(*) FROM forecast_refresh_log WHERE status = 'failure' "
+                "AND created_at > datetime('now', '-1 hour')"
+            ).fetchone()
+            recent_failures = row[0] if row else 0
+        finally:
+            conn.close()
+    except Exception:
+        pass
+    status = "degraded" if is_stale else "ok"
+    return JSONResponse(
+        {"status": status, "forecast_last_updated": last_updated,
+         "forecast_hours_stale": round(hours_since, 1) if hours_since is not None else None,
+         "recent_failures_1h": recent_failures},
+        status_code=200 if status == "ok" else 503,
+    )
 
 
 @app.get("/", response_class=HTMLResponse)

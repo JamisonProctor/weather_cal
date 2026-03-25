@@ -147,6 +147,27 @@ class ForecastStore:
             WHERE location LIKE '%,%'
         """)
         cur.execute("DELETE FROM forecast WHERE location LIKE '%,%'")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS forecast_alerts (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                alert_type      TEXT NOT NULL,
+                status          TEXT NOT NULL DEFAULT 'active',
+                created_at      TEXT NOT NULL,
+                resolved_at     TEXT,
+                alert_sent_at   TEXT,
+                recovery_sent_at TEXT,
+                details         TEXT
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS forecast_refresh_log (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                tier        TEXT NOT NULL,
+                status      TEXT NOT NULL,
+                created_at  TEXT NOT NULL,
+                error       TEXT
+            )
+        """)
         conn.commit()
         conn.close()
 

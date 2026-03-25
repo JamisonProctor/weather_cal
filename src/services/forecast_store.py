@@ -163,6 +163,7 @@ class ForecastStore:
             "rain": forecast.rain or [],
             "precipitation": forecast.precipitation or [],
             "winds": forecast.winds or [],
+            "gusts": forecast.gusts or [],
         })
         cur.execute("""
             INSERT INTO forecast (date, location, high, low, summary, description, last_updated, hourly_json, timezone)
@@ -217,6 +218,7 @@ class ForecastStore:
                 rain=hourly.get("rain", []),
                 precipitation=hourly.get("precipitation", []),
                 winds=hourly.get("winds", []),
+                gusts=hourly.get("gusts", []),
                 apparent_temps=hourly.get("apparent_temps", hourly.get("temps", [])),
                 timezone=row[8],
             ))
@@ -256,6 +258,7 @@ class ForecastStore:
                 rain=hourly.get("rain", []),
                 precipitation=hourly.get("precipitation", []),
                 winds=hourly.get("winds", []),
+                gusts=hourly.get("gusts", []),
                 apparent_temps=hourly.get("apparent_temps", hourly.get("temps", [])),
                 timezone=row[8],
             ))

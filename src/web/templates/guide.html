@@ -274,21 +274,12 @@
 
 <div class="guide-content">
 
-  <!-- 1: Welcome -->
-  <section id="welcome" class="guide-section">
-    <div class="inner">
-      <h1>Your weather, in your calendar.</h1>
-      <p>WeatherCal puts a daily forecast directly in your calendar. No app to open — just glance at your day and you'll know what to expect.</p>
-      <p class="muted">Let's set yours up. About 2 minutes.</p>
-      <div class="hint"><span>↓</span></div>
-    </div>
-  </section>
-
-  <!-- 2: Location -->
+  <!-- 1: Location (first section — no welcome screen, user just clicked "Get started") -->
   <section id="location" class="guide-section">
     <div class="inner">
-      <h2>Where do you want your forecast?</h2>
+      <h2>Great! Where do you live?</h2>
       <input type="text" class="text-input" id="locationInput" placeholder="e.g. Melbourne, Australia" value="Munich, Germany" oninput="checkLocationForUnit()">
+      <p class="muted">You can change this anytime from your settings.</p>
     </div>
   </section>
 
@@ -306,7 +297,7 @@
         <div class="radio-option selected" data-value="feels_like" onclick="selectRadio('displayGroup',this)">
           <span class="badge">Recommended</span>
           <span class="rl">Feels like</span>
-          <span class="rd">Accounts for wind and humidity — what it actually feels like when you step outside. On a windy 8° morning, it might feel closer to 4°. Better for deciding what to wear.</span>
+          <span class="rd">Accounts for wind and humidity — we recommend this because it shows what it actually feels like when you step outside.</span>
         </div>
         <div class="radio-option" data-value="actual" onclick="selectRadio('displayGroup',this)">
           <span class="rl">Actual</span>
@@ -320,6 +311,7 @@
   <section id="daily-summary" class="guide-section">
     <div class="inner">
       <h2>Your daily summary</h2>
+      <p>Each day, an all-day event appears at the top of your calendar with a summary of the day's weather.</p>
 
       <div class="cal-mock">
         <div class="cal-mock-header">Tuesday, March 24</div>
@@ -336,7 +328,7 @@
         </div>
       </div>
 
-      <p>Each day, an all-day event appears at the top of your calendar with a summary of the day's weather. The two temperatures are <strong>morning</strong> and <strong>afternoon</strong> — not high and low. The emoji shows the expected weather for each half of the day.</p>
+      <p>You'll see weather and temperature for the <strong>morning</strong> and <strong>afternoon</strong>.</p>
 
       <p class="label-sm">Choose your format</p>
       <div class="radio-group" id="formatGroup">
@@ -468,18 +460,11 @@
   <section id="find-settings" class="guide-section">
     <div class="inner">
       <h2>Changing your settings later</h2>
-      <p>Every forecast event has a settings link at the bottom. Open any forecast in your calendar and look for this:</p>
+      <p>Every daily summary in your calendar has a settings link at the bottom. Just open it and look for the ⚙️ link:</p>
 
-      <div class="cal-expanded">
-        <div class="cal-expanded-title">☁️8° → ☀️14°C</div>
-        <div class="cal-expanded-body">
-          <div class="row"><span class="lbl">Morning</span> ☁️ 6°C</div>
-          <div class="row"><span class="lbl">Afternoon</span> ☀️ 14°C</div>
-        </div>
-        <div class="cal-expanded-footer">
-          <span class="settings-highlight">⚙️ weathercal.app/settings</span>
-        </div>
-      </div>
+      <video autoplay loop muted playsinline style="width:100%;border-radius:12px;margin:14px 0;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+        <source src="/static/img/find-settings.mp4" type="video/mp4">
+      </video>
 
       <p class="muted">You can also redo this guide anytime from your settings page.</p>
     </div>

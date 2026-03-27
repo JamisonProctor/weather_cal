@@ -277,7 +277,7 @@
   <!-- 1: Location (first section — no welcome screen, user just clicked "Get started") -->
   <section id="location" class="guide-section">
     <div class="inner">
-      <h2>Great! Where do you live?</h2>
+      <h2><span style="color:var(--accent)">Great!</span> Where do you live?</h2>
       <input type="text" class="text-input" id="locationInput" placeholder="e.g. Melbourne, Australia" value="Munich, Germany" oninput="checkLocationForUnit()">
       <p class="muted">You can change this anytime from your settings.</p>
     </div>
@@ -462,7 +462,7 @@
       <h2>Changing your settings later</h2>
       <p>Every daily summary in your calendar has a settings link at the bottom. Just open it and look for the ⚙️ link:</p>
 
-      <video autoplay loop muted playsinline style="width:100%;border-radius:12px;margin:14px 0;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+      <video autoplay loop muted playsinline style="max-width:252px;width:100%;border-radius:12px;margin:14px auto;display:block;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
         <source src="/static/img/find-settings.mp4" type="video/mp4">
       </video>
 

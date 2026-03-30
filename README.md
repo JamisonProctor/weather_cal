@@ -1,45 +1,81 @@
-# Weather Calendar
+# WeatherCal
 
-Weather Calendar keeps a rolling 14-day weather forecast synced to Google Calendar. Forecasts are fetched from Open-Meteo, stored in SQLite for change tracking, and rendered as daily summary calendar events that stay up to date without duplicate clutter.
+**A weather forecast right in your calendar.** No app to install, no website to check — just glance at your day and know what to expect.
 
----
+WeatherCal adds emoji-rich daily summaries and timed weather alerts directly to your calendar. Works with Google Calendar, Apple Calendar, Outlook, and any app that supports calendar subscriptions.
 
-## Features
+> ☁️8° → ☀️14°C
 
-- Pulls 14-day forecasts per location using Open-Meteo forecast & geocode APIs.
-- Persists each day’s data in SQLite for diff-aware updates and easy auditing.
-- Builds emoji-rich summaries plus detailed descriptions for Google Calendar events.
-- De-duplicates calendar entries and disables reminders to avoid notification noise.
-- Runs on a scheduler (midnight by default) with logging and multi-location hooks.
-- Ships with pytest coverage over services and integrations to guard regressions.
+That's your morning and afternoon at a glance. Open the event for the full breakdown — morning through night, with weather and temperature for each part of your day.
 
 ---
 
-## Architecture at a Glance
+## What you get
 
-- `src/app/main.py` — scheduler entry point; orchestrates fetch → store → calendar updates.
-- `src/services/` — weather fetching, formatting, and persistence (`ForecastStore`).
-- `src/integrations/calendar_service.py` — Google Calendar wrapper with duplicate cleanup.
-- `src/models/forecast.py` — dataclass shared across services and integrations.
-- `src/utils/` — logging config and location management helpers.
-- `data/forecast.db` (or `DB_PATH`) — SQLite persistence layer for forecasts.
-- `logs/` — default log destination when `LOG_FILE=logs/weather_cal.log` is set.
+**Daily summaries** — An all-day event at the top of each day with the weather forecast. Choose between Simple (`☁️8° → ☀️14°C`) or AM/PM (`AM☁️8° / PM☀️14°C`) format.
+
+**Weather alerts** — Timed calendar events that show exactly when bad weather hits. Rain from 2–5pm? You'll see it right alongside your meetings so you know to grab an umbrella.
+
+**Warning emoji** — When rain ☂️, snow ☃️, wind 🌬️, cold 🥶, or heat 🥵 are in the forecast, warning emoji replace the weather emoji in your daily summary. At a glance, before you even open the event.
+
+**Nice weather alerts** — Not just bad weather — get notified when it's sunny and warm. Your "go outside" signal. ☀️
+
+**Feels-like temperature** — Shows what it actually feels like outside, adjusted for wind and humidity. Or switch to actual temperature if you prefer.
+
+**14-day forecasts** — Powered by [Open-Meteo](https://open-meteo.com/), updated multiple times per day. Global coverage, free, open data.
 
 ---
 
-## Prerequisites
+## How it works
+
+1. **Sign up** at [weathercal.app](https://weathercal.app) and set your location.
+2. **Connect your calendar** — Google Calendar syncs automatically. Apple Calendar, Outlook, and others work via a calendar subscription link (ICS).
+3. **Customize** — Set your temperature thresholds, choose which alerts you want, pick your preferred format. Everything is adjustable from your settings.
+
+That's it. Your forecast shows up in your calendar alongside your existing events.
+
+---
+
+## Customizable settings
+
+- Temperature unit (°C / °F)
+- Temperature display (feels like / actual)
+- Daily summary title format (Simple / AM/PM)
+- Cold, hot, and nice weather thresholds
+- Individual alert toggles (rain, snow, wind, cold, heat, nice weather)
+- Warning emoji in daily summaries (per-type toggles)
+- Reminder notifications
+
+---
+
+## Privacy
+
+- Free to use
+- Open weather data from [Open-Meteo](https://open-meteo.com/)
+- EU servers
+- No tracking, no ads
+- Export or delete your data anytime
+
+---
+
+## Tech stack
+
+- **Backend:** Python, FastAPI, SQLite
+- **Calendar:** Google Calendar API (push), ICS feed generation (pull)
+- **Weather:** Open-Meteo forecast and geocoding APIs
+- **Auth:** Session-based with Google OAuth for calendar connection
+- **Deployment:** Docker, GitHub Actions CI/CD
+
+---
+
+## Development
+
+### Prerequisites
 
 - Python 3.10+
-- Google Cloud project with Calendar API enabled
-- OAuth client credentials (Desktop application) for Calendar access
+- Google Cloud project with Calendar API enabled (for Google Calendar integration)
 
-All required Python packages are listed in `requirements.txt`.
-
----
-
-## Setup
-
-Run these commands from the repository root:
+### Setup
 
 ```bash
 python3 -m venv venv
@@ -47,98 +83,46 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Google API credentials
-
-1. Create OAuth client credentials (Desktop app) in Google Cloud Console.
-2. Save the downloaded `credentials.json` to the project root.
-3. First-time execution will launch a browser flow and produce `token.json`. Keep both files out of source control.
-
-### Environment configuration
-
-Create a `.env` file (the project uses `python-dotenv`) and populate required values:
+Create a `.env` file with required configuration:
 
 ```bash
 DEFAULT_LOCATION=Munich, Germany
 OPEN_METEO_URL=https://api.open-meteo.com/v1/forecast
 GEOCODE_URL=https://geocoding-api.open-meteo.com/v1/search
-GOOGLE_CALENDAR_ID=primary
-CREDENTIALS_FILE=credentials.json
-TOKEN_FILE=token.json
 DB_PATH=data/forecast.db
 LOG_FILE=logs/weather_cal.log
 LOG_LEVEL=INFO
 ```
 
-- `DEFAULT_LOCATION` is used unless `load_locations_from_db()` returns records.
-- `DB_PATH` and `LOG_FILE` directories are created on demand; adjust if you prefer different paths.
-- Keep `.env`, `credentials.json`, and `token.json` out of version control.
-
----
-
-## Running Locally
-
-Activate your virtual environment, ensure the `.env` is loaded, then start the scheduler:
+For Google Calendar push integration, add OAuth credentials:
 
 ```bash
-python -m src.app.main
+GOOGLE_CALENDAR_ID=primary
+CREDENTIALS_FILE=credentials.json
+TOKEN_FILE=token.json
 ```
 
-By default the scheduler runs `main()` daily at midnight. For rapid iteration you can temporarily switch the interval in `schedule_jobs()` to run every minute (see the inline comment).
-
-### Run once for an immediate sync
-
-If you just need a single fetch/update cycle without the long-running scheduler:
+### Running locally
 
 ```bash
-python -c "from src.app.main import main; main()"
+python -m uvicorn src.web.app:app --reload --port 8000
 ```
 
-Each run will:
-- Fetch forecasts for configured locations.
-- Upsert records in SQLite for change tracking.
-- Push Google Calendar events (one daily summary per location/day) with summaries and descriptions.
+Then open http://localhost:8000.
 
-Logs are emitted to both stdout and the file pointed to `LOG_FILE`.
-
----
-
-## Data & Logs
-
-- Forecast data persists in SQLite at the path defined by `DB_PATH` (default `data/forecast.db`).
-- Log rotation is handled by `RotatingFileHandler`; keep an eye on available disk when running over long periods.
-- The scheduler and services assume directories for `DB_PATH` and `LOG_FILE` exist or can be created.
-
----
-
-## Tests
-
-Run the full pytest suite:
+### Tests
 
 ```bash
-pytest -v
+python -m pytest src/tests/ -q --tb=short
 ```
 
-Tests live in `src/tests/` and cover forecast formatting, persistence, and calendar integration behaviors. Add new cases alongside the service under test.
+Tests cover forecast formatting, calendar event generation, user preferences, web routes, and integration behaviors.
 
----
-
-## Docker (optional)
-
-Containerized execution is available via Docker Compose:
+### Docker
 
 ```bash
 docker compose up --build
 ```
-
-Mount host volumes for `data/`, `logs/`, and OAuth tokens (`credentials.json`, `token.json`) so credentials stay local and forecast history persists between runs.
-
----
-
-## Operational Tips
-
-- Ensure the machine running the scheduler has continuous network access so the Open-Meteo and Google APIs remain reachable.
-- Update `DEFAULT_LOCATION` or extend `load_locations_from_db()` when you are ready to sync multiple cities.
-- Periodically review `logs/weather_cal.log` for API quota errors or calendar issues, especially after credential refreshes.
 
 ---
 
